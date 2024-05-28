@@ -59,9 +59,6 @@ resource "google_spanner_instance" "spanner_instance" {
   project          = module.google_cloud_project.project_id
   display_name     = "Test Spanner Instance"
   processing_units = 100
-  labels = {
-    "env" = "dev"
-  }
   // This is the minimal instance, you will want to change this for production deployments.
   force_destroy = var.destroy_all_resources
 }
