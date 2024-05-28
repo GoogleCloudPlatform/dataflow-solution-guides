@@ -52,15 +52,14 @@ module "dataset" {
   }
 }
 
-// Spanner instance for change streams / CDC
+// Spanner instance for change streams / CDC, using minimal instances size for demo purposes
 resource "google_spanner_instance" "spanner_instance" {
   config           = "regional-${var.region}"
   name             = "test-spanner-instance"
   project          = module.google_cloud_project.project_id
   display_name     = "Test Spanner Instance"
   processing_units = 100
-  // This is the minimal instance, you will want to change this for production deployments.
-  force_destroy = var.destroy_all_resources
+  force_destroy    = var.destroy_all_resources
 }
 
 resource "google_spanner_database" "taxis" {
@@ -112,11 +111,11 @@ module "dataflow_sa" {
 module "vpc_network" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v30.0.0"
   project_id = module.google_cloud_project.project_id
-  name       = "default"
+  name       = "${var.network_prefix}-net"
   subnets    = [
     {
       ip_cidr_range         = "10.1.0.0/16"
-      name                  = "default"
+      name                  = "${var.network_prefix}-subnet"
       region                = var.region
       enable_private_access = true
       secondary_ip_ranges = {
@@ -134,7 +133,7 @@ module "firewall_rules" {
   network    = module.vpc_network.name
   default_rules_config = {
     admin_ranges = [
-      module.vpc_network.subnet_ips["${var.region}/default"],
+      module.vpc_network.subnet_ips["${var.region}/${var.network_prefix}-subnet"],
     ]
   }
   egress_rules = {
@@ -160,6 +159,6 @@ module "regional_nat" {
   source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v30.0.0"
   project_id     = module.google_cloud_project.project_id
   region         = var.region
-  name           = "default"
+  name           = "${var.network_prefix}-nat"
   router_network = module.vpc_network.self_link
 }

@@ -4,26 +4,25 @@ This directory contains the Terraform code to spawn a Google Cloud project
 with all the necessary infrastructure and configuration required for running
 the ETL / integration solution guide.
 
-These deployment scripts are part of the 
+These deployment scripts are part of the
 [Dataflow ETL Integration solution guide](../../use_cases/ETL_integration.md).
 
 ## Bill of resources created by this script
 
 The scripts will create the following resources
 
-| Resource             |         Name          | Description                                                                                                                                                                                                                                                                                      |
-|:---------------------|:---------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Project              |      Set by user      | Optional, you may reuse an existing project. If the project is created by Terraform, it will enable the APIs for Cloud Build, Dataflow,  Monitoring, Pub/Sub, Dataflow Autoscaling, and Artifact Registry                                                                                        |
-| Docker registry      | `dataflow-containers` | An Artifact Registry Docker repo for the custom Dataflow container used in the pipeline. The Cloud Build service agent is granted admin role in this repository. The Dataflow service account is granted reader role. By default, only the 3 latest versions of each image are kept in the repo. |
-| Bucket               |  Same as project id   | Using the standard storage class, this is a regional bucket in the region specified by the user.                                                                                                                                                                                                 |
-| Pub/Sub topic        |      `messages`       | The input Pub/Sub topic for the sample pipeline.                                                                                                                                                                                                                                                 |
-| Pub/Sub topic        |     `predictions`     | The output Pub/Sub topic for the sample pipeline.                                                                                                                                                                                                                                                |
-| Pub/Sub subscription |    `messages-sub`     | The subscription to the `messages` topic that is actually used by the Dataflow pipeline.                                                                                                                                                                                                         |
-| Pub/Sub subscription |   `predictions-sub`   | The subscription to the `predictions` topic, useful to visualize the messages produced by the pipeline.                                                                                                                                                                                          |
-| Service account      |   `my-dataflow-sa`    | Dataflow worker servive account. It has storage admin, Dataflow worker, metrics writer and Pub/Sub editor roles assigned at project level.                                                                                                                                                       |
-| VPC network          |       `default`       | If the project is created from scratch, the default network is removed and this network is re-created with a single regional sub-network.                                                                                                                                                        |
-| Cloud NAT            |       `default`       | Cloud NAT in the region specified by the user, in case the Dataflow workers need to reach the Internet. This is not necessary for the sample pipeline provided.                                                                                                                                  |
-| Firewall rules       |     Several rules     | Ingress and egress rules to remove unnecessary traffic, and to ensure the traffice required by Dataflow. If you want to access a VM using SSH, apply the network tag `ssh` to that instance. Same for `http-server` and for `https-server`                                                       |
+| Resource         |          Name           | Description                                                                                                                                                                                                                                |
+|:-----------------|:-----------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Project          |       Set by user       | Optional, you may reuse an existing project. If the project is created by Terraform, it will enable the APIs for Cloud Build, Dataflow,  Monitoring, Pub/Sub, Dataflow Autoscaling, and Artifact Registry                                  |
+| Bucket           |   Same as project id    | Using the standard storage class, this is a regional bucket in the region specified by the user.                                                                                                                                           |
+| BigQuery dataset |        `replica`        | A dataset where the data coming from Spanner will be replicated to.                                                                                                                                                                        |
+| Spanner instance | `test-spanner-instance` | A Spanner instance that will be replicated to BigQuery                                                                                                                                                                                     |           
+| Spanner database |         `taxis`         | The main database for the data being received and replicated. A table `events` will be created in this database.                                                                                                                           |
+| Spanner database |       `metadata`        | A metadata database used for tracking change streams and keeping track of the replication to BigQuery                                                                                                                                      | 
+| Service account  |    `my-dataflow-sa`     | Dataflow worker service account. It has storage admin, Dataflow worker, metrics writer and Pub/Sub editor roles assigned at project level.                                                                                                 |
+| VPC network      |        `default`        | If the project is created from scratch, the default network is removed and this network is re-created with a single regional sub-network.                                                                                                  |
+| Firewall rules   |      Several rules      | Ingress and egress rules to remove unnecessary traffic, and to ensure the traffice required by Dataflow. If you want to access a VM using SSH, apply the network tag `ssh` to that instance. Same for `http-server` and for `https-server` |
+| Cloud NAT        |        `default`        | Optional. Cloud NAT in the region specified by the user, in case the Dataflow workers need to reach the Internet. This is not necessary for the sample pipeline provided.                                                                  |
 
 ## Configuration variables
 
@@ -37,29 +36,29 @@ This deployment accepts the following configuration variables:
 | `project_id`      | `string`  | Project Id.                                                                                                                                                                                                           | 
 | `region`          | `string`  | Region to be used for all the resources. The VPC will contain only a single sub-network in this region.                                                                                                               |
 
-
 ## How to deploy
 
 1. **Set the configuration variables:**
-   - Create a file named `terraform.tfvars` in the current directory.
-   - Add the following configuration variables to the file, replacing the values with your own:
-     ```
-     billing_account = "YOUR_BILLING_ACCOUNT"
-     organization = "YOUR_ORGANIZATION_ID"
-     project_create = TRUE_OR_FALSE
-     project_id = "YOUR_PROJECT_ID"
-     region = "YOUR_REGION"
-     ```
+    - Create a file named `terraform.tfvars` in the current directory.
+    - Add the following configuration variables to the file, replacing the values with your own:
+      ```
+      billing_account = "YOUR_BILLING_ACCOUNT"
+      organization = "YOUR_ORGANIZATION_ID"
+      project_create = TRUE_OR_FALSE
+      project_id = "YOUR_PROJECT_ID"
+      region = "YOUR_REGION"
+      ```
 2. **Initialize Terraform:**
-   - Run the following command to initialize Terraform:
-     ```bash
-     terraform init
-     ```
+    - Run the following command to initialize Terraform:
+      ```bash
+      terraform init
+      ```
 3. **Apply the configuration:**
-   - Run the following command to apply the Terraform configuration:
-     ```bash
-     terraform apply
-     ```
+    - Run the following command to apply the Terraform configuration:
+      ```bash
+      terraform apply
+      ```
 4. **Wait for the deployment to complete:**
-   - Terraform will output the status of the deployment. Wait for it to complete successfully.
-5. **Access the deployed resources:** You are now ready to launch the sample pipeline in this solution guide.
+    - Terraform will output the status of the deployment. Wait for it to complete successfully.
+5. **Access the deployed resources:** You are now ready to launch the sample pipeline in this
+   solution guide.
