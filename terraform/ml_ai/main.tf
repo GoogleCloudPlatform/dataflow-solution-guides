@@ -19,7 +19,7 @@ module "google_cloud_project" {
   project_create  = var.project_create
   name            = var.project_id
   parent          = var.organization
-  services = [
+  services        = [
     "cloudbuild.googleapis.com",
     "dataflow.googleapis.com",
     "monitoring.googleapis.com",
@@ -60,7 +60,7 @@ module "buckets" {
   name          = module.google_cloud_project.project_id
   location      = var.region
   storage_class = "STANDARD"
-  force_destroy = true
+  force_destroy = var.destroy_all_resources
 }
 
 module "input_topic" {
@@ -101,11 +101,11 @@ module "dataflow_sa" {
 module "vpc_network" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v30.0.0"
   project_id = module.google_cloud_project.project_id
-  name       = "default"
-  subnets = [
+  name       = "${var.network_prefix}-net"
+  subnets    = [
     {
       ip_cidr_range         = "10.1.0.0/16"
-      name                  = "default"
+      name                  = "${var.network_prefix}-subnet"
       region                = var.region
       enable_private_access = true
       secondary_ip_ranges = {
@@ -123,7 +123,7 @@ module "firewall_rules" {
   network    = module.vpc_network.name
   default_rules_config = {
     admin_ranges = [
-      module.vpc_network.subnet_ips["${var.region}/default"],
+      module.vpc_network.subnet_ips["${var.region}/${var.network_prefix}-subnet"],
     ]
   }
   egress_rules = {
@@ -147,6 +147,6 @@ module "regional_nat" {
   source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v30.0.0"
   project_id     = module.google_cloud_project.project_id
   region         = var.region
-  name           = "default"
+  name           = "${var.network_prefix}-nat"
   router_network = module.vpc_network.self_link
 }

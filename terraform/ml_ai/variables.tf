@@ -18,6 +18,18 @@ variable "billing_account" {
   default     = null
 }
 
+variable "destroy_all_resources" {
+  description = "Destroy all resources when calling tf destroy. Use false for production deployments. For test environments, set to true to remove all buckets and Spanner instances."
+  type        = bool
+  default     = true
+}
+
+variable "network_prefix" {
+  description = "Prefix to be used for networks and subnetworks"
+  type        = string
+  default     = "dataflow"
+}
+
 variable "organization" {
   description = "Organization for the project/resources"
   type        = string
