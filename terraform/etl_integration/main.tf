@@ -67,7 +67,7 @@ resource "google_spanner_database" "taxis" {
   project  = module.google_cloud_project.project_id
   name     = "taxis_database"
   ddl      = [
-    <<DDL
+<<DDL1
 CREATE TABLE events (
   ride_id STRING(64),
   point_idx INT64,
@@ -79,8 +79,12 @@ CREATE TABLE events (
   ride_status STRING(64),
   passenger_count INT64,
 ) PRIMARY KEY(ride_id, point_idx)
-DDL
-  ]
+DDL1
+,
+<<DDL2
+CREATE CHANGE STREAM EverythingStream FOR ALL
+DDL2
+]
   deletion_protection = !var.destroy_all_resources
 }
 
