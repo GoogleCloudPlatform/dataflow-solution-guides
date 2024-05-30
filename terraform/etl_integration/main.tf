@@ -190,7 +190,7 @@ resource "local_file" "variables_script" {
 # We recommend that you modify this file only through the Terraform deployment.
 export PROJECT=${module.google_cloud_project.project_id}
 export REGION=${var.region}
-export NETWORK=regions/$REGION/subnetworks/dataflow-net
+export NETWORK=${module.vpc_network.subnet_ids["${var.region}/${var.network_prefix}-subnet"]}
 export TEMP_LOCATION=gs://$PROJECT/tmp
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 

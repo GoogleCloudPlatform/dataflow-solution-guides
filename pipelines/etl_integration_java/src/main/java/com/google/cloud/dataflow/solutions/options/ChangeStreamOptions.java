@@ -27,11 +27,11 @@ public interface ChangeStreamOptions extends SpannerOptions {
 
     String getSpannerChangeStream();
 
-    @Description("Number of Pubsub output topics")
-    void setPubsubOutputTopicCount(int t);
+    @Validation.Required
+    @Description("BigQuery destination dataset")
+    void setBigQueryDataset(String d);
 
-    @Default.Integer(3)
-    int getPubsubOutputTopicCount();
+    String getBigQueryDataset();
 
     @Description("Catch up time for the change stream")
     void setCatchUpMinutes(long t);

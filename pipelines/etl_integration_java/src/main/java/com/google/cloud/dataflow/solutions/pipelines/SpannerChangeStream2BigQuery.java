@@ -30,7 +30,7 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TupleTag;
 
-public class SpannerChangeStream2Pubsub {
+public class SpannerChangeStream2BigQuery {
     private static Timestamp getCatchupTimestamp(long catchupMinutes) {
         return Timestamp.ofTimeSecondsAndNanos(
                 Instant.now().minusSeconds(catchupMinutes * 60).getEpochSecond(), 0);
@@ -54,23 +54,6 @@ public class SpannerChangeStream2Pubsub {
                                 .withChangeStreamName(options.getSpannerChangeStream())
                                 .withInclusiveStartAt(
                                         getCatchupTimestamp(options.getCatchUpMinutes())));
-
-        ChangeRecordRouter.ToPubsub routeTransform =
-                ChangeRecordRouter.ToPubsub.process(options.getPubsubOutputTopicCount());
-
-        PCollectionTuple allRouted = changes.apply(routeTransform);
-
-        int k = 0;
-        for (TupleTag<DataChangeRecord> tag : routeTransform.getTags()) {
-            PCollection<DataChangeRecord> routed =
-                    allRouted.get(tag).setCoder(AvroCoder.of(DataChangeRecord.class));
-            routed.apply(
-                    String.format("Topic %d", k),
-                    Pubsub.Publisher.publish()
-                            .withProjectId(projectId)
-                            .withTopicNumber(options.getPubsubOutputTopicCount()));
-            k++;
-        }
 
         return p;
     }

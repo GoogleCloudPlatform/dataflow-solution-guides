@@ -7,39 +7,30 @@ This pipeline is part of the [Dataflow ETL & integration solution guide](../../u
 
 ## Architecture
 
+The generic architecture for both looks like this:
+
+![Architecture](./imgs/etl_integration.png)
+
 There are two pipelines in this repository. The first pipeline reads from a Pub/Sub topic of public data, and writes
 to a Spanner database. This pipeline's purpose is to keep Spanner with constant updates. The data is written in an
 `events` table.
 
 The second pipeline reads from a change stream from Spanner, and replicates the `events` table in BigQuery. The table
-in BigQuery receives updates continuously and has the same data as the Spanner table, with a minimal latency. 
+in BigQuery receives updates continuously and has the same data as the Spanner table, with a minimal latency.
 
-So the generic architecture for both looks like this:
+The infrastructure required to launch the pipelines is deployed
+through [the accompanying Terraform scripts in this solution guide](../../terraform/etl_integration/README.md).
 
-![Architecture](./imgs/etl_integration.png)
-
-## Spanner instance size and configuration
-
-For the Spanner database, we are 
-
-## How to launch the pipeline
+## How to launch the pipelines
 
 All the scripts are located in the `scripts` directory and prepared to be launched from the top
 sources directory.
 
-In the script `scripts/00_set_environment.sh`, define the value of the project id and the region variable:
-
-```
-export PROJECT=<YOUR PROJECT ID>
-export REGION=<YOUR CLOUD REGION>
-```
-
-Leave the rest of variables untouched, although you can override them if you prefer.
-
-After you edit the script, load those variables into the environment
+The Terraform code generates a file with all the necessary variables in the location `./scripts/01_set_variables.sh`.
+Run the following command to apply that configuration:
 
 ```sh
-source scripts/00_set_environment.sh
+source scripts/01_set_variables.sh
 ```
 
 And then run the script that builds and publishes the custom Dataflow container. This container will
@@ -53,7 +44,7 @@ This will create a Cloud Build job that can take a few minutes to complete. Once
 can trigger the pipeline with the following:
 
 ```sh
-./scripts/02_run_dataflow.sh
+./scripts/02_run_publisher_dataflow.sh
 ```
 
 ## Input data
