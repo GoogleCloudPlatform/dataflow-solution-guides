@@ -1,4 +1,5 @@
 ./gradlew run -Pargs="
+  --update \
   --pipeline=PUBSUB_TO_SPANNER \
   --streaming \
   --enableStreamingEngine \

@@ -101,11 +101,31 @@ DDL2
   deletion_protection = !var.destroy_all_resources
 }
 
+resource "google_spanner_database_iam_binding" "read_write_taxis" {
+  project  = module.google_cloud_project.project_id
+  instance = google_spanner_instance.spanner_instance.name
+  database = google_spanner_database.taxis.name
+  role     = "roles/spanner.databaseUser"
+  members = [
+    module.dataflow_sa.iam_email
+  ]
+}
+
 resource "google_spanner_database" "metadata" {
   instance            = google_spanner_instance.spanner_instance.name
   project             = module.google_cloud_project.project_id
   name                = local.spanner_metadata_db
   deletion_protection = !var.destroy_all_resources
+}
+
+resource "google_spanner_database_iam_binding" "read_write_metadata" {
+  project  = module.google_cloud_project.project_id
+  instance = google_spanner_instance.spanner_instance.name
+  database = google_spanner_database.metadata.name
+  role     = "roles/spanner.databaseUser"
+  members = [
+    module.dataflow_sa.iam_email
+  ]
 }
 
 // Service account
