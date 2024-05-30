@@ -71,7 +71,7 @@ resource "google_spanner_instance" "spanner_instance" {
   name             = local.spanner_instance
   project          = module.google_cloud_project.project_id
   display_name     = local.spanner_name
-  processing_units = 100
+  processing_units = 1000
   force_destroy    = var.destroy_all_resources
 }
 

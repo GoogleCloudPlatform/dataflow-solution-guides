@@ -52,8 +52,8 @@ These are not configurable externally, but they can be changed in the `main.tf` 
 
 ## Spanner instance size and configuration
 
-The Spanner instance in this guide is configured to use `100` processing units, which is the
-smallest possible size for an instance.
+The Spanner instance in this guide is configured to use `1000` processing units, which is the
+equivalent of a 1 node instance.
 
 The configuration is regional, using the same region as the rest of resources, and it assumes the
 name of the configuration is `regional-YOUR_REGION`.
