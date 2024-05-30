@@ -9,6 +9,7 @@
   --region=$REGION \
   --serviceAccount=$SERVICE_ACCOUNT \
   --subnetwork=$NETWORK \
+  --maxNumWorkers=$MAX_DATAFLOW_WORKERS \
   --experiments=enable_data_sampling;use_network_tags=ssh;dataflow \
   --usePublicIps=false \
   --pubsubTopic=$TOPIC \

@@ -13,17 +13,16 @@
 #  limitations under the License.
 
 locals {
-  spanner_instance      = "test-spanner-instance"
-  spanner_database      = "taxis_database"
-  spanner_table         = "events"
-  spanner_change_stream = "EverythingStream"
-  spanner_metadata_db   = "metadata"
-  spanner_configuration = "regional-${var.region}"
-  spanner_name          = "Spanner instance managed by TF"
-
-  bigquery_dataset = "replica"
-
+  spanner_instance         = "test-spanner-instance"
+  spanner_database         = "taxis_database"
+  spanner_table            = "events"
+  spanner_change_stream    = "EverythingStream"
+  spanner_metadata_db      = "metadata"
+  spanner_configuration    = "regional-${var.region}"
+  spanner_name             = "Spanner instance managed by TF"
+  bigquery_dataset         = "replica"
   dataflow_service_account = "my-dataflow-sa"
+  max_dataflow_workers     = 10
 }
 
 // Project
@@ -199,5 +198,7 @@ export SPANNER_INSTANCE=${google_spanner_instance.spanner_instance.name}
 export SPANNER_DATABASE=${local.spanner_database}
 export SPANNER_TABLE=${local.spanner_table}
 export SPANNER_CHANGE_STREAM=${local.spanner_change_stream}
+
+export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 FILE
 }
