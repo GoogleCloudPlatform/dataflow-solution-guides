@@ -101,4 +101,5 @@ The setup will be continuously consuming as this is a streaming architecture, ru
 To destroy and stop all the resources, run:
 
 ```bash
-terraform destroy```
+terraform destroy
+```
