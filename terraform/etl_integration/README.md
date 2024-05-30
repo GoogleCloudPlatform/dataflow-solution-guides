@@ -92,6 +92,17 @@ the `main.tf` file. For more details see the following links:
 5. **Access the deployed resources:** You are now ready to launch the sample pipeline in this
    solution guide.
 
+## Scripts generation
+
+The Terraform code will generate a script with variable values, to be used
+with [the accompanying pipelines in this solution guide](../../pipelines/etl_integration_java/README.md).
+
+The script is written in the location `scripts/01_set_variables.sh`, and should be executed as follows:
+
+```bash
+source ./scripts/01_set_variables.sh
+```
+
 ## How to remove
 
 The setup will be continuously consuming as this is a streaming architecture, running without stop.
