@@ -17,18 +17,13 @@
 package com.google.cloud.dataflow.solutions.pipelines;
 
 import com.google.cloud.Timestamp;
-import com.google.cloud.dataflow.solutions.load.Pubsub;
 import com.google.cloud.dataflow.solutions.options.ChangeStreamOptions;
-import com.google.cloud.dataflow.solutions.transform.ChangeRecordRouter;
 import java.time.Instant;
 import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.extensions.avro.coders.AvroCoder;
 import org.apache.beam.sdk.io.gcp.spanner.SpannerIO;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.DataChangeRecord;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionTuple;
-import org.apache.beam.sdk.values.TupleTag;
 
 public class SpannerChangeStream2BigQuery {
     private static Timestamp getCatchupTimestamp(long catchupMinutes) {

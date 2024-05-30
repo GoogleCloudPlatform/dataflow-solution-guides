@@ -95,7 +95,8 @@ CREATE TABLE events (
 DDL1
   ,
     <<DDL2
-CREATE CHANGE STREAM EverythingStream FOR ALL
+CREATE CHANGE STREAM events_stream FOR ${local.spanner_table}
+OPTIONS(value_capture_type = 'NEW_ROW_AND_OLD_VALUES')
 DDL2
   ]
   deletion_protection = !var.destroy_all_resources
