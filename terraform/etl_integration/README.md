@@ -45,6 +45,25 @@ The default values of all the optional configuration variables are set for devel
 For production settings, you will want to adjust the Spanner instance settings in `main.tf`. The
 default values create a very small instance for testing purposes only.
 
+### Other potential configuration variables
+
+The file `main.tf` has some local variables for the names of the Spanner instance, database, etc.
+These are not configurable externally, but they can be changed in the `main.tf` file if necessary.
+
+## Spanner instance size and configuration
+
+The Spanner instance in this guide is configured to use `100` processing units, which is the
+smallest possible size for an instance.
+
+The configuration is regional, using the same region as the rest of resources, and it assumes the
+name of the configuration is `regional-YOUR_REGION`.
+
+To change those settings (increase capacity, multi-regional setups, etc), you will need to adapt
+the `main.tf` file. For more details see the following links:
+
+* https://cloud.google.com/spanner/docs/compute-capacity
+* https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/spanner_instance
+
 ## How to deploy
 
 1. **Set the configuration variables:**
