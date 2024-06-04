@@ -19,7 +19,10 @@ package com.google.cloud.dataflow.solutions.transform;
 import com.google.auto.value.AutoValue;
 import com.google.cloud.dataflow.solutions.data.SchemaUtils;
 import com.google.cloud.dataflow.solutions.data.TaxiObjects;
+import com.google.common.collect.ImmutableMap;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.transforms.Convert;
@@ -30,65 +33,130 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionRowTuple;
 import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.PInput;
+import org.apache.beam.sdk.values.POutput;
+import org.apache.beam.sdk.values.PValue;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TupleTag;
 
 public class TaxiEventProcessor {
-    public static final TupleTag<TaxiObjects.TaxiEvent> PARSED_MESSAGES = new TupleTag<>();
-    public static final TupleTag<TaxiObjects.ParsingError> PARSING_ERRORS = new TupleTag<>();
 
     @AutoValue
-    public abstract static class Parser
-            extends PTransform<PCollection<PubsubMessage>, PCollectionTuple> {
+    public abstract static class FromPubsubMessage
+            extends PTransform<PCollection<PubsubMessage>, ParsingOutput<TaxiObjects.TaxiEvent>> {
 
-        public static Builder builder() {
-            return new AutoValue_TaxiEventProcessor_Parser.Builder();
-        }
-
-        public static Parser create() {
-            return builder().build();
-        }
-
-        @AutoValue.Builder
-        public abstract static class Builder {
-            public abstract Parser build();
+        public static FromPubsubMessage parse() {
+            return new AutoValue_TaxiEventProcessor_FromPubsubMessage();
         }
 
         @Override
-        public PCollectionTuple expand(PCollection<PubsubMessage> rides) {
-            PCollectionRowTuple allRows = rides.apply("Convert to Row", new TaxiEventJsonParser());
+        public ParsingOutput<TaxiObjects.TaxiEvent> expand(PCollection<PubsubMessage> rides) {
 
-            PCollection<Row> rows = allRows.get(TaxiEventJsonParser.RESULTS_TAG);
-            PCollection<Row> errorRows = allRows.get(TaxiEventJsonParser.ERRORS_TAG);
+            PCollection<String> ridesAsStrings =
+                    rides.apply("Convert to Json String", ParDo.of(new ExtractPayloadDoFn()));
+
+            Schema taxiEventSchema =
+                    SchemaUtils.getSchemaForType(rides.getPipeline(), TaxiObjects.TaxiEvent.class);
+
+            return ridesAsStrings.apply(
+                    "Parse from Json String",
+                    FromJsonString.<TaxiObjects.TaxiEvent>builder()
+                            .schema(taxiEventSchema)
+                            .clz(TaxiObjects.TaxiEvent.class)
+                            .build());
+        }
+    }
+
+    @AutoValue
+    public abstract static class FromJsonString<T>
+            extends PTransform<PCollection<String>, ParsingOutput<T>> {
+
+        public abstract Schema schema();
+
+        public abstract Class<T> clz();
+
+        public static <T> Builder<T> builder() {
+            return new AutoValue_TaxiEventProcessor_FromJsonString.Builder<T>();
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder<T> {
+            public abstract Builder<T> schema(Schema schema);
+
+            public abstract Builder<T> clz(Class<T> clz);
+
+            public abstract FromJsonString<T> build();
+        }
+
+        @Override
+        public ParsingOutput<T> expand(PCollection<String> input) {
+            PCollectionRowTuple allRows = input.apply("Convert to Row", new JsonStringParser());
+
+            PCollection<Row> rows = allRows.get(JsonStringParser.RESULTS_TAG);
+            PCollection<Row> errorRows = allRows.get(JsonStringParser.ERRORS_TAG);
             PCollection<TaxiObjects.ParsingError> errorMessages =
                     errorRows.apply("Convert to ErrorMessage", new RowToError());
 
             // Convert row objects to TaxiRide objects
-            PCollection<TaxiObjects.TaxiEvent> taxiRides =
-                    rows.apply(
-                            "Convert to TaxiRides", Convert.fromRows(TaxiObjects.TaxiEvent.class));
+            PCollection<T> taxiRides = rows.apply("Convert to TaxiRides", Convert.fromRows(clz()));
 
-            return PCollectionTuple.of(PARSED_MESSAGES, taxiRides)
-                    .and(PARSING_ERRORS, errorMessages);
+            return new ParsingOutput<>(input.getPipeline(), taxiRides, errorMessages);
         }
     }
 
-    private static class TaxiEventJsonParser
-            extends PTransform<PCollection<PubsubMessage>, PCollectionRowTuple> {
+    public static class ParsingOutput<T> implements POutput {
+
+        private final Pipeline p;
+        private final PCollection<T> parsed;
+        private final PCollection<TaxiObjects.ParsingError> errors;
+        private final TupleTag<T> parsedTag = new TupleTag<>() {};
+        private final TupleTag<TaxiObjects.ParsingError> errorsTag = new TupleTag<>() {};
+
+        public ParsingOutput(
+                Pipeline p, PCollection<T> parsed, PCollection<TaxiObjects.ParsingError> errors) {
+            this.p = p;
+            this.parsed = parsed;
+            this.errors = errors;
+        }
+
+        @Override
+        public Pipeline getPipeline() {
+            return p;
+        }
+
+        @Override
+        public Map<TupleTag<?>, PValue> expand() {
+            return ImmutableMap.of(parsedTag, parsed, errorsTag, errors);
+        }
+
+        @Override
+        public void finishSpecifyingOutput(
+                String transformName, PInput input, PTransform<?, ?> transform) {}
+
+        public PCollection<T> getParsedData() {
+            return parsed;
+        }
+
+        public PCollection<TaxiObjects.ParsingError> getErrors() {
+            return errors;
+        }
+    }
+
+    private static class JsonStringParser
+            extends PTransform<PCollection<String>, PCollectionRowTuple> {
 
         public static final String RESULTS_TAG = "RESULTS_TAG";
         public static final String ERRORS_TAG = "ERRORS_TAG";
 
         @Override
-        public PCollectionRowTuple expand(PCollection<PubsubMessage> input) {
+        public PCollectionRowTuple expand(PCollection<String> input) {
 
             Schema taxiEventSchema =
                     SchemaUtils.getSchemaForType(input.getPipeline(), TaxiObjects.TaxiEvent.class);
             JsonToRow.ParseResult parseResult =
-                    input.apply("Convert to Json String", ParDo.of(new ExtractPayloadDoFn()))
-                            .apply(
-                                    JsonToRow.withExceptionReporting(taxiEventSchema)
-                                            .withExtendedErrorInfo());
+                    input.apply(
+                            JsonToRow.withExceptionReporting(taxiEventSchema)
+                                    .withExtendedErrorInfo());
 
             PCollection<Row> results = parseResult.getResults();
             PCollection<Row> errors = parseResult.getFailedToParseLines();

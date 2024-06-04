@@ -25,7 +25,6 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionTuple;
 
 public class Pubsub2Spanner {
 
@@ -37,9 +36,11 @@ public class Pubsub2Spanner {
         PCollection<PubsubMessage> msgs =
                 p.apply("Read topic", PubsubIO.readMessages().fromTopic(options.getPubsubTopic()));
 
-        PCollectionTuple parsed = msgs.apply("Parse", TaxiEventProcessor.Parser.create());
-        PCollection<TaxiObjects.TaxiEvent> taxiEvents =
-                parsed.get(TaxiEventProcessor.PARSED_MESSAGES);
+        TaxiEventProcessor.ParsingOutput<TaxiObjects.TaxiEvent> parsed =
+                msgs.apply(
+                        "Parse",
+                        TaxiEventProcessor.FromPubsubMessage.parse());
+        PCollection<TaxiObjects.TaxiEvent> taxiEvents = parsed.getParsedData();
 
         taxiEvents.apply(
                 "Write",

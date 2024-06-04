@@ -17,6 +17,8 @@
 package com.google.cloud.dataflow.solutions.data;
 
 import com.google.auto.value.AutoValue;
+import javax.annotation.Nullable;
+import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.ModType;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
@@ -84,6 +86,19 @@ public class TaxiObjects {
 
             public abstract TaxiEvent build();
         }
+    }
+
+    @DefaultSchema(AutoValueSchema.class)
+    @AutoValue
+    public abstract static class CDCValue {
+        @SchemaFieldName("mod_type")
+        public abstract ModType getModType();
+
+        @SchemaFieldName("old_event")
+        public abstract @Nullable TaxiEvent getOldEvent();
+
+        @SchemaFieldName("new_event")
+        public abstract @Nullable TaxiEvent getNewEvent();
     }
 
     @AutoValue
