@@ -32,7 +32,6 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionRowTuple;
-import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.PInput;
 import org.apache.beam.sdk.values.POutput;
 import org.apache.beam.sdk.values.PValue;
@@ -97,8 +96,11 @@ public class TaxiEventProcessor {
             PCollection<TaxiObjects.ParsingError> errorMessages =
                     errorRows.apply("Convert to ErrorMessage", new RowToError());
 
-            // Convert row objects to TaxiRide objects
-            PCollection<T> taxiRides = rows.apply("Convert to TaxiRides", Convert.fromRows(clz()));
+            // Convert row objects to input type
+            PCollection<T> taxiRides =
+                    rows.apply(
+                            String.format("Convert to %s", clz().getSimpleName()),
+                            Convert.fromRows(clz()));
 
             return new ParsingOutput<>(input.getPipeline(), taxiRides, errorMessages);
         }

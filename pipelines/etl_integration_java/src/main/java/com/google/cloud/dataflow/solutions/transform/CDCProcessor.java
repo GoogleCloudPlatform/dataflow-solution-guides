@@ -16,11 +16,13 @@
 
 package com.google.cloud.dataflow.solutions.transform;
 
+import com.google.cloud.dataflow.solutions.data.SchemaUtils;
 import com.google.cloud.dataflow.solutions.data.TaxiObjects;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.DataChangeRecord;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.Mod;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.ModType;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.ValueCaptureType;
+import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -34,9 +36,18 @@ public class CDCProcessor {
         public PCollection<TaxiObjects.CDCValue> expand(PCollection<DataChangeRecord> input) {
             PCollection<String> jsons = input.apply("ToJson", ParDo.of(new RecordToJsonDoFn()));
 
-            //            JsonToRow.withExceptionReporting().withExtendedErrorInfo()
+            Schema cdcSchema =
+                    SchemaUtils.getSchemaForType(input.getPipeline(), TaxiObjects.CDCValue.class);
 
-            return null;
+            TaxiEventProcessor.ParsingOutput<TaxiObjects.CDCValue> parsingOutput =
+                    jsons.apply(
+                            "Parse from Json String",
+                            TaxiEventProcessor.FromJsonString.<TaxiObjects.CDCValue>builder()
+                                    .schema(cdcSchema)
+                                    .clz(TaxiObjects.CDCValue.class)
+                                    .build());
+
+            return parsingOutput.getParsedData();
         }
     }
 

@@ -37,9 +37,7 @@ public class Pubsub2Spanner {
                 p.apply("Read topic", PubsubIO.readMessages().fromTopic(options.getPubsubTopic()));
 
         TaxiEventProcessor.ParsingOutput<TaxiObjects.TaxiEvent> parsed =
-                msgs.apply(
-                        "Parse",
-                        TaxiEventProcessor.FromPubsubMessage.parse());
+                msgs.apply("Parse", TaxiEventProcessor.FromPubsubMessage.parse());
         PCollection<TaxiObjects.TaxiEvent> taxiEvents = parsed.getParsedData();
 
         taxiEvents.apply(
