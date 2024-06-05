@@ -30,7 +30,7 @@ RUN pip install --upgrade --no-cache-dir pip \
     && pip install --no-cache-dir -e .
 
 # Copy files from official SDK image, including script/dependencies.
-COPY --from=apache/beam_python3.10_sdk:2.56.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.11_sdk:2.56.0 /opt/apache/beam /opt/apache/beam
 
 COPY gemma_2B gemma_2B
 
