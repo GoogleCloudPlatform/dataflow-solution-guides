@@ -24,5 +24,5 @@ export GCS_GEMMA_PATH=gs://$PROJECT/gemma_2B
 export CONTAINER_URI=$DOCKER_IMAGE:$DOCKER_TAG
 
 export SERVICE_ACCOUNT=my-dataflow-sa@$PROJECT.iam.gserviceaccount.com
-export SUBNETWORK=regions/$REGION/subnetworks/default
+export SUBNETWORK=regions/$REGION/subnetworks/dataflow-subnet
 export MACHINE_TYPE=g2-standard-4
