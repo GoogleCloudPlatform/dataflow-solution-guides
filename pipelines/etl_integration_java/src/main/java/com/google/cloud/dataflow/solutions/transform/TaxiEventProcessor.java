@@ -18,7 +18,8 @@ package com.google.cloud.dataflow.solutions.transform;
 
 import com.google.auto.value.AutoValue;
 import com.google.cloud.dataflow.solutions.data.SchemaUtils;
-import com.google.cloud.dataflow.solutions.data.TaxiObjects;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects.ParsingError;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects.TaxiEvent;
 import com.google.common.collect.ImmutableMap;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -42,26 +43,26 @@ public class TaxiEventProcessor {
 
     @AutoValue
     public abstract static class FromPubsubMessage
-            extends PTransform<PCollection<PubsubMessage>, ParsingOutput<TaxiObjects.TaxiEvent>> {
+            extends PTransform<PCollection<PubsubMessage>, ParsingOutput<TaxiEvent>> {
 
         public static FromPubsubMessage parse() {
             return new AutoValue_TaxiEventProcessor_FromPubsubMessage();
         }
 
         @Override
-        public ParsingOutput<TaxiObjects.TaxiEvent> expand(PCollection<PubsubMessage> rides) {
+        public ParsingOutput<TaxiEvent> expand(PCollection<PubsubMessage> rides) {
 
             PCollection<String> ridesAsStrings =
                     rides.apply("Convert to Json String", ParDo.of(new ExtractPayloadDoFn()));
 
             Schema taxiEventSchema =
-                    SchemaUtils.getSchemaForType(rides.getPipeline(), TaxiObjects.TaxiEvent.class);
+                    SchemaUtils.getSchemaForType(rides.getPipeline(), TaxiEvent.class);
 
             return ridesAsStrings.apply(
                     "Parse from Json String",
-                    FromJsonString.<TaxiObjects.TaxiEvent>builder()
+                    FromJsonString.<TaxiEvent>builder()
                             .schema(taxiEventSchema)
-                            .clz(TaxiObjects.TaxiEvent.class)
+                            .clz(TaxiEvent.class)
                             .build());
         }
     }
@@ -93,7 +94,7 @@ public class TaxiEventProcessor {
 
             PCollection<Row> rows = allRows.get(JsonStringParser.RESULTS_TAG);
             PCollection<Row> errorRows = allRows.get(JsonStringParser.ERRORS_TAG);
-            PCollection<TaxiObjects.ParsingError> errorMessages =
+            PCollection<ParsingError> errorMessages =
                     errorRows.apply("Convert to ErrorMessage", new RowToError());
 
             // Convert row objects to input type
@@ -110,12 +111,11 @@ public class TaxiEventProcessor {
 
         private final Pipeline p;
         private final PCollection<T> parsed;
-        private final PCollection<TaxiObjects.ParsingError> errors;
+        private final PCollection<ParsingError> errors;
         private final TupleTag<T> parsedTag = new TupleTag<>() {};
-        private final TupleTag<TaxiObjects.ParsingError> errorsTag = new TupleTag<>() {};
+        private final TupleTag<ParsingError> errorsTag = new TupleTag<>() {};
 
-        public ParsingOutput(
-                Pipeline p, PCollection<T> parsed, PCollection<TaxiObjects.ParsingError> errors) {
+        public ParsingOutput(Pipeline p, PCollection<T> parsed, PCollection<ParsingError> errors) {
             this.p = p;
             this.parsed = parsed;
             this.errors = errors;
@@ -139,7 +139,7 @@ public class TaxiEventProcessor {
             return parsed;
         }
 
-        public PCollection<TaxiObjects.ParsingError> getErrors() {
+        public PCollection<ParsingError> getErrors() {
             return errors;
         }
     }
@@ -154,7 +154,7 @@ public class TaxiEventProcessor {
         public PCollectionRowTuple expand(PCollection<String> input) {
 
             Schema taxiEventSchema =
-                    SchemaUtils.getSchemaForType(input.getPipeline(), TaxiObjects.TaxiEvent.class);
+                    SchemaUtils.getSchemaForType(input.getPipeline(), TaxiEvent.class);
             JsonToRow.ParseResult parseResult =
                     input.apply(
                             JsonToRow.withExceptionReporting(taxiEventSchema)

@@ -99,6 +99,9 @@ public class TaxiObjects {
 
         @SchemaFieldName("new_event")
         public abstract @Nullable TaxiEvent getNewEvent();
+
+        @SchemaFieldName("sequence_number")
+        public abstract Long getSequenceNumber();
     }
 
     @AutoValue

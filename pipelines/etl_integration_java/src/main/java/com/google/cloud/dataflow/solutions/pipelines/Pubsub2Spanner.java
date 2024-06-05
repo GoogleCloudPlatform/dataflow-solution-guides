@@ -16,7 +16,7 @@
 
 package com.google.cloud.dataflow.solutions.pipelines;
 
-import com.google.cloud.dataflow.solutions.data.TaxiObjects;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects.TaxiEvent;
 import com.google.cloud.dataflow.solutions.load.Spanner;
 import com.google.cloud.dataflow.solutions.options.SpannerPublisherOptions;
 import com.google.cloud.dataflow.solutions.transform.TaxiEventProcessor;
@@ -36,9 +36,9 @@ public class Pubsub2Spanner {
         PCollection<PubsubMessage> msgs =
                 p.apply("Read topic", PubsubIO.readMessages().fromTopic(options.getPubsubTopic()));
 
-        TaxiEventProcessor.ParsingOutput<TaxiObjects.TaxiEvent> parsed =
+        TaxiEventProcessor.ParsingOutput<TaxiEvent> parsed =
                 msgs.apply("Parse", TaxiEventProcessor.FromPubsubMessage.parse());
-        PCollection<TaxiObjects.TaxiEvent> taxiEvents = parsed.getParsedData();
+        PCollection<TaxiEvent> taxiEvents = parsed.getParsedData();
 
         taxiEvents.apply(
                 "Write",

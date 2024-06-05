@@ -33,6 +33,7 @@ variable "network_prefix" {
 variable "organization" {
   description = "Organization for the project/resources"
   type        = string
+  default     = null
 }
 
 variable "project_create" {

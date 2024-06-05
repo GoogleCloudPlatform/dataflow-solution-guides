@@ -16,8 +16,11 @@
 
 package com.google.cloud.dataflow.solutions.transform;
 
+import static com.google.cloud.dataflow.solutions.data.TaxiObjects.*;
+
 import com.google.cloud.dataflow.solutions.data.SchemaUtils;
-import com.google.cloud.dataflow.solutions.data.TaxiObjects;
+import com.google.cloud.dataflow.solutions.transform.TaxiEventProcessor.ParsingOutput;
+import org.apache.beam.sdk.io.gcp.bigquery.RowMutationInformation;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.DataChangeRecord;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.Mod;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.ModType;
@@ -28,27 +31,43 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 
+import java.util.Objects;
+
 public class CDCProcessor {
 
-    private static class ParseCDCRecord
-            extends PTransform<PCollection<DataChangeRecord>, PCollection<TaxiObjects.CDCValue>> {
+    public static class ParseCDCRecord
+            extends PTransform<PCollection<DataChangeRecord>, ParsingOutput<CDCValue>> {
+        public static ParseCDCRecord create() {
+            return new ParseCDCRecord();
+        }
+
         @Override
-        public PCollection<TaxiObjects.CDCValue> expand(PCollection<DataChangeRecord> input) {
+        public ParsingOutput<CDCValue> expand(PCollection<DataChangeRecord> input) {
             PCollection<String> jsons = input.apply("ToJson", ParDo.of(new RecordToJsonDoFn()));
 
-            Schema cdcSchema =
-                    SchemaUtils.getSchemaForType(input.getPipeline(), TaxiObjects.CDCValue.class);
+            Schema cdcSchema = SchemaUtils.getSchemaForType(input.getPipeline(), CDCValue.class);
 
-            TaxiEventProcessor.ParsingOutput<TaxiObjects.CDCValue> parsingOutput =
-                    jsons.apply(
-                            "Parse from Json String",
-                            TaxiEventProcessor.FromJsonString.<TaxiObjects.CDCValue>builder()
-                                    .schema(cdcSchema)
-                                    .clz(TaxiObjects.CDCValue.class)
-                                    .build());
-
-            return parsingOutput.getParsedData();
+            return jsons.apply(
+                    "Parse from Json String",
+                    TaxiEventProcessor.FromJsonString.<CDCValue>builder()
+                            .schema(cdcSchema)
+                            .clz(CDCValue.class)
+                            .build());
         }
+    }
+
+    public static RowMutationInformation rowMutationInformation(CDCValue cdc) {
+        RowMutationInformation.MutationType mutationType = RowMutationInformation.MutationType.UPSERT;
+        if (Objects.requireNonNull(cdc.getModType()) == ModType.DELETE) {
+            mutationType = RowMutationInformation.MutationType.DELETE;
+        }
+
+        return RowMutationInformation.of(mutationType, );
+
+        return null;
+
+
+
     }
 
     private static class RecordToJsonDoFn extends DoFn<DataChangeRecord, String> {
@@ -62,6 +81,9 @@ public class CDCProcessor {
                                 + " capture type is : "
                                 + valueCaptureType);
             }
+
+            Long sequenceNumber = Long.valueOf(record.getRecordSequence());
+
             for (Mod mod : record.getMods()) {
                 switch (record.getModType()) {
                     case INSERT -> {
