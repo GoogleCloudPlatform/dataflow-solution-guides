@@ -20,7 +20,8 @@ python main.py \
   --save_main_session \
   --machine_type=$MACHINE_TYPE \
   --num_workers=1 \
-  --max_num_workers=1 \
+  --disk_size_gb=$DISK_SIZE_GB \
+  --max_num_workers=$MAX_DATAFLOW_WORKERS \
   --no_use_public_ip \
   --service_account_email=$SERVICE_ACCOUNT \
   --subnetwork=$SUBNETWORK \

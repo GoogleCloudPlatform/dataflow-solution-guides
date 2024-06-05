@@ -65,12 +65,12 @@ public class SpannerChangeStream2BigQuery {
         PCollection<CDCValue> parsedData = parsedChanges.getParsedData();
         PCollection<ParsingError> errors = parsedChanges.getErrors();
 
-        parsedData.apply("Sync with BQ",
-                BigQueryIO.write().to("")
-                        .withSchema(null)
-                        .withPrimaryKey(List.of())
-                        .withFormatFunction(null)
-                        .withRowMutationInformationFn(cdc -> RowMutationInformation.of(cdc)))
+//        parsedData.apply("Sync with BQ",
+//                BigQueryIO.write().to("")
+//                        .withSchema(null)
+//                        .withPrimaryKey(List.of())
+//                        .withFormatFunction(null)
+//                        .withRowMutationInformationFn(cdc -> RowMutationInformation.of(cdc)))
 
 
         return p;

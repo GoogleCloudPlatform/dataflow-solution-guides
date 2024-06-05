@@ -62,7 +62,7 @@ public class CDCProcessor {
             mutationType = RowMutationInformation.MutationType.DELETE;
         }
 
-        return RowMutationInformation.of(mutationType, );
+//        return RowMutationInformation.of(mutationType, );
 
         return null;
 
