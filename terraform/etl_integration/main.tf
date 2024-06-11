@@ -27,7 +27,7 @@ locals {
 
 // Project
 module "google_cloud_project" {
-  source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v30.0.0"
+  source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v31.1.0"
   billing_account = var.billing_account
   project_create  = var.project_create
   name            = var.project_id
@@ -44,7 +44,7 @@ module "google_cloud_project" {
 
 // Buckets for staging data, scripts, etc, in the two regions
 module "buckets" {
-  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v30.0.0"
+  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v31.1.0"
   project_id    = module.google_cloud_project.project_id
   name          = module.google_cloud_project.project_id
   location      = var.region
@@ -54,7 +54,7 @@ module "buckets" {
 
 // BigQuery dataset for final destination
 module "dataset" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v30.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v31.1.0"
   project_id = module.google_cloud_project.project_id
   id         = local.bigquery_dataset
   access = {
@@ -131,7 +131,7 @@ resource "google_spanner_database_iam_binding" "read_write_metadata" {
 
 // Service account
 module "dataflow_sa" {
-  source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v30.0.0"
+  source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v31.1.0"
   project_id   = module.google_cloud_project.project_id
   name         = local.dataflow_service_account
   generate_key = false
@@ -147,7 +147,7 @@ module "dataflow_sa" {
 
 // Network
 module "vpc_network" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v30.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v31.1.0"
   project_id = module.google_cloud_project.project_id
   name       = "${var.network_prefix}-net"
   subnets = [
@@ -166,7 +166,7 @@ module "vpc_network" {
 
 module "firewall_rules" {
   // Default rules for internal traffic + SSH access via IAP
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v30.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v31.1.0"
   project_id = module.google_cloud_project.project_id
   network    = module.vpc_network.name
   default_rules_config = {
@@ -194,7 +194,7 @@ module "firewall_rules" {
 // So we can get to Internet if necessary (from the Dataflow region)
 module "regional_nat" {
   count          = var.internet_access ? 1 : 0
-  source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v30.0.0"
+  source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v31.1.0"
   project_id     = module.google_cloud_project.project_id
   region         = var.region
   name           = "${var.network_prefix}-nat"
