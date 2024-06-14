@@ -17,6 +17,7 @@
 package com.google.cloud.dataflow.solutions.data;
 
 import com.google.auto.value.AutoValue;
+import java.util.List;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.ModType;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
@@ -85,6 +86,10 @@ public class TaxiObjects {
             public abstract Builder setPassengerCount(Integer value);
 
             public abstract TaxiEvent build();
+        }
+
+        public static List<String> primaryKeys() {
+            return List.of("ride_id", "point_idx");
         }
     }
 

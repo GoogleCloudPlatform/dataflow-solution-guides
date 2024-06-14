@@ -17,22 +17,19 @@
 package com.google.cloud.dataflow.solutions.pipelines;
 
 import com.google.cloud.Timestamp;
-import com.google.cloud.dataflow.solutions.data.TaxiObjects;
 import com.google.cloud.dataflow.solutions.data.TaxiObjects.CDCValue;
 import com.google.cloud.dataflow.solutions.data.TaxiObjects.ParsingError;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects.TaxiEvent;
 import com.google.cloud.dataflow.solutions.options.ChangeStreamOptions;
-import java.time.Instant;
-import java.util.List;
-
 import com.google.cloud.dataflow.solutions.transform.CDCProcessor;
-import com.google.cloud.dataflow.solutions.transform.TaxiEventProcessor;
 import com.google.cloud.dataflow.solutions.transform.TaxiEventProcessor.ParsingOutput;
+import java.time.Instant;
 import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
-import org.apache.beam.sdk.io.gcp.bigquery.RowMutationInformation;
 import org.apache.beam.sdk.io.gcp.spanner.SpannerIO;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.DataChangeRecord;
+import org.apache.beam.sdk.schemas.NoSuchSchemaException;
 import org.apache.beam.sdk.values.PCollection;
 
 public class SpannerChangeStream2BigQuery {
@@ -41,7 +38,8 @@ public class SpannerChangeStream2BigQuery {
                 Instant.now().minusSeconds(catchupMinutes * 60).getEpochSecond(), 0);
     }
 
-    public static Pipeline createPipeline(ChangeStreamOptions options) {
+    public static Pipeline createPipeline(ChangeStreamOptions options)
+            throws NoSuchSchemaException {
         String projectId = options.as(DataflowPipelineOptions.class).getProject();
 
         Pipeline p = Pipeline.create(options);
@@ -60,18 +58,19 @@ public class SpannerChangeStream2BigQuery {
                                 .withInclusiveStartAt(
                                         getCatchupTimestamp(options.getCatchUpMinutes())));
 
-        ParsingOutput<CDCValue> parsedChanges = changes.apply("Parse changes", CDCProcessor.ParseCDCRecord.create());
+        ParsingOutput<CDCValue> parsedChanges =
+                changes.apply("Parse changes", CDCProcessor.ParseCDCRecord.create());
 
         PCollection<CDCValue> parsedData = parsedChanges.getParsedData();
         PCollection<ParsingError> errors = parsedChanges.getErrors();
 
-//        parsedData.apply("Sync with BQ",
-//                BigQueryIO.write().to("")
-//                        .withSchema(null)
-//                        .withPrimaryKey(List.of())
-//                        .withFormatFunction(null)
-//                        .withRowMutationInformationFn(cdc -> RowMutationInformation.of(cdc)))
-
+        parsedData.apply(
+                "Sync with BQ",
+                BigQueryIO.<CDCValue>write()
+                        .to("")
+                        .withPrimaryKey(TaxiEvent.primaryKeys())
+                        .withFormatFunction(null)
+                        .withRowMutationInformationFn(CDCProcessor::rowMutationInformation));
 
         return p;
     }

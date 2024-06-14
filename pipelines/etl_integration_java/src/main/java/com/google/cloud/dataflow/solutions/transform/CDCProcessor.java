@@ -16,10 +16,13 @@
 
 package com.google.cloud.dataflow.solutions.transform;
 
-import static com.google.cloud.dataflow.solutions.data.TaxiObjects.*;
+import static com.google.cloud.dataflow.solutions.data.TaxiObjects.CDCValue;
 
+import com.google.api.services.bigquery.model.TableRow;
 import com.google.cloud.dataflow.solutions.data.SchemaUtils;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects;
 import com.google.cloud.dataflow.solutions.transform.TaxiEventProcessor.ParsingOutput;
+import java.util.Objects;
 import org.apache.beam.sdk.io.gcp.bigquery.RowMutationInformation;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.DataChangeRecord;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.Mod;
@@ -30,8 +33,6 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
-
-import java.util.Objects;
 
 public class CDCProcessor {
 
@@ -57,17 +58,28 @@ public class CDCProcessor {
     }
 
     public static RowMutationInformation rowMutationInformation(CDCValue cdc) {
-        RowMutationInformation.MutationType mutationType = RowMutationInformation.MutationType.UPSERT;
+        Long sequenceNumber = 0L;
+        if (cdc != null) {
+            sequenceNumber = cdc.getSequenceNumber();
+        }
+
+        RowMutationInformation.MutationType mutationType =
+                RowMutationInformation.MutationType.UPSERT;
         if (Objects.requireNonNull(cdc.getModType()) == ModType.DELETE) {
             mutationType = RowMutationInformation.MutationType.DELETE;
         }
 
-//        return RowMutationInformation.of(mutationType, );
+        return RowMutationInformation.of(mutationType, sequenceNumber);
+    }
+
+    public static TableRow formatFunction(CDCValue cdc) {
+        switch (cdc.getModType()) {
+            case INSERT -> {
+                TaxiObjects.TaxiEvent newEvent = cdc.getNewEvent();
+            }
+        }
 
         return null;
-
-
-
     }
 
     private static class RecordToJsonDoFn extends DoFn<DataChangeRecord, String> {
@@ -87,17 +99,23 @@ public class CDCProcessor {
             for (Mod mod : record.getMods()) {
                 switch (record.getModType()) {
                     case INSERT -> {
-                        receiver.output(formatJson(mod.getNewValuesJson(), record.getModType()));
+                        receiver.output(
+                                formatJson(
+                                        mod.getNewValuesJson(),
+                                        record.getModType(),
+                                        sequenceNumber));
                     }
                     case DELETE -> {
-                        receiver.output(formatJson(mod.getKeysJson(), record.getModType()));
+                        receiver.output(
+                                formatJson(mod.getKeysJson(), record.getModType(), sequenceNumber));
                     }
                     case UPDATE -> {
                         receiver.output(
                                 formatJson(
                                         mod.getOldValuesJson(),
                                         mod.getNewValuesJson(),
-                                        record.getModType()));
+                                        record.getModType(),
+                                        sequenceNumber));
                     }
                     case UNKNOWN -> throw new IllegalArgumentException(
                             "UNKNOWN mod type, not supported");
@@ -105,17 +123,19 @@ public class CDCProcessor {
             }
         }
 
-        private static String formatJson(String newValue, ModType modType) {
-            return formatJson("", newValue, modType);
+        private static String formatJson(String newValue, ModType modType, Long sequenceNumber) {
+            return formatJson("", newValue, modType, sequenceNumber);
         }
 
-        private static String formatJson(String oldValue, String newValue, ModType modType) {
+        private static String formatJson(
+                String oldValue, String newValue, ModType modType, Long sequenceNumber) {
             if (oldValue == null || oldValue.isBlank()) oldValue = "\"\"";
             if (newValue == null || newValue.isBlank()) newValue = "\"\"";
 
             return String.format(
-                    "{\"new_event\": %s, \"old_event\": %s, \"mod_type\": \"%s\"}",
-                    newValue, oldValue, modType.toString());
+                    "{\"new_event\": %s, \"old_event\": %s, \"mod_type\": \"%s\","
+                            + " \"sequence_number\": %d}",
+                    newValue, oldValue, modType.toString(), sequenceNumber);
         }
     }
 }
