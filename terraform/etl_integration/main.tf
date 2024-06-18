@@ -220,6 +220,8 @@ export SPANNER_DATABASE=${local.spanner_database}
 export SPANNER_TABLE=${local.spanner_table}
 export SPANNER_CHANGE_STREAM=${local.spanner_change_stream}
 
+export BIGQUERY_DATASET=${local.bigquery_dataset}
+
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 FILE
 }
