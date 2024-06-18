@@ -90,7 +90,7 @@ public class TaxiEventProcessor {
 
         @Override
         public ParsingOutput<T> expand(PCollection<String> input) {
-            PCollectionRowTuple allRows = input.apply("Convert to Row", new JsonStringParser());
+            PCollectionRowTuple allRows = input.apply("Convert to Row", new JsonStringParser(schema()));
 
             PCollection<Row> rows = allRows.get(JsonStringParser.RESULTS_TAG);
             PCollection<Row> errorRows = allRows.get(JsonStringParser.ERRORS_TAG);
@@ -149,15 +149,19 @@ public class TaxiEventProcessor {
 
         public static final String RESULTS_TAG = "RESULTS_TAG";
         public static final String ERRORS_TAG = "ERRORS_TAG";
+        private final Schema schema;
+
+
+        public JsonStringParser(Schema schema) {
+
+            this.schema = schema;
+        }
 
         @Override
         public PCollectionRowTuple expand(PCollection<String> input) {
-
-            Schema taxiEventSchema =
-                    SchemaUtils.getSchemaForType(input.getPipeline(), TaxiEvent.class);
             JsonToRow.ParseResult parseResult =
                     input.apply(
-                            JsonToRow.withExceptionReporting(taxiEventSchema)
+                            JsonToRow.withExceptionReporting(this.schema)
                                     .withExtendedErrorInfo());
 
             PCollection<Row> results = parseResult.getResults();

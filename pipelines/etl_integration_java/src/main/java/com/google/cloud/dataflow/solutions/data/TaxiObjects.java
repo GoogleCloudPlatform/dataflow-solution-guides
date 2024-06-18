@@ -16,6 +16,7 @@
 
 package com.google.cloud.dataflow.solutions.data;
 
+import com.google.api.services.bigquery.model.TableRow;
 import com.google.auto.value.AutoValue;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -107,6 +108,37 @@ public class TaxiObjects {
 
         @SchemaFieldName("sequence_number")
         public abstract Long getSequenceNumber();
+    }
+
+    @DefaultSchema(AutoValueSchema.class)
+    @AutoValue
+    public abstract static class MergedCDCValue {
+        @SchemaFieldName("event")
+        public abstract TableRow getTableRow();
+
+        @SchemaFieldName("sequence_number")
+        public abstract Long getSequenceNumber();
+
+        @SchemaFieldName("mod_type")
+        public abstract ModType getModType();
+
+        public abstract Builder toBuilder();
+
+        public static Builder builder() {
+            return new AutoValue_TaxiObjects_MergedCDCValue.Builder();
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder {
+
+            public abstract Builder setTableRow(TableRow value);
+
+            public abstract Builder setSequenceNumber(Long value);
+
+            public abstract Builder setModType(ModType value);
+
+            public abstract MergedCDCValue build();
+        }
     }
 
     @AutoValue

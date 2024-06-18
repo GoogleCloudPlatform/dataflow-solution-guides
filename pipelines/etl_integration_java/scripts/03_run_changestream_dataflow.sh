@@ -13,8 +13,8 @@
   --maxNumWorkers=$MAX_DATAFLOW_WORKERS \
   --experiments=enable_data_sampling;use_network_tags=ssh;dataflow \
   --usePublicIps=false \
-  --pubsubTopic=$TOPIC \
   --spannerInstance=$SPANNER_INSTANCE \
   --spannerDatabase=$SPANNER_DATABASE \
   --spannerChangeStream=$SPANNER_CHANGE_STREAM \
-  --pubsubOutputTopicCount=$PUBSUB_TOPIC_COUNT"
+  --bigQueryDataset=$BIGQUERY_DATASET \
+  --bigQueryTable=$SPANNER_TABLE"

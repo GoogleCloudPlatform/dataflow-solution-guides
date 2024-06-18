@@ -33,9 +33,33 @@ public interface ChangeStreamOptions extends SpannerOptions {
 
     String getBigQueryDataset();
 
+    @Validation.Required
+    @Description("BigQuery destination table")
+    void setBigQueryTable(String t);
+
+    String getBigQueryTable();
+
+    @Description("Errors table in BigQuery")
+    void setBigQueryErrorsTable(String t);
+
+    @Default.String("errors")
+    String getBigQueryErrorsTable();
+
     @Description("Catch up time for the change stream")
     void setCatchUpMinutes(long t);
 
     @Default.Long(10)
     long getCatchUpMinutes();
+
+    @Description("Metadata database name")
+    void setMetadataDatabase(String d);
+
+    @Default.String("metadata")
+    String getMetadataDatabase();
+
+    @Description("Metadata table name")
+    void setMyMetadataTable(String t);
+
+    @Default.String("change_stream")
+    String getMyMetadataTable();
 }
