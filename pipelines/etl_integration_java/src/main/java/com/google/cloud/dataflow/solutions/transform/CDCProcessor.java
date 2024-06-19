@@ -20,7 +20,8 @@ import static com.google.cloud.dataflow.solutions.data.TaxiObjects.CDCValue;
 
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.cloud.dataflow.solutions.data.SchemaUtils;
-import com.google.cloud.dataflow.solutions.data.TaxiObjects.MergedCDCValue;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects.CDCValueForBQ;
 import com.google.cloud.dataflow.solutions.data.TaxiObjects.TaxiEvent;
 import com.google.cloud.dataflow.solutions.transform.TaxiEventProcessor.ParsingOutput;
 import java.util.Objects;
@@ -46,13 +47,14 @@ import org.apache.beam.sdk.values.TypeDescriptor;
 public class CDCProcessor {
 
     public static class ParseCDCRecord
-            extends PTransform<PCollection<DataChangeRecord>, ParsingOutput<MergedCDCValue>> {
+            extends PTransform<
+                    PCollection<DataChangeRecord>, ParsingOutput<TaxiObjects.CDCValueForBQ>> {
         public static ParseCDCRecord create() {
             return new ParseCDCRecord();
         }
 
         @Override
-        public ParsingOutput<MergedCDCValue> expand(PCollection<DataChangeRecord> input) {
+        public ParsingOutput<CDCValueForBQ> expand(PCollection<DataChangeRecord> input) {
             PCollection<String> jsons = input.apply("ToJson", ParDo.of(new RecordToJsonDoFn()));
 
             Schema cdcSchema = SchemaUtils.getSchemaForType(input.getPipeline(), CDCValue.class);
@@ -75,15 +77,15 @@ public class CDCProcessor {
             SerializableFunction<TaxiEvent, Row> toRowFunction =
                     converted.outputSchemaCoder.getToRowFunction();
 
-            PCollection<MergedCDCValue> mergedCdc =
+            PCollection<CDCValueForBQ> mergedCdc =
                     parsed.getParsedData()
-                            .apply("Merge CDC", ParDo.of(new MergeCDCDoFn(toRowFunction)));
+                            .apply("Convert to BQ", ParDo.of(new ToBQFormatDoFn(toRowFunction)));
 
             return new ParsingOutput<>(input.getPipeline(), mergedCdc, parsed.getErrors());
         }
     }
 
-    public static RowMutationInformation rowMutationInformation(MergedCDCValue cdc) {
+    public static RowMutationInformation rowMutationInformation(CDCValueForBQ cdc) {
         Long sequenceNumber = 0L;
         if (cdc != null) {
             sequenceNumber = cdc.getSequenceNumber();
@@ -91,7 +93,7 @@ public class CDCProcessor {
 
         RowMutationInformation.MutationType mutationType =
                 RowMutationInformation.MutationType.UPSERT;
-        if (Objects.requireNonNull(cdc.getModType()) == ModType.DELETE) {
+        if (Objects.requireNonNull(cdc).getModType().equals("DELETE")) {
             mutationType = RowMutationInformation.MutationType.DELETE;
         }
 
@@ -114,7 +116,7 @@ public class CDCProcessor {
 
             for (Mod mod : record.getMods()) {
                 switch (record.getModType()) {
-                    case INSERT -> {
+                    case INSERT, UPDATE -> {
                         receiver.output(
                                 formatJson(
                                         mod.getKeysJson(),
@@ -130,15 +132,6 @@ public class CDCProcessor {
                                         record.getModType(),
                                         sequenceNumber));
                     }
-                    case UPDATE -> {
-                        receiver.output(
-                                formatJson(
-                                        mod.getKeysJson(),
-                                        mod.getOldValuesJson(),
-                                        mod.getNewValuesJson(),
-                                        record.getModType(),
-                                        sequenceNumber));
-                    }
                     case UNKNOWN -> throw new IllegalArgumentException(
                             "UNKNOWN mod type, not supported");
                 }
@@ -146,25 +139,9 @@ public class CDCProcessor {
         }
 
         private String formatJson(
-                String keysJson, String newValue, ModType modType, Long sequenceNumber) {
-            return formatJson(keysJson, newValue, "", modType, sequenceNumber);
-        }
-
-        private String formatJson(
-                String keysJson,
-                String newValue,
-                String oldValue,
-                ModType modType,
-                Long sequenceNumber) {
+                String keysJson, String value, ModType modType, Long sequenceNumber) {
             // The keys JSON is sent in a different string to the rest of the columns, we need to
             // merge both together
-            if (oldValue == null || oldValue.isBlank() || modType.equals(ModType.INSERT)) {
-                oldValue = "\"\"";
-            }
-            if (newValue == null || newValue.isBlank() || modType.equals(ModType.DELETE)) {
-                newValue = "\"\"";
-            }
-
             String regex = "\\{(.*?)\\}";
             Pattern pattern = Pattern.compile(regex);
             Matcher matcherKeys = pattern.matcher(keysJson);
@@ -174,44 +151,43 @@ public class CDCProcessor {
                 keysUnwrapped = matcherKeys.group(1);
             }
 
-            Matcher matcherNewValue = pattern.matcher(newValue);
+            Matcher matcherNewValue = pattern.matcher(value);
 
-            String newValueUnwrapped = "";
+            String valueUnwrapped = "";
             if (matcherNewValue.find()) {
-                newValueUnwrapped = matcherNewValue.group(1);
+                valueUnwrapped = matcherNewValue.group(1);
             }
 
-            String newValueMerged = String.format("{%s, %s}", newValueUnwrapped, keysUnwrapped);
+            String newValueMerged = String.format("{%s, %s}", valueUnwrapped, keysUnwrapped);
 
             return String.format(
-                    "{\"new_event\": %s, \"old_event\": %s, \"mod_type\": \"%s\","
-                            + " \"sequence_number\": %d}",
-                    newValueMerged, oldValue, modType.toString(), sequenceNumber);
+                    "{\"event\": %s, \"mod_type\": \"%s\", \"sequence_number\": %d}",
+                    newValueMerged, modType.toString(), sequenceNumber);
         }
     }
 
-    private static class MergeCDCDoFn extends DoFn<CDCValue, MergedCDCValue> {
+    private static class ToBQFormatDoFn extends DoFn<CDCValue, CDCValueForBQ> {
         private final SerializableFunction<TaxiEvent, Row> taxiToRowFunction;
 
-        public MergeCDCDoFn(SerializableFunction<TaxiEvent, Row> taxiToRowFunction) {
+        public ToBQFormatDoFn(SerializableFunction<TaxiEvent, Row> taxiToRowFunction) {
             this.taxiToRowFunction = taxiToRowFunction;
         }
 
         @ProcessElement
-        public void processElement(@Element CDCValue cdc, OutputReceiver<MergedCDCValue> receiver) {
+        public void processElement(@Element CDCValue cdc, OutputReceiver<CDCValueForBQ> receiver) {
             switch (cdc.getModType()) {
-                case INSERT, DELETE, UPDATE -> {
-                    Row taxiRow = taxiToRowFunction.apply(cdc.getNewEvent());
+                case "INSERT", "DELETE", "UPDATE" -> {
+                    Row taxiRow = taxiToRowFunction.apply(cdc.getEvent());
                     TableRow tr = BigQueryUtils.toTableRow(taxiRow);
 
                     receiver.output(
-                            MergedCDCValue.builder()
+                            TaxiObjects.CDCValueForBQ.builder()
                                     .setTableRow(tr)
                                     .setModType(cdc.getModType())
                                     .setSequenceNumber(cdc.getSequenceNumber())
                                     .build());
                 }
-                case UNKNOWN -> throw new IllegalArgumentException(
+                case "UNKNOWN" -> throw new IllegalArgumentException(
                         "UNKNOWN mod type, not supported");
             }
         }

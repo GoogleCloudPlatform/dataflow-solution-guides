@@ -20,7 +20,6 @@ import com.google.api.services.bigquery.model.TableRow;
 import com.google.auto.value.AutoValue;
 import java.util.List;
 import javax.annotation.Nullable;
-import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.ModType;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
@@ -60,6 +59,33 @@ public class TaxiObjects {
         @SchemaFieldName("passenger_count")
         public abstract Integer getPassengerCount();
 
+        public static Builder builder() {
+            return new AutoValue_TaxiObjects_TaxiEvent.Builder();
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder {
+            public abstract Builder setRideId(String value);
+
+            public abstract Builder setPointIdx(Integer value);
+
+            public abstract Builder setLatitude(Double latitude);
+
+            public abstract Builder setLongitude(Double longitude);
+
+            public abstract Builder setTimeStamp(String value);
+
+            public abstract Builder setMeterReading(Double value);
+
+            public abstract Builder setMeterIncrement(Double value);
+
+            public abstract Builder setRideStatus(String value);
+
+            public abstract Builder setPassengerCount(Integer value);
+
+            public abstract TaxiEvent build();
+        }
+
         public static List<String> primaryKeys() {
             return List.of("ride_id", "point_idx");
         }
@@ -69,21 +95,33 @@ public class TaxiObjects {
     @AutoValue
     public abstract static class CDCValue {
         @SchemaFieldName("mod_type")
-        public abstract ModType getModType();
+        public abstract String getModType();
 
-        @SchemaFieldName("old_event")
-        public abstract @Nullable TaxiEvent getOldEvent();
-
-        @SchemaFieldName("new_event")
-        public abstract @Nullable TaxiEvent getNewEvent();
+        @SchemaFieldName("event")
+        public abstract @Nullable TaxiEvent getEvent();
 
         @SchemaFieldName("sequence_number")
         public abstract Long getSequenceNumber();
+
+        public static Builder builder() {
+            return new AutoValue_TaxiObjects_CDCValue.Builder();
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder {
+            public abstract Builder setModType(String value);
+
+            public abstract Builder setEvent(TaxiEvent value);
+
+            public abstract Builder setSequenceNumber(Long value);
+
+            public abstract CDCValue build();
+        }
     }
 
     @DefaultSchema(AutoValueSchema.class)
     @AutoValue
-    public abstract static class MergedCDCValue {
+    public abstract static class CDCValueForBQ {
         @SchemaFieldName("event")
         public abstract TableRow getTableRow();
 
@@ -91,12 +129,10 @@ public class TaxiObjects {
         public abstract Long getSequenceNumber();
 
         @SchemaFieldName("mod_type")
-        public abstract ModType getModType();
-
-        public abstract Builder toBuilder();
+        public abstract String getModType();
 
         public static Builder builder() {
-            return new AutoValue_TaxiObjects_MergedCDCValue.Builder();
+            return new AutoValue_TaxiObjects_CDCValueForBQ.Builder();
         }
 
         @AutoValue.Builder
@@ -106,9 +142,9 @@ public class TaxiObjects {
 
             public abstract Builder setSequenceNumber(Long value);
 
-            public abstract Builder setModType(ModType value);
+            public abstract Builder setModType(String value);
 
-            public abstract MergedCDCValue build();
+            public abstract CDCValueForBQ build();
         }
     }
 
