@@ -10,8 +10,6 @@ jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
-    environment: production
-
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
       run:
@@ -49,7 +47,7 @@ jobs:
         ls -d */ | while read d
         do
         echo "Running tf format check in directory: $d"
-        cd $d && terraform fmt -check && cd ..
+        cd $d && terraform fmt -check
         done
 
     # Generates an execution plan for Terraform
