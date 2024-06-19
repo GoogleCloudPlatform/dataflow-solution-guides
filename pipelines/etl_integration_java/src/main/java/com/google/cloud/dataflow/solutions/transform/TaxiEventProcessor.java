@@ -206,22 +206,23 @@ public class TaxiEventProcessor {
             this.schema = schema;
         }
 
-        @Setup
-        public void setup() {
-            mapper = new ObjectMapper();
+        private ObjectMapper mapper() {
+            if (mapper == null) {
+                this.mapper = new ObjectMapper();
+            }
+            return mapper;
         }
 
         @ProcessElement
         public void processElement(@Element String jsonStr, OutputReceiver<String> receiver) {
             try {
-                JsonNode jsonNode = mapper.readTree(jsonStr);
+                JsonNode jsonNode = mapper().readTree(jsonStr);
                 JsonNode sanitized = sanitizeNode(jsonNode, schema);
                 String sanitizedJsonStr = sanitized.toString();
                 receiver.output(sanitizedJsonStr);
             } catch (JsonProcessingException e) {
-                // Just pass the string to the next transformation, and let that one report the
-                // JSON parsing
-                // error
+                // Just pass the string to the next transformation, and let that one report the JSON
+                // parsing error
                 receiver.output(jsonStr);
             }
         }
