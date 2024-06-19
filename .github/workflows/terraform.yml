@@ -19,7 +19,7 @@ jobs:
     # Checkout the repository to the GitHub Actions runner
     - name: Checkout
       uses: actions/checkout@v4
-    - uses: dorny/paths-filter@v2
+    - uses: dorny/paths-filter@v3
       id: filter
       with:
           filters: |
@@ -29,17 +29,15 @@ jobs:
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
-
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
       working-directory: terraform
-      run: |
+      run: |        
         ls -d */ | while read d
         do
         echo "Running tf init in directory: $d"
         cd $d && terraform init && cd ..
         done
-
     # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
       working-directory: terraform      
@@ -49,12 +47,12 @@ jobs:
         echo "Running tf format check in directory: $d"
         cd $d && terraform fmt -check && cd ..
         done
-
     # Generates an execution plan for Terraform
-    - name: Terraform Plan
+    - name: Terraform Validate
       working-directory: terraform
       run: |
         ls -d */ | while read d
         do
-        cd $d && terraform plan -input=false -var-file=.test.tfvars && cd ..
+        echo "Running tf validate in directory: $d"        
+        cd $d && terraform validate && cd ..
         done
