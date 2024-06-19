@@ -92,7 +92,8 @@ public class SpannerChangeStream2BigQuery {
                         .withRowMutationInformationFn(CDCProcessor::rowMutationInformation)
                         .withMethod(BigQueryIO.Write.Method.STORAGE_API_AT_LEAST_ONCE));
 
-        errors.apply("Write errors to BQ",
+        errors.apply(
+                "Write errors to BQ",
                 BigQueryIO.<ParsingError>write()
                         .to(
                                 new TableReference()

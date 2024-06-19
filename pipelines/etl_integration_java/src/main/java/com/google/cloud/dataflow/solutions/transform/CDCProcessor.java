@@ -24,6 +24,8 @@ import com.google.cloud.dataflow.solutions.data.TaxiObjects.MergedCDCValue;
 import com.google.cloud.dataflow.solutions.data.TaxiObjects.TaxiEvent;
 import com.google.cloud.dataflow.solutions.transform.TaxiEventProcessor.ParsingOutput;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryUtils;
 import org.apache.beam.sdk.io.gcp.bigquery.RowMutationInformation;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.DataChangeRecord;
@@ -64,7 +66,8 @@ public class CDCProcessor {
                                     .build());
 
             SchemaRegistry registry = input.getPipeline().getSchemaRegistry();
-            Schema schemaForTaxi = SchemaUtils.getSchemaForType(input.getPipeline(), TaxiEvent.class);
+            Schema schemaForTaxi =
+                    SchemaUtils.getSchemaForType(input.getPipeline(), TaxiEvent.class);
             ConvertHelpers.ConvertedSchemaInformation<TaxiEvent> converted =
                     ConvertHelpers.getConvertedSchemaInformation(
                             schemaForTaxi, TypeDescriptor.of(TaxiEvent.class), registry);
@@ -114,17 +117,23 @@ public class CDCProcessor {
                     case INSERT -> {
                         receiver.output(
                                 formatJson(
+                                        mod.getKeysJson(),
                                         mod.getNewValuesJson(),
                                         record.getModType(),
                                         sequenceNumber));
                     }
                     case DELETE -> {
                         receiver.output(
-                                formatJson(mod.getKeysJson(), record.getModType(), sequenceNumber));
+                                formatJson(
+                                        mod.getKeysJson(),
+                                        mod.getOldValuesJson(),
+                                        record.getModType(),
+                                        sequenceNumber));
                     }
                     case UPDATE -> {
                         receiver.output(
                                 formatJson(
+                                        mod.getKeysJson(),
                                         mod.getOldValuesJson(),
                                         mod.getNewValuesJson(),
                                         record.getModType(),
@@ -136,19 +145,48 @@ public class CDCProcessor {
             }
         }
 
-        private static String formatJson(String newValue, ModType modType, Long sequenceNumber) {
-            return formatJson("", newValue, modType, sequenceNumber);
+        private String formatJson(
+                String keysJson, String newValue, ModType modType, Long sequenceNumber) {
+            return formatJson(keysJson, newValue, "", modType, sequenceNumber);
         }
 
-        private static String formatJson(
-                String oldValue, String newValue, ModType modType, Long sequenceNumber) {
-            if (oldValue == null || oldValue.isBlank()) oldValue = "\"\"";
-            if (newValue == null || newValue.isBlank()) newValue = "\"\"";
+        private String formatJson(
+                String keysJson,
+                String newValue,
+                String oldValue,
+                ModType modType,
+                Long sequenceNumber) {
+            // The keys JSON is sent in a different string to the rest of the columns, we need to
+            // merge both together
+            if (oldValue == null || oldValue.isBlank() || modType.equals(ModType.INSERT)) {
+                oldValue = "\"\"";
+            }
+            if (newValue == null || newValue.isBlank() || modType.equals(ModType.DELETE)) {
+                newValue = "\"\"";
+            }
+
+            String regex = "\\{(.*?)\\}";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcherKeys = pattern.matcher(keysJson);
+
+            String keysUnwrapped = "";
+            if (matcherKeys.find()) {
+                keysUnwrapped = matcherKeys.group(1);
+            }
+
+            Matcher matcherNewValue = pattern.matcher(newValue);
+
+            String newValueUnwrapped = "";
+            if (matcherNewValue.find()) {
+                newValueUnwrapped = matcherNewValue.group(1);
+            }
+
+            String newValueMerged = String.format("{%s, %s}", newValueUnwrapped, keysUnwrapped);
 
             return String.format(
                     "{\"new_event\": %s, \"old_event\": %s, \"mod_type\": \"%s\","
                             + " \"sequence_number\": %d}",
-                    newValue, oldValue, modType.toString(), sequenceNumber);
+                    newValueMerged, oldValue, modType.toString(), sequenceNumber);
         }
     }
 

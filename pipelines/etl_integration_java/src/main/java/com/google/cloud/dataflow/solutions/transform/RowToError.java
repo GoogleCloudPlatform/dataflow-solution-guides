@@ -65,8 +65,8 @@ class RowToError extends PTransform<PCollection<Row>, PCollection<TaxiObjects.Pa
 
             out.output(
                     Row.withSchema(errorMessageSchema)
-                            .withFieldValue("inputData", inputData)
-                            .withFieldValue("errorMessage", errorMessage)
+                            .withFieldValue("input_data", inputData)
+                            .withFieldValue("error_message", errorMessage)
                             .withFieldValue("timestamp", timestamp)
                             .build());
         }
