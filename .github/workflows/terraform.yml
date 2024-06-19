@@ -34,24 +34,27 @@ jobs:
 
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
+      working-directory: terraform
       run: |
-        ls -d terraform/*/ | while read d
+        ls -d */ | while read d
         do
-        cd $d && terraform init && cd ../../
+        echo "Running tf init in directory: $d"
+        cd $d && terraform init && cd ..
         done
 
     # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
       run: |
-        ls -d terraform/*/ | while read d
+        ls -d */ | while read d
         do
-        cd $d && terraform fmt -check && cd ../../
+        echo "Running tf format check in directory: $d"
+        cd $d && terraform fmt -check && cd ..
         done
 
     # Generates an execution plan for Terraform
     - name: Terraform Plan
       run: |
-        ls -d terraform/*/ | while read d
+        ls -d */ | while read d
         do
-        cd $d && terraform plan -input=false && cd ../../
+        cd $d && terraform plan -input=false && cd ..
         done
