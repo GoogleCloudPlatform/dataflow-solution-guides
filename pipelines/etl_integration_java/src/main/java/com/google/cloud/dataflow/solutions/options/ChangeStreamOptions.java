@@ -45,12 +45,6 @@ public interface ChangeStreamOptions extends SpannerOptions {
     @Default.String("errors")
     String getBigQueryErrorsTable();
 
-    @Description("Catch up time for the change stream")
-    void setCatchUpMinutes(long t);
-
-    @Default.Long(10)
-    long getCatchUpMinutes();
-
     @Description("Metadata database name")
     void setMetadataDatabase(String d);
 

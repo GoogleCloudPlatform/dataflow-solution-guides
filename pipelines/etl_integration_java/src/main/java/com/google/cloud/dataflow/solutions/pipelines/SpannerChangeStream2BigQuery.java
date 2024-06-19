@@ -20,7 +20,8 @@ import com.google.api.services.bigquery.model.TableReference;
 import com.google.api.services.bigquery.model.TableSchema;
 import com.google.cloud.Timestamp;
 import com.google.cloud.dataflow.solutions.data.SchemaUtils;
-import com.google.cloud.dataflow.solutions.data.TaxiObjects.MergedCDCValue;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects.CDCValueForBQ;
 import com.google.cloud.dataflow.solutions.data.TaxiObjects.ParsingError;
 import com.google.cloud.dataflow.solutions.data.TaxiObjects.TaxiEvent;
 import com.google.cloud.dataflow.solutions.options.ChangeStreamOptions;
@@ -64,14 +65,12 @@ public class SpannerChangeStream2BigQuery {
                                 .withMetadataInstance(spannerInstance)
                                 .withMetadataDatabase(metadataDatabase)
                                 .withMetadataTable(metadataTable)
-                                .withChangeStreamName(spannerChangeStream)
-                                .withInclusiveStartAt(
-                                        getCatchupTimestamp(options.getCatchUpMinutes())));
+                                .withChangeStreamName(spannerChangeStream));
 
-        ParsingOutput<MergedCDCValue> parsedChanges =
+        ParsingOutput<CDCValueForBQ> parsedChanges =
                 changes.apply("Parse changes", CDCProcessor.ParseCDCRecord.create());
 
-        PCollection<MergedCDCValue> parsedData = parsedChanges.getParsedData();
+        PCollection<CDCValueForBQ> parsedData = parsedChanges.getParsedData();
         PCollection<ParsingError> errors = parsedChanges.getErrors();
 
         Schema cdcSchema = SchemaUtils.getSchemaForType(p, TaxiEvent.class);
@@ -79,7 +78,7 @@ public class SpannerChangeStream2BigQuery {
 
         parsedData.apply(
                 "Sync with BQ",
-                BigQueryIO.<MergedCDCValue>write()
+                BigQueryIO.<TaxiObjects.CDCValueForBQ>write()
                         .to(
                                 new TableReference()
                                         .setProjectId(projectId)
