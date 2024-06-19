@@ -93,7 +93,7 @@ CREATE TABLE ${local.spanner_table} (
   passenger_count INT64,
 ) PRIMARY KEY(ride_id, point_idx)
 DDL1
-  ,
+    ,
     <<DDL2
 CREATE CHANGE STREAM ${local.spanner_change_stream} FOR ${local.spanner_table}
 OPTIONS(value_capture_type = 'NEW_ROW_AND_OLD_VALUES')
@@ -178,15 +178,15 @@ module "firewall_rules" {
     allow-egress-dataflow = {
       deny        = false
       description = "Dataflow firewall rule egress"
-      targets = ["dataflow"]
-      rules = [{ protocol = "tcp", ports = [12345, 12346] }]
+      targets     = ["dataflow"]
+      rules       = [{ protocol = "tcp", ports = [12345, 12346] }]
     }
   }
   ingress_rules = {
     allow-ingress-dataflow = {
       description = "Dataflow firewall rule ingress"
-      targets = ["dataflow"]
-      rules = [{ protocol = "tcp", ports = [12345, 12346] }]
+      targets     = ["dataflow"]
+      rules       = [{ protocol = "tcp", ports = [12345, 12346] }]
     }
   }
 }
