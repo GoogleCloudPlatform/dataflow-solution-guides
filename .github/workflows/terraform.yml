@@ -47,7 +47,7 @@ jobs:
         ls -d */ | while read d
         do
         echo "Running tf format check in directory: $d"
-        cd $d && terraform fmt -check
+        cd $d && terraform fmt -check && cd ..
         done
 
     # Generates an execution plan for Terraform
