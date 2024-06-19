@@ -44,6 +44,7 @@ jobs:
 
     # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
+      working-directory: terraform      
       run: |
         ls -d */ | while read d
         do
@@ -53,6 +54,7 @@ jobs:
 
     # Generates an execution plan for Terraform
     - name: Terraform Plan
+      working-directory: terraform
       run: |
         ls -d */ | while read d
         do
