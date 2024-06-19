@@ -16,7 +16,7 @@ locals {
   spanner_instance         = "test-spanner-instance"
   spanner_database         = "taxis_database"
   spanner_table            = "events"
-  spanner_change_stream    = "EverythingStream"
+  spanner_change_stream    = "events_stream"
   spanner_metadata_db      = "metadata"
   spanner_configuration    = "regional-${var.region}"
   spanner_name             = "Spanner instance managed by TF"
@@ -81,7 +81,7 @@ resource "google_spanner_database" "taxis" {
   name     = local.spanner_database
   ddl = [
     <<DDL1
-CREATE TABLE events (
+CREATE TABLE ${local.spanner_table} (
   ride_id STRING(64),
   point_idx INT64,
   latitude FLOAT64,
@@ -95,7 +95,7 @@ CREATE TABLE events (
 DDL1
   ,
     <<DDL2
-CREATE CHANGE STREAM events_stream FOR ${local.spanner_table}
+CREATE CHANGE STREAM ${local.spanner_change_stream} FOR ${local.spanner_table}
 OPTIONS(value_capture_type = 'NEW_ROW_AND_OLD_VALUES')
 DDL2
   ]
@@ -219,6 +219,8 @@ export SPANNER_INSTANCE=${google_spanner_instance.spanner_instance.name}
 export SPANNER_DATABASE=${local.spanner_database}
 export SPANNER_TABLE=${local.spanner_table}
 export SPANNER_CHANGE_STREAM=${local.spanner_change_stream}
+
+export BIGQUERY_DATASET=${local.bigquery_dataset}
 
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 FILE

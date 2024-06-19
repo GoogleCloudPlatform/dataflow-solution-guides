@@ -16,7 +16,9 @@
 
 package com.google.cloud.dataflow.solutions.data;
 
+import com.google.api.services.bigquery.model.TableRow;
 import com.google.auto.value.AutoValue;
+import java.util.List;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.ModType;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
@@ -25,6 +27,7 @@ import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
 import org.joda.time.Instant;
 
 public class TaxiObjects {
+
     /** Represents Taxi Ride Event */
     @DefaultSchema(AutoValueSchema.class)
     @AutoValue
@@ -57,34 +60,8 @@ public class TaxiObjects {
         @SchemaFieldName("passenger_count")
         public abstract Integer getPassengerCount();
 
-        public abstract Builder toBuilder();
-
-        public static Builder builder() {
-            return new AutoValue_TaxiObjects_TaxiEvent.Builder();
-        }
-
-        @AutoValue.Builder
-        public abstract static class Builder {
-
-            public abstract Builder setRideId(String value);
-
-            public abstract Builder setPointIdx(Integer value);
-
-            public abstract Builder setLatitude(Double value);
-
-            public abstract Builder setLongitude(Double value);
-
-            public abstract Builder setTimeStamp(String value);
-
-            public abstract Builder setMeterReading(Double value);
-
-            public abstract Builder setMeterIncrement(Double value);
-
-            public abstract Builder setRideStatus(String value);
-
-            public abstract Builder setPassengerCount(Integer value);
-
-            public abstract TaxiEvent build();
+        public static List<String> primaryKeys() {
+            return List.of("ride_id", "point_idx");
         }
     }
 
@@ -104,21 +81,50 @@ public class TaxiObjects {
         public abstract Long getSequenceNumber();
     }
 
+    @DefaultSchema(AutoValueSchema.class)
+    @AutoValue
+    public abstract static class MergedCDCValue {
+        @SchemaFieldName("event")
+        public abstract TableRow getTableRow();
+
+        @SchemaFieldName("sequence_number")
+        public abstract Long getSequenceNumber();
+
+        @SchemaFieldName("mod_type")
+        public abstract ModType getModType();
+
+        public abstract Builder toBuilder();
+
+        public static Builder builder() {
+            return new AutoValue_TaxiObjects_MergedCDCValue.Builder();
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder {
+
+            public abstract Builder setTableRow(TableRow value);
+
+            public abstract Builder setSequenceNumber(Long value);
+
+            public abstract Builder setModType(ModType value);
+
+            public abstract MergedCDCValue build();
+        }
+    }
+
     @AutoValue
     @DefaultSchema(AutoValueSchema.class)
     /* Represents a parsing error message event */
     public abstract static class ParsingError {
-
-        @SchemaFieldName("inputData")
+        // These field names are determined
+        @SchemaFieldName("input_data")
         public abstract String getInputData();
 
-        @SchemaFieldName("errorMessage")
+        @SchemaFieldName("error_message")
         public abstract String getErrorMessage();
 
         @SchemaFieldName("timestamp")
         public abstract Instant getTimestamp();
-
-        public abstract Builder toBuilder();
 
         public static Builder builder() {
             return new AutoValue_TaxiObjects_ParsingError.Builder();
@@ -126,12 +132,11 @@ public class TaxiObjects {
 
         @AutoValue.Builder
         public abstract static class Builder {
+            public abstract Builder setInputData(String i);
 
-            public abstract Builder setInputData(String value);
+            public abstract Builder setErrorMessage(String e);
 
-            public abstract Builder setErrorMessage(String value);
-
-            public abstract Builder setTimestamp(Instant value);
+            public abstract Builder setTimestamp(Instant t);
 
             public abstract ParsingError build();
         }
