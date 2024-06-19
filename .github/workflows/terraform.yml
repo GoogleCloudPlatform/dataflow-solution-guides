@@ -39,7 +39,6 @@ jobs:
         echo "Running tf init in directory: $d"
         cd $d && terraform init && cd ..
         done
-
     # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
       working-directory: terraform      
@@ -48,4 +47,12 @@ jobs:
         do
         echo "Running tf format check in directory: $d"
         cd $d && terraform fmt -check && cd ..
+        done
+    # Generates an execution plan for Terraform
+    - name: Terraform Plan
+      working-directory: terraform
+      run: |
+        ls -d */ | while read d
+        do
+        cd $d && terraform plan -input=false -refresh=false -var-file=.test.tfvars && cd ..
         done
