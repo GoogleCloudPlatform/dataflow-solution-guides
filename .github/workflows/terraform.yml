@@ -37,7 +37,7 @@ jobs:
       run: |
         ls -d terraform/*/ | while read d
         do
-        cd $d && terraform init
+        cd $d && terraform init && cd ../../
         done
 
     # Checks that all Terraform configuration files adhere to a canonical format
@@ -45,7 +45,7 @@ jobs:
       run: |
         ls -d terraform/*/ | while read d
         do
-        cd $d && terraform fmt -check
+        cd $d && terraform fmt -check && cd ../../
         done
 
     # Generates an execution plan for Terraform
@@ -53,5 +53,5 @@ jobs:
       run: |
         ls -d terraform/*/ | while read d
         do
-        cd $d && terraform plan -input=false
+        cd $d && terraform plan -input=false && cd ../../
         done
