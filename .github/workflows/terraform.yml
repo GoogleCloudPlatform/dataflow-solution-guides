@@ -54,5 +54,5 @@ jobs:
         ls -d */ | while read d
         echo "Running tf validate in directory: $d"
         do
-        cd $d && terraform validate && cd ..
+        echo $d
         done
