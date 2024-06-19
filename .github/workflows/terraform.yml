@@ -52,7 +52,7 @@ jobs:
       working-directory: terraform
       run: |
         ls -d */ | while read d
-        echo "Running tf validate in directory: $d"
         do
-        echo $d
+        echo "Running tf validate in directory: $d"        
+        cd $d && terraform validate && cd ..
         done
