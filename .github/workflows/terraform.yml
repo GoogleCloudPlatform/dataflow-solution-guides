@@ -56,5 +56,5 @@ jobs:
       run: |
         ls -d */ | while read d
         do
-        cd $d && terraform plan -input=false && cd ..
+        cd $d && terraform plan -input=false -var-file=.test.tfvars && cd ..
         done
