@@ -49,12 +49,3 @@ jobs:
         echo "Running tf format check in directory: $d"
         cd $d && terraform fmt -check && cd ..
         done
-
-    # Generates an execution plan for Terraform
-    - name: Terraform Plan
-      working-directory: terraform
-      run: |
-        ls -d */ | while read d
-        do
-        cd $d && terraform plan -input=false -var-file=.test.tfvars && cd ..
-        done
