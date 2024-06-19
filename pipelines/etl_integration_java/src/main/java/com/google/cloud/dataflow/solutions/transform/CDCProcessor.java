@@ -16,58 +16,86 @@
 
 package com.google.cloud.dataflow.solutions.transform;
 
-import static com.google.cloud.dataflow.solutions.data.TaxiObjects.*;
+import static com.google.cloud.dataflow.solutions.data.TaxiObjects.CDCValue;
 
+import com.google.api.services.bigquery.model.TableRow;
 import com.google.cloud.dataflow.solutions.data.SchemaUtils;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects.MergedCDCValue;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects.TaxiEvent;
 import com.google.cloud.dataflow.solutions.transform.TaxiEventProcessor.ParsingOutput;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryUtils;
 import org.apache.beam.sdk.io.gcp.bigquery.RowMutationInformation;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.DataChangeRecord;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.Mod;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.ModType;
 import org.apache.beam.sdk.io.gcp.spanner.changestreams.model.ValueCaptureType;
 import org.apache.beam.sdk.schemas.Schema;
+import org.apache.beam.sdk.schemas.SchemaRegistry;
+import org.apache.beam.sdk.schemas.utils.ConvertHelpers;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.PCollection;
-
-import java.util.Objects;
+import org.apache.beam.sdk.values.Row;
+import org.apache.beam.sdk.values.TypeDescriptor;
 
 public class CDCProcessor {
 
     public static class ParseCDCRecord
-            extends PTransform<PCollection<DataChangeRecord>, ParsingOutput<CDCValue>> {
+            extends PTransform<PCollection<DataChangeRecord>, ParsingOutput<MergedCDCValue>> {
         public static ParseCDCRecord create() {
             return new ParseCDCRecord();
         }
 
         @Override
-        public ParsingOutput<CDCValue> expand(PCollection<DataChangeRecord> input) {
+        public ParsingOutput<MergedCDCValue> expand(PCollection<DataChangeRecord> input) {
             PCollection<String> jsons = input.apply("ToJson", ParDo.of(new RecordToJsonDoFn()));
 
             Schema cdcSchema = SchemaUtils.getSchemaForType(input.getPipeline(), CDCValue.class);
 
-            return jsons.apply(
-                    "Parse from Json String",
-                    TaxiEventProcessor.FromJsonString.<CDCValue>builder()
-                            .schema(cdcSchema)
-                            .clz(CDCValue.class)
-                            .build());
+            ParsingOutput<CDCValue> parsed =
+                    jsons.apply(
+                            "Parse from Json String",
+                            TaxiEventProcessor.FromJsonString.<CDCValue>builder()
+                                    .schema(cdcSchema)
+                                    .clz(CDCValue.class)
+                                    .build());
+
+            SchemaRegistry registry = input.getPipeline().getSchemaRegistry();
+            Schema schemaForTaxi =
+                    SchemaUtils.getSchemaForType(input.getPipeline(), TaxiEvent.class);
+            ConvertHelpers.ConvertedSchemaInformation<TaxiEvent> converted =
+                    ConvertHelpers.getConvertedSchemaInformation(
+                            schemaForTaxi, TypeDescriptor.of(TaxiEvent.class), registry);
+
+            SerializableFunction<TaxiEvent, Row> toRowFunction =
+                    converted.outputSchemaCoder.getToRowFunction();
+
+            PCollection<MergedCDCValue> mergedCdc =
+                    parsed.getParsedData()
+                            .apply("Merge CDC", ParDo.of(new MergeCDCDoFn(toRowFunction)));
+
+            return new ParsingOutput<>(input.getPipeline(), mergedCdc, parsed.getErrors());
         }
     }
 
-    public static RowMutationInformation rowMutationInformation(CDCValue cdc) {
-        RowMutationInformation.MutationType mutationType = RowMutationInformation.MutationType.UPSERT;
+    public static RowMutationInformation rowMutationInformation(MergedCDCValue cdc) {
+        Long sequenceNumber = 0L;
+        if (cdc != null) {
+            sequenceNumber = cdc.getSequenceNumber();
+        }
+
+        RowMutationInformation.MutationType mutationType =
+                RowMutationInformation.MutationType.UPSERT;
         if (Objects.requireNonNull(cdc.getModType()) == ModType.DELETE) {
             mutationType = RowMutationInformation.MutationType.DELETE;
         }
 
-//        return RowMutationInformation.of(mutationType, );
-
-        return null;
-
-
-
+        return RowMutationInformation.of(mutationType, sequenceNumber);
     }
 
     private static class RecordToJsonDoFn extends DoFn<DataChangeRecord, String> {
@@ -87,17 +115,29 @@ public class CDCProcessor {
             for (Mod mod : record.getMods()) {
                 switch (record.getModType()) {
                     case INSERT -> {
-                        receiver.output(formatJson(mod.getNewValuesJson(), record.getModType()));
+                        receiver.output(
+                                formatJson(
+                                        mod.getKeysJson(),
+                                        mod.getNewValuesJson(),
+                                        record.getModType(),
+                                        sequenceNumber));
                     }
                     case DELETE -> {
-                        receiver.output(formatJson(mod.getKeysJson(), record.getModType()));
+                        receiver.output(
+                                formatJson(
+                                        mod.getKeysJson(),
+                                        mod.getOldValuesJson(),
+                                        record.getModType(),
+                                        sequenceNumber));
                     }
                     case UPDATE -> {
                         receiver.output(
                                 formatJson(
+                                        mod.getKeysJson(),
                                         mod.getOldValuesJson(),
                                         mod.getNewValuesJson(),
-                                        record.getModType()));
+                                        record.getModType(),
+                                        sequenceNumber));
                     }
                     case UNKNOWN -> throw new IllegalArgumentException(
                             "UNKNOWN mod type, not supported");
@@ -105,17 +145,75 @@ public class CDCProcessor {
             }
         }
 
-        private static String formatJson(String newValue, ModType modType) {
-            return formatJson("", newValue, modType);
+        private String formatJson(
+                String keysJson, String newValue, ModType modType, Long sequenceNumber) {
+            return formatJson(keysJson, newValue, "", modType, sequenceNumber);
         }
 
-        private static String formatJson(String oldValue, String newValue, ModType modType) {
-            if (oldValue == null || oldValue.isBlank()) oldValue = "\"\"";
-            if (newValue == null || newValue.isBlank()) newValue = "\"\"";
+        private String formatJson(
+                String keysJson,
+                String newValue,
+                String oldValue,
+                ModType modType,
+                Long sequenceNumber) {
+            // The keys JSON is sent in a different string to the rest of the columns, we need to
+            // merge both together
+            if (oldValue == null || oldValue.isBlank() || modType.equals(ModType.INSERT)) {
+                oldValue = "\"\"";
+            }
+            if (newValue == null || newValue.isBlank() || modType.equals(ModType.DELETE)) {
+                newValue = "\"\"";
+            }
+
+            String regex = "\\{(.*?)\\}";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcherKeys = pattern.matcher(keysJson);
+
+            String keysUnwrapped = "";
+            if (matcherKeys.find()) {
+                keysUnwrapped = matcherKeys.group(1);
+            }
+
+            Matcher matcherNewValue = pattern.matcher(newValue);
+
+            String newValueUnwrapped = "";
+            if (matcherNewValue.find()) {
+                newValueUnwrapped = matcherNewValue.group(1);
+            }
+
+            String newValueMerged = String.format("{%s, %s}", newValueUnwrapped, keysUnwrapped);
 
             return String.format(
-                    "{\"new_event\": %s, \"old_event\": %s, \"mod_type\": \"%s\"}",
-                    newValue, oldValue, modType.toString());
+                    "{\"new_event\": %s, \"old_event\": %s, \"mod_type\": \"%s\","
+                            + " \"sequence_number\": %d}",
+                    newValueMerged, oldValue, modType.toString(), sequenceNumber);
+        }
+    }
+
+    private static class MergeCDCDoFn extends DoFn<CDCValue, MergedCDCValue> {
+        private final SerializableFunction<TaxiEvent, Row> taxiToRowFunction;
+
+        public MergeCDCDoFn(SerializableFunction<TaxiEvent, Row> taxiToRowFunction) {
+            this.taxiToRowFunction = taxiToRowFunction;
+        }
+
+        @ProcessElement
+        public void processElement(@Element CDCValue cdc, OutputReceiver<MergedCDCValue> receiver) {
+            switch (cdc.getModType()) {
+                case INSERT, DELETE, UPDATE -> {
+                    Row taxiRow = taxiToRowFunction.apply(cdc.getNewEvent());
+                    TableRow tr = BigQueryUtils.toTableRow(taxiRow);
+
+                    receiver.output(
+                            MergedCDCValue.builder()
+                                    .setTableRow(tr)
+                                    .setModType(cdc.getModType())
+                                    .setSequenceNumber(cdc.getSequenceNumber())
+                                    .build());
+                }
+                case UNKNOWN -> throw new IllegalArgumentException(
+                        "UNKNOWN mod type, not supported");
+            }
         }
     }
 }
