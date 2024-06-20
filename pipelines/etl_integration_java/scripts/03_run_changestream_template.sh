@@ -5,6 +5,7 @@ gcloud dataflow flex-template run spanner-change-streams \
     --service-account-email=$SERVICE_ACCOUNT \
     --subnetwork=$NETWORK \
     --max-workers=$MAX_DATAFLOW_WORKERS \
+    --worker-machine-type=$WORKER_TYPE \
     --disable-public-ips \
     --parameters \
 spannerInstanceId=$SPANNER_INSTANCE,\

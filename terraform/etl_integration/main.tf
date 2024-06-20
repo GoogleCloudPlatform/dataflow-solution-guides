@@ -22,6 +22,7 @@ locals {
   spanner_name             = "Spanner instance managed by TF"
   bigquery_dataset         = "replica"
   dataflow_service_account = "my-dataflow-sa"
+  worker_type              = "n2-standard-4"
   max_dataflow_workers     = 10
 }
 
@@ -93,7 +94,7 @@ CREATE TABLE ${local.spanner_table} (
   passenger_count INT64,
 ) PRIMARY KEY(ride_id, point_idx)
 DDL1
-    ,
+  ,
     <<DDL2
 CREATE CHANGE STREAM ${local.spanner_change_stream} FOR ${local.spanner_table}
 OPTIONS(value_capture_type = 'NEW_ROW_AND_OLD_VALUES')
@@ -178,15 +179,15 @@ module "firewall_rules" {
     allow-egress-dataflow = {
       deny        = false
       description = "Dataflow firewall rule egress"
-      targets     = ["dataflow"]
-      rules       = [{ protocol = "tcp", ports = [12345, 12346] }]
+      targets = ["dataflow"]
+      rules = [{ protocol = "tcp", ports = [12345, 12346] }]
     }
   }
   ingress_rules = {
     allow-ingress-dataflow = {
       description = "Dataflow firewall rule ingress"
-      targets     = ["dataflow"]
-      rules       = [{ protocol = "tcp", ports = [12345, 12346] }]
+      targets = ["dataflow"]
+      rules = [{ protocol = "tcp", ports = [12345, 12346] }]
     }
   }
 }
@@ -224,5 +225,6 @@ export SPANNER_CHANGE_STREAM=${local.spanner_change_stream}
 export BIGQUERY_DATASET=${local.bigquery_dataset}
 
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
+export WORKER_TYPE=${local.worker_type}
 FILE
 }
