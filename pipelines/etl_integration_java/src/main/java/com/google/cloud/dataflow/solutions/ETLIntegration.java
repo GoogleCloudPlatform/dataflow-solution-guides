@@ -16,46 +16,51 @@
 
 package com.google.cloud.dataflow.solutions;
 
-import com.google.cloud.dataflow.solutions.options.ChangeStreamOptions;
-import com.google.cloud.dataflow.solutions.options.RunOptions;
+import com.google.cloud.dataflow.solutions.data.TaxiObjects;
+import com.google.cloud.dataflow.solutions.load.Spanner;
 import com.google.cloud.dataflow.solutions.options.SpannerPublisherOptions;
-import com.google.cloud.dataflow.solutions.pipelines.Pubsub2Spanner;
-import com.google.cloud.dataflow.solutions.pipelines.SpannerChangeStream2BigQuery;
+import com.google.cloud.dataflow.solutions.transform.TaxiEventProcessor;
+import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
+import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.values.PCollection;
 
 public class ETLIntegration {
-    private static String getJobName(String pipelineToRun) {
-        return pipelineToRun.replace("_", "-");
-    }
-
     public static void main(String[] args) {
-        PipelineOptionsFactory.register(RunOptions.class);
-        RunOptions runOptions =
-                PipelineOptionsFactory.fromArgs(args).withoutStrictParsing().as(RunOptions.class);
+        String jobName = "pubsub-to-spanner";
+        SpannerPublisherOptions spannerPublisherOptions =
+                PipelineOptionsFactory.fromArgs(args)
+                        .withoutStrictParsing()
+                        .as(SpannerPublisherOptions.class);
 
-        RunOptions.PipelineToRun pipelineToRun = runOptions.getPipeline();
-
-        String jobName = getJobName(pipelineToRun.toString());
-        Pipeline p =
-                switch (pipelineToRun) {
-                    case PUBSUB_TO_SPANNER -> {
-                        SpannerPublisherOptions spannerPublisherOptions =
-                                PipelineOptionsFactory.fromArgs(args)
-                                        .withoutStrictParsing()
-                                        .as(SpannerPublisherOptions.class);
-                        yield Pubsub2Spanner.createPipeline(spannerPublisherOptions);
-                    }
-                    case SPANNER_CHANGE_STREAM -> {
-                        ChangeStreamOptions changeStreamOptions =
-                                PipelineOptionsFactory.fromArgs(args)
-                                        .withoutStrictParsing()
-                                        .as(ChangeStreamOptions.class);
-                        yield SpannerChangeStream2BigQuery.createPipeline(changeStreamOptions);
-                    }
-                };
-
+        Pipeline p = createPipeline(spannerPublisherOptions);
         p.getOptions().setJobName(jobName);
         p.run();
+    }
+
+    public static Pipeline createPipeline(SpannerPublisherOptions options) {
+        String projectId = options.as(DataflowPipelineOptions.class).getProject();
+
+        Pipeline p = Pipeline.create(options);
+
+        PCollection<PubsubMessage> msgs =
+                p.apply("Read topic", PubsubIO.readMessages().fromTopic(options.getPubsubTopic()));
+
+        TaxiEventProcessor.ParsingOutput<TaxiObjects.TaxiEvent> parsed =
+                msgs.apply("Parse", TaxiEventProcessor.FromPubsubMessage.parse());
+        PCollection<TaxiObjects.TaxiEvent> taxiEvents = parsed.getParsedData();
+
+        taxiEvents.apply(
+                "Write",
+                Spanner.Writer.builder()
+                        .projectId(projectId)
+                        .instanceId(options.getSpannerInstance())
+                        .databaseId(options.getSpannerDatabase())
+                        .tableName(options.getSpannerTable())
+                        .build());
+
+        return p;
     }
 }

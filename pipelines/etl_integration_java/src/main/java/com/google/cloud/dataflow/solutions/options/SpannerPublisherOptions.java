@@ -17,9 +17,10 @@
 package com.google.cloud.dataflow.solutions.options;
 
 import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.Validation;
 
-public interface SpannerPublisherOptions extends SpannerOptions {
+public interface SpannerPublisherOptions extends PipelineOptions {
     @Validation.Required()
     @Description("Input topic with data to replicate in Spanner")
     void setPubsubTopic(String t);
@@ -31,4 +32,16 @@ public interface SpannerPublisherOptions extends SpannerOptions {
     void setSpannerTable(String t);
 
     String getSpannerTable();
+
+    @Validation.Required()
+    @Description("Spanner instance to write the data to")
+    void setSpannerInstance(String s);
+
+    String getSpannerInstance();
+
+    @Validation.Required()
+    @Description("Spanner database to write the data to")
+    void setSpannerDatabase(String d);
+
+    String getSpannerDatabase();
 }

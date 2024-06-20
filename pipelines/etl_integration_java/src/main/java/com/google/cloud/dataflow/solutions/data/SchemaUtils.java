@@ -27,7 +27,6 @@ public class SchemaUtils {
     private static final Logger LOG = LoggerFactory.getLogger(SchemaUtils.class);
 
     public static <T> Schema getSchemaForType(Pipeline p, Class<T> classType) {
-        // Parser JSON events into row objects with TaxiRide schema
         Schema schema;
 
         try {

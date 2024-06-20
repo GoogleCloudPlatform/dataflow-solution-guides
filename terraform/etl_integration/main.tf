@@ -217,6 +217,7 @@ export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 export TOPIC=projects/pubsub-public-data/topics/taxirides-realtime
 export SPANNER_INSTANCE=${google_spanner_instance.spanner_instance.name}
 export SPANNER_DATABASE=${local.spanner_database}
+export SPANNER_METADATA_DB=${local.spanner_metadata_db}
 export SPANNER_TABLE=${local.spanner_table}
 export SPANNER_CHANGE_STREAM=${local.spanner_change_stream}
 
