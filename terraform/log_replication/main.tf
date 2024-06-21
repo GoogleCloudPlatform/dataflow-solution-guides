@@ -29,7 +29,7 @@ module "google_cloud_project" {
   project_create  = var.project_create
   name            = var.project_id
   parent          = var.organization
-  services        = [
+  services = [
     "dataflow.googleapis.com",
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
@@ -119,7 +119,7 @@ module "vpc_network" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
   name       = "${var.network_prefix}-net"
-  subnets    = [
+  subnets = [
     {
       ip_cidr_range         = "10.1.0.0/16"
       name                  = "${var.network_prefix}-subnet"
