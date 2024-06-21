@@ -13,16 +13,12 @@
 #  limitations under the License.
 
 locals {
-  spanner_instance         = "test-spanner-instance"
-  spanner_database         = "taxis_database"
-  spanner_table            = "events"
-  spanner_change_stream    = "events_stream"
-  spanner_metadata_db      = "metadata"
-  spanner_configuration    = "regional-${var.region}"
-  spanner_name             = "Spanner instance managed by TF"
-  bigquery_dataset         = "replica"
+  pubsub_logging_topic     = "all-logs"
+  pubsub_sink_name         = "pubsub-sink"
+  splunk_gke_cluster_name  = "splunk-gke-cluster"
   dataflow_service_account = "my-dataflow-sa"
-  worker_type              = "n2-standard-4"
+  logging_service_account  = "my-logging-sa"
+  worker_type              = "n2-standard-2"
   max_dataflow_workers     = 10
 }
 
@@ -39,7 +35,8 @@ module "google_cloud_project" {
     "pubsub.googleapis.com",
     "autoscaling.googleapis.com",
     "spanner.googleapis.com",
-    "bigquery.googleapis.com"
+    "bigquery.googleapis.com",
+    "container.googleapis.com"
   ]
 }
 
@@ -53,84 +50,8 @@ module "buckets" {
   force_destroy = var.destroy_all_resources
 }
 
-// BigQuery dataset for final destination
-module "dataset" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v32.0.0"
-  project_id = module.google_cloud_project.project_id
-  id         = local.bigquery_dataset
-  access = {
-    dataflow-writer = { role = "OWNER", type = "user" }
-  }
-  access_identities = {
-    dataflow-writer = module.dataflow_sa.email
-  }
-}
 
-// Spanner instance for change streams / CDC, using minimal instances size for demo purposes
-resource "google_spanner_instance" "spanner_instance" {
-  config           = local.spanner_configuration
-  name             = local.spanner_instance
-  project          = module.google_cloud_project.project_id
-  display_name     = local.spanner_name
-  processing_units = 1000
-  force_destroy    = var.destroy_all_resources
-}
-
-resource "google_spanner_database" "taxis" {
-  instance = google_spanner_instance.spanner_instance.name
-  project  = module.google_cloud_project.project_id
-  name     = local.spanner_database
-  ddl = [
-    <<DDL1
-CREATE TABLE ${local.spanner_table} (
-  ride_id STRING(64),
-  point_idx INT64,
-  latitude FLOAT64,
-  longitude FLOAT64,
-  timestamp TIMESTAMP,
-  meter_reading FLOAT64,
-  meter_increment FLOAT64,
-  ride_status STRING(64),
-  passenger_count INT64,
-) PRIMARY KEY(ride_id, point_idx)
-DDL1
-    ,
-    <<DDL2
-CREATE CHANGE STREAM ${local.spanner_change_stream} FOR ${local.spanner_table}
-OPTIONS(value_capture_type = 'NEW_ROW_AND_OLD_VALUES')
-DDL2
-  ]
-  deletion_protection = !var.destroy_all_resources
-}
-
-resource "google_spanner_database_iam_binding" "read_write_taxis" {
-  project  = module.google_cloud_project.project_id
-  instance = google_spanner_instance.spanner_instance.name
-  database = google_spanner_database.taxis.name
-  role     = "roles/spanner.databaseUser"
-  members = [
-    module.dataflow_sa.iam_email
-  ]
-}
-
-resource "google_spanner_database" "metadata" {
-  instance            = google_spanner_instance.spanner_instance.name
-  project             = module.google_cloud_project.project_id
-  name                = local.spanner_metadata_db
-  deletion_protection = !var.destroy_all_resources
-}
-
-resource "google_spanner_database_iam_binding" "read_write_metadata" {
-  project  = module.google_cloud_project.project_id
-  instance = google_spanner_instance.spanner_instance.name
-  database = google_spanner_database.metadata.name
-  role     = "roles/spanner.databaseUser"
-  members = [
-    module.dataflow_sa.iam_email
-  ]
-}
-
-// Service account
+// Service accounts
 module "dataflow_sa" {
   source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v32.0.0"
   project_id   = module.google_cloud_project.project_id
@@ -144,6 +65,53 @@ module "dataflow_sa" {
       "roles/pubsub.editor"
     ]
   }
+}
+
+module "splunk_gke_cluster" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gke-cluster-autopilot?ref=v32.0.0"
+  project_id = module.google_cloud_project.project_id
+  name       = local.splunk_gke_cluster_name
+  location   = var.region
+  vpc_config = {
+    network    = module.vpc_network.self_link
+    subnetwork = module.vpc_network.subnets["${var.region}/${var.network_prefix}-subnet"].name
+    secondary_range_names = {
+      pods     = "pods"
+      services = "services"
+    }
+    master_authorized_ranges = {
+      internal-vms = module.vpc_network.subnets["${var.region}/${var.network_prefix}-subnet"].ip_cidr_range
+    }
+    master_ipv4_cidr_block = "192.168.0.0/28"
+  }
+  private_cluster_config = {
+    enable_private_endpoint = true
+    master_global_access    = false
+  }
+}
+
+// Pubsub topic to receive all logs
+module "logging_topic" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
+  project_id = module.google_cloud_project.project_id
+  name       = local.pubsub_logging_topic
+}
+
+// Logging sink in Pubsub
+resource "google_logging_project_sink" "my_logging_sink" {
+  name                   = local.pubsub_sink_name
+  project                = module.google_cloud_project.project_id
+  destination            = "pubsub.googleapis.com/${module.logging_topic.topic.id}"
+  unique_writer_identity = true
+}
+
+resource "google_project_iam_binding" "pubsub_log_writer" {
+  project = module.google_cloud_project.project_id
+  role    = "roles/pubsub.editor"
+
+  members = [
+    google_logging_project_sink.my_logging_sink.writer_identity
+  ]
 }
 
 // Network
@@ -164,6 +132,7 @@ module "vpc_network" {
     }
   ]
 }
+
 
 module "firewall_rules" {
   // Default rules for internal traffic + SSH access via IAP
@@ -214,15 +183,6 @@ export REGION=${var.region}
 export NETWORK=regions/${var.region}/subnetworks/${var.network_prefix}-subnet
 export TEMP_LOCATION=gs://$PROJECT/tmp
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
-
-export TOPIC=projects/pubsub-public-data/topics/taxirides-realtime
-export SPANNER_INSTANCE=${google_spanner_instance.spanner_instance.name}
-export SPANNER_DATABASE=${local.spanner_database}
-export SPANNER_METADATA_DB=${local.spanner_metadata_db}
-export SPANNER_TABLE=${local.spanner_table}
-export SPANNER_CHANGE_STREAM=${local.spanner_change_stream}
-
-export BIGQUERY_DATASET=${local.bigquery_dataset}
 
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 export WORKER_TYPE=${local.worker_type}
