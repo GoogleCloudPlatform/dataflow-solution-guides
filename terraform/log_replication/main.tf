@@ -14,10 +14,11 @@
 
 locals {
   pubsub_logging_topic     = "all-logs"
-  pubsub_sink_name = "pubsub-sink"
+  pubsub_sink_name         = "pubsub-sink"
+  splunk_gke_cluster_name  = "splunk-gke-cluster"
   dataflow_service_account = "my-dataflow-sa"
   logging_service_account  = "my-logging-sa"
-  worker_type              = "n2-standard-4"
+  worker_type              = "n2-standard-2"
   max_dataflow_workers     = 10
 }
 
@@ -28,13 +29,14 @@ module "google_cloud_project" {
   project_create  = var.project_create
   name            = var.project_id
   parent          = var.organization
-  services = [
+  services        = [
     "dataflow.googleapis.com",
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
     "autoscaling.googleapis.com",
     "spanner.googleapis.com",
-    "bigquery.googleapis.com"
+    "bigquery.googleapis.com",
+    "container.googleapis.com"
   ]
 }
 
@@ -49,7 +51,7 @@ module "buckets" {
 }
 
 
-// Service account
+// Service accounts
 module "dataflow_sa" {
   source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v32.0.0"
   project_id   = module.google_cloud_project.project_id
@@ -65,15 +67,26 @@ module "dataflow_sa" {
   }
 }
 
-module "logging_sa" {
-  source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v32.0.0"
-  project_id   = module.google_cloud_project.project_id
-  name         = local.logging_service_account
-  generate_key = false
-  iam_project_roles = {
-    (module.google_cloud_project.project_id) = [
-      "roles/pubsub.editor"
-    ]
+module "splunk_gke_cluster" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gke-cluster-autopilot?ref=v32.0.0"
+  project_id = module.google_cloud_project.project_id
+  name       = local.splunk_gke_cluster_name
+  location   = var.region
+  vpc_config = {
+    network    = module.vpc_network.self_link
+    subnetwork = module.vpc_network.subnets["${var.region}/${var.network_prefix}-subnet"].name
+    secondary_range_names = {
+      pods     = "pods"
+      services = "services"
+    }
+    master_authorized_ranges = {
+      internal-vms = module.vpc_network.subnets["${var.region}/${var.network_prefix}-subnet"].ip_cidr_range
+    }
+    master_ipv4_cidr_block = "192.168.0.0/28"
+  }
+  private_cluster_config = {
+    enable_private_endpoint = true
+    master_global_access    = false
   }
 }
 
@@ -85,11 +98,20 @@ module "logging_topic" {
 }
 
 // Logging sink in Pubsub
-resource "google_logging_project_sink" "my-sink" {
-  name = local.pubsub_sink_name
-  destination = module.logging_topic.topic
+resource "google_logging_project_sink" "my_logging_sink" {
+  name                   = local.pubsub_sink_name
+  project                = module.google_cloud_project.project_id
+  destination            = "pubsub.googleapis.com/${module.logging_topic.topic.id}"
   unique_writer_identity = true
-  custom_writer_identity = module.logging_sa.email
+}
+
+resource "google_project_iam_binding" "pubsub_log_writer" {
+  project = module.google_cloud_project.project_id
+  role    = "roles/pubsub.editor"
+
+  members = [
+    google_logging_project_sink.my_logging_sink.writer_identity
+  ]
 }
 
 // Network
@@ -97,7 +119,7 @@ module "vpc_network" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
   name       = "${var.network_prefix}-net"
-  subnets = [
+  subnets    = [
     {
       ip_cidr_range         = "10.1.0.0/16"
       name                  = "${var.network_prefix}-subnet"
@@ -126,15 +148,15 @@ module "firewall_rules" {
     allow-egress-dataflow = {
       deny        = false
       description = "Dataflow firewall rule egress"
-      targets = ["dataflow"]
-      rules = [{ protocol = "tcp", ports = [12345, 12346] }]
+      targets     = ["dataflow"]
+      rules       = [{ protocol = "tcp", ports = [12345, 12346] }]
     }
   }
   ingress_rules = {
     allow-ingress-dataflow = {
       description = "Dataflow firewall rule ingress"
-      targets = ["dataflow"]
-      rules = [{ protocol = "tcp", ports = [12345, 12346] }]
+      targets     = ["dataflow"]
+      rules       = [{ protocol = "tcp", ports = [12345, 12346] }]
     }
   }
 }

@@ -10,13 +10,11 @@ jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
-    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
       run:
         shell: bash
 
     steps:
-    # Checkout the repository to the GitHub Actions runner
     - name: Checkout
       uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3
@@ -26,10 +24,8 @@ jobs:
             Terraform:
               - 'terraform/**'     
 
-    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
-    # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
       working-directory: terraform
       run: |        
@@ -38,7 +34,6 @@ jobs:
         echo "Running tf init in directory: $d"
         cd $d && terraform init && cd ..
         done
-    # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
       working-directory: terraform      
       run: |
@@ -47,7 +42,6 @@ jobs:
         echo "Running tf format check in directory: $d"
         cd $d && terraform fmt -check && cd ..
         done
-    # Generates an execution plan for Terraform
     - name: Terraform Validate
       working-directory: terraform
       run: |
