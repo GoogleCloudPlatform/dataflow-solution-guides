@@ -88,6 +88,18 @@ public class App {
         String getSubscription();
 
         void setSubscription(String value);
+
+        @Description("BigTable Instance")
+        @Default.String("my_bt_instance")
+        String getBTInstance();
+
+        void setBTInstance(String value);
+
+        @Description("BigTable table")
+        @Default.String("my_bt_table")
+        String getBTTable();
+
+        void setBTTable(String value);
     }
 
     private static final Logger LOG = LoggerFactory.getLogger(App.class);
@@ -140,6 +152,8 @@ public class App {
 
         final String BQ_PROJECT = options.getBQProject();
         final String BQ_DATASET = options.getBQDataset();
+        final String BT_INSTANCE = options.getBTInstance();
+        final String BT_TABLE = options.getBTTable();
 
         PCollection<String> pubsubMessages = p
                 .apply("ReadPubSubSubscription", PubsubIO.readStrings().fromSubscription(SUBSCRIPTION));
@@ -151,7 +165,12 @@ public class App {
             }
         }));
 
-        PCollectionTuple results = pubsubMessages.apply("TransformJSONToBQ", JsonToBQ.run());
+        PCollection<String> enrichedMessages = pubsubMessages.apply(
+                "EnrichWithBigtable",
+                ParDo.of(new BigTableEnrichment(PROJECT, BT_INSTANCE, BT_TABLE))
+        );
+
+        PCollectionTuple results = enrichedMessages.apply("TransformJSONToBQ", JsonToBQ.run());
 
         WriteResult writeResult = results.get(SUCCESS_TAG).apply("WriteSuccessfulRecordsToBQ", BigQueryIO.writeTableRows()
                 .withMethod(BigQueryIO.Write.Method.STREAMING_INSERTS)
