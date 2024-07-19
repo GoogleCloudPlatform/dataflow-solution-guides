@@ -99,7 +99,7 @@ module "enrichment_table" {
   name       = "bt-enrichment"
   clusters = {
     cluster1 = {
-      zone = var.zone
+      zone      = var.zone
       num_nodes = 3
     }
   }
