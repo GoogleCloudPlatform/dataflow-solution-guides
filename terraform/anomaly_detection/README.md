@@ -1,11 +1,11 @@
-# GenAI & ML inference project deployment
+# Real-Time Anomaly Detection project deployment
 
 This directory contains the Terraform code to spawn a Google Cloud project
 with all the necessary infrastructure and configuration required for running
-the GenAI & ML inference solution guide.
+the Real-Time Anomaly Detection solution guide.
 
 These deployment scripts are part of the
-[Dataflow Gen AI & ML solution guide](../../use_cases/GenAI_ML.md).
+[Dataflow Real-Time Anomaly Detection](../../use_cases/GenAI_ML.md).
 
 ## Bill of resources created by this script
 
@@ -81,3 +81,54 @@ To destroy and stop all the resources, run:
 ```bash
 terraform destroy
 ```
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+No requirements.
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_local"></a> [local](#provider\_local) | 2.5.1 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| <a name="module_buckets"></a> [buckets](#module\_buckets) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs | v32.0.0 |
+| <a name="module_dataflow_sa"></a> [dataflow\_sa](#module\_dataflow\_sa) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account | v32.0.0 |
+| <a name="module_enrichment_table"></a> [enrichment\_table](#module\_enrichment\_table) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigtable-instance | v32.0.0 |
+| <a name="module_firewall_rules"></a> [firewall\_rules](#module\_firewall\_rules) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall | v32.0.0 |
+| <a name="module_google_cloud_project"></a> [google\_cloud\_project](#module\_google\_cloud\_project) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project | v32.0.0 |
+| <a name="module_input_topic"></a> [input\_topic](#module\_input\_topic) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub | v32.0.0 |
+| <a name="module_output_dataset"></a> [output\_dataset](#module\_output\_dataset) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset | v32.0.0 |
+| <a name="module_output_topic"></a> [output\_topic](#module\_output\_topic) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub | v32.0.0 |
+| <a name="module_regional_nat"></a> [regional\_nat](#module\_regional\_nat) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat | v32.0.0 |
+| <a name="module_registry_docker"></a> [registry\_docker](#module\_registry\_docker) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry | v32.0.0 |
+| <a name="module_vpc_network"></a> [vpc\_network](#module\_vpc\_network) | github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc | v32.0.0 |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [local_file.variables_script](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_billing_account"></a> [billing\_account](#input\_billing\_account) | Billing account for the projects/resources | `string` | `null` | no |
+| <a name="input_destroy_all_resources"></a> [destroy\_all\_resources](#input\_destroy\_all\_resources) | Destroy all resources when calling tf destroy. Use false for production deployments. For test environments, set to true to remove all buckets and bigtable instances. | `bool` | `true` | no |
+| <a name="input_internet_access"></a> [internet\_access](#input\_internet\_access) | Set to true to create a NAT for Dataflow workers to access Internet. | `bool` | `false` | no |
+| <a name="input_network_prefix"></a> [network\_prefix](#input\_network\_prefix) | Prefix to be used for networks and subnetworks | `string` | `"dataflow"` | no |
+| <a name="input_organization"></a> [organization](#input\_organization) | Organization for the project/resources | `string` | `null` | no |
+| <a name="input_project_create"></a> [project\_create](#input\_project\_create) | True if you want to create a new project. False to reuse an existing project. | `bool` | n/a | yes |
+| <a name="input_project_id"></a> [project\_id](#input\_project\_id) | Project ID for the project/resources | `string` | n/a | yes |
+| <a name="input_region"></a> [region](#input\_region) | The region for resources and networking | `string` | n/a | yes |
+| <a name="input_zone"></a> [zone](#input\_zone) | The zone for big table | `string` | n/a | yes |
+
+## Outputs
+
+No outputs.
+<!-- END_TF_DOCS -->
