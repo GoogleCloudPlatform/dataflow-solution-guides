@@ -17,6 +17,8 @@ locals {
   max_dataflow_workers     = 1
   worker_disk_size_gb      = 200
   machine_type             = "g2-standard-4"
+  bigquery_dataset  = "output_dataset"
+  bigtable_instance = "bt-enrichment"
 }
 
 
@@ -77,18 +79,18 @@ module "buckets" {
 module "input_topic" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
-  name       = "messages"
+  name       = "transactions"
   subscriptions = {
-    messages-sub = {}
+    transactions-sub = {}
   }
 }
 
 module "output_topic" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
-  name       = "predictions"
+  name       = "detections"
   subscriptions = {
-    predictions-sub = {}
+    detections-sub = {}
   }
 }
 
@@ -96,7 +98,7 @@ module "output_topic" {
 module "enrichment_table" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigtable-instance?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
-  name       = "bt-enrichment"
+  name       = local.bigtable_instance
   clusters = {
     cluster1 = {
       zone      = var.zone
@@ -112,7 +114,7 @@ module "enrichment_table" {
 module "output_dataset" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
-  id         = "output_dataset"
+  id         = local.bigquery_dataset
 }
 
 // Service account
@@ -199,15 +201,17 @@ export TEMP_LOCATION=gs://$PROJECT/tmp
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 
 export DOCKER_REPOSITORY=${module.registry_docker.name}
-export IMAGE_NAME=dataflow-solutions-ml-ai
+export IMAGE_NAME=dataflow-solutions-anomaly-detection
 export DOCKER_TAG=0.1
 export DOCKER_IMAGE=$REGION-docker.pkg.dev/$PROJECT/$DOCKER_REPOSITORY/$IMAGE_NAME
 
-export GCS_GEMMA_PATH=gs://$PROJECT/gemma_2B
 export CONTAINER_URI=$DOCKER_IMAGE:$DOCKER_TAG
 
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 export DISK_SIZE_GB=${local.worker_disk_size_gb}
 export MACHINE_TYPE=${local.machine_type}
+
+export BIGTABLE_INSTANCE=${module.enrichment_table.id}
+export BQ_DATASET=${module.output_dataset.dataset_id}
 FILE
 }

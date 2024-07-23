@@ -61,4 +61,3 @@ variable "zone" {
   description = "The zone for big table"
   type        = string
 }
-
