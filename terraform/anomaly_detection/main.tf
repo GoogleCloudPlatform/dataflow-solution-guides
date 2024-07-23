@@ -17,8 +17,8 @@ locals {
   max_dataflow_workers     = 1
   worker_disk_size_gb      = 200
   machine_type             = "g2-standard-4"
-  bigquery_dataset  = "output_dataset"
-  bigtable_instance = "bt-enrichment"
+  bigquery_dataset         = "output_dataset"
+  bigtable_instance        = "bt-enrichment"
 }
 
 
