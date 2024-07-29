@@ -1,6 +1,7 @@
 package clickstream_analytics_java;
 
 import com.google.api.client.json.JsonFactory;
+import com.google.api.services.bigquery.model.TableRow;
 import com.google.common.io.Resources;
 import org.apache.beam.runners.dataflow.DataflowRunner;
 import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
@@ -18,8 +19,11 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.windowing.Sessions;
+import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionTuple;
+import org.joda.time.Duration;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -128,7 +132,7 @@ public class ClickstreamPubSubToBq {
         final String BT_LOOKUP_KEY = options.getBtLookupKey();
 
         PCollection<String> pubsubMessages = p
-                .apply("ReadPubSubSubscription", PubsubIO.readStrings().fromSubscription(SUBSCRIPTION));
+                .apply("ReadPubSubData", PubsubIO.readStrings().fromSubscription(SUBSCRIPTION));
 
         pubsubMessages.apply("CountPubSubData", ParDo.of(new DoFn<String, String>() {
             @ProcessElement
@@ -144,7 +148,11 @@ public class ClickstreamPubSubToBq {
 
         PCollectionTuple results = pubsubMessages.apply("TransformJSONToBQ", JsonToTableRows.run());
 
-        WriteResult writeResult = results.get(SUCCESS_TAG).apply("WriteSuccessfulRecordsToBQ", BigQueryIO.writeTableRows()
+        PCollection<TableRow> windowedTableRows = results.get(SUCCESS_TAG)
+                .apply("SessionWindow",
+                        Window.<TableRow>into(Sessions.withGapDuration(Duration.standardMinutes(1))));
+
+        WriteResult writeResult = windowedTableRows.apply("WriteSuccessfulRecordsToBQ", BigQueryIO.writeTableRows()
                 .withMethod(BigQueryIO.Write.Method.STREAMING_INSERTS)
                 .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
                 .withWriteDisposition(WRITE_APPEND)
