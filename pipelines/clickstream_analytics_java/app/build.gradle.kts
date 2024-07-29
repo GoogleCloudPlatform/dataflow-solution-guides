@@ -6,33 +6,36 @@
  */
 
 plugins {
-    // Apply the application plugin to add support for building a CLI application in Java.
     application
 }
 
 repositories {
-    // Use Maven Central for resolving dependencies.
     mavenCentral()
+    maven {
+            url = uri("https://packages.confluent.io/maven/")
+        }
 }
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
     implementation("com.google.guava:guava:31.1-jre")
     implementation("com.google.cloud.dataflow:google-cloud-dataflow-java-sdk-all:2.5.0")
-    implementation("org.apache.beam:beam-sdks-java-io-google-cloud-platform:2.57.0")
-    implementation("org.apache.beam:beam-sdks-java-core:2.57.0")
-    implementation("org.apache.beam:beam-runners-google-cloud-dataflow-java:2.57.0")
-    implementation("org.apache.beam:beam-runners-direct-java:2.57.0")
+    implementation("org.apache.beam:beam-sdks-java-io-google-cloud-platform:2.50.0")
+    implementation("org.apache.beam:beam-sdks-java-core:2.50.0")
+    implementation("org.apache.beam:beam-runners-google-cloud-dataflow-java:2.50.0")
+    annotationProcessor("com.google.auto.value:auto-value-annotations:1.10.4")
+    implementation("com.google.auto.value:auto-value-annotations:1.10.4")
+    implementation("org.slf4j:slf4j-nop:2.0.13")
+    implementation("io.confluent:kafka-avro-serializer:5.3.2")
+    implementation("io.confluent:kafka-schema-registry-client:5.3.2")
 }
 
-// Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(22))
+        languageVersion.set(JavaLanguageVersion.of(17))
     }
 }
 
 application {
-    // Define the main class for the application.
-    mainClass.set("clickstream_analytics_java.App")
+    mainClass.set("clickstream_analytics_java.ClickstreamPubSubToBq")
 }

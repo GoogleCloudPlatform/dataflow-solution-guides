@@ -1,8 +1,5 @@
 package clickstream_analytics_java;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,11 +18,10 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.coders.Coder.Context;
 import org.apache.beam.sdk.io.gcp.bigquery.TableRowJsonCoder;
 
-public class JsonToBQ {
-    private static final Logger log = LoggerFactory.getLogger(JsonToBQ.class);
+public class JsonToTableRows {
 
     public static PTransform<PCollection<String>, PCollectionTuple> run() {
-        return new JsonToBQ.JsonToTableRow();
+        return new JsonToTableRows.JsonToTableRow();
     }
 
     static final TupleTag<TableRow> SUCCESS_TAG =
@@ -47,8 +43,8 @@ public class JsonToBQ {
                             byte[] message_in_bytes = jsonString.getBytes(StandardCharsets.UTF_8);
 
                             if (message_in_bytes.length >= 10 * 1024 * 1024) {
-                                log.error("Error: too big row of size {} bytes in type {}", message_in_bytes.length);
-                                Metric.tooBigMessages.inc();
+                                System.out.println("Error: too big row of size {} bytes in type {}");
+                                Metrics.tooBigMessages.inc();
                                 context.output(FAILURE_TAG, KV.of("TooBigRow", jsonString));
                             }
 
@@ -56,12 +52,12 @@ public class JsonToBQ {
                             try (InputStream inputStream = new ByteArrayInputStream(message_in_bytes))
                             {
                                 row = TableRowJsonCoder.of().decode(inputStream, Context.OUTER);
-                                Metric.successfulMessages.inc();
+                                Metrics.successfulMessages.inc();
                                 context.output(row);
 
                             } catch (IOException e) {
-                                log.error("Error: {}", e.getMessage());
-                                Metric.jsonParseErrorMessages.inc();
+                                System.out.println("Error:" + e.getMessage());
+                                Metrics.jsonParseErrorMessages.inc();
                                 context.output(FAILURE_TAG, KV.of("JsonParseError", jsonString));
                             }
                         }
