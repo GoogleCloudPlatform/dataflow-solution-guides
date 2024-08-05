@@ -18,8 +18,7 @@ public class ErrorConverters {
             extends DoFn<FailsafeElement<String, String>, TableRow> {
 
         /**
-         * The formatter used to convert timestamps into a BigQuery compatible <a
-         * href="https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#timestamp-type">format</a>.
+         * The formatter used to convert timestamps into a BigQuery compatible.
          */
         private static final DateTimeFormatter TIMESTAMP_FORMATTER =
                 DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");

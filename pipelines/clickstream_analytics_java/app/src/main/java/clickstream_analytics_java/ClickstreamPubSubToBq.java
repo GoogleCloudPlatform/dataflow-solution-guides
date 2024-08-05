@@ -119,6 +119,18 @@ public class ClickstreamPubSubToBq {
                 .withValidation()
                 .as(MyOptions.class);
 
+        options.setRunner(DataflowRunner.class);
+        options.setBQTable("sample_tbl_enriched");
+        options.setBQDataset("df_sol_guide");
+        options.setProjectId("dev-experiment-project");
+        options.setBTInstance("df-sol-bt-instance");
+        options.setBTTable("customer_profiles");
+        options.setOutputDeadletterTable("deadletter_tbl");
+        options.setSubscription("projects/dev-experiment-project/subscriptions/df-sol-pubsub-sub");
+        options.setTempLocation("gs://df-sol-guide-gcs/tmp-loc");
+        options.setRegion("us-central1");
+        options.setBtLookupKey("bigtable_row_key");
+
         Pipeline p = Pipeline.create(options);
 
         final String PROJECT = options.getProjectId();
@@ -131,9 +143,11 @@ public class ClickstreamPubSubToBq {
         final String BT_TABLE = options.getBTTable();
         final String BT_LOOKUP_KEY = options.getBtLookupKey();
 
+        /*******     Read PubSub data  *********/
         PCollection<String> pubsubMessages = p
                 .apply("ReadPubSubData", PubsubIO.readStrings().fromSubscription(SUBSCRIPTION));
 
+        /*******     Count PubSub data using Metrics  *********/
         pubsubMessages.apply("CountPubSubData", ParDo.of(new DoFn<String, String>() {
             @ProcessElement
             public void processElement(ProcessContext c) {
@@ -141,17 +155,26 @@ public class ClickstreamPubSubToBq {
             }
         }));
 
-//        PCollection<String> enrichedMessages = pubsubMessages.apply(
-//                "EnrichWithBigtable",
-//                ParDo.of(new BigTableEnrichment(PROJECT, BT_INSTANCE, BT_TABLE,BT_LOOKUP_KEY))
-//        );
+        /***
+         *
+         * TODO
+         * Bigtable enrichment with pubsub data task is still pending.
+         *
+        PCollection<String> enrichedMessages = pubsubMessages.apply(
+                "EnrichWithBigtable",
+                ParDo.of(new BigTableEnrichment(PROJECT, BT_INSTANCE, BT_TABLE,BT_LOOKUP_KEY))
+        );
+        ***/
 
+
+        /*******     Convert PubSub data to BigQuery Table Rows  *********/
         PCollectionTuple results = pubsubMessages.apply("TransformJSONToBQ", JsonToTableRows.run());
 
         PCollection<TableRow> windowedTableRows = results.get(SUCCESS_TAG)
                 .apply("SessionWindow",
                         Window.<TableRow>into(Sessions.withGapDuration(Duration.standardMinutes(1))));
 
+        /*******     Write Data to BigQuery Table  *********/
         WriteResult writeResult = windowedTableRows.apply("WriteSuccessfulRecordsToBQ", BigQueryIO.writeTableRows()
                 .withMethod(BigQueryIO.Write.Method.STREAMING_INSERTS)
                 .withFailedInsertRetryPolicy(InsertRetryPolicy.retryTransientErrors())
@@ -175,6 +198,7 @@ public class ClickstreamPubSubToBq {
                                         .via((BigQueryInsertError e) -> wrapBigQueryInsertError(e)))
                         .setCoder(FAILSAFE_ELEMENT_CODER);
 
+        /*******     Failed insertion will be pushed to Bigquery Deadletter table  *********/
         failedInserts.apply("FailedRecordToTableRow", ParDo.of(new ErrorConverters.FailedStringToTableRowFn()))
                 .apply(
                         "WriteFailedRecordsToBigQuery",
@@ -207,6 +231,7 @@ public class ClickstreamPubSubToBq {
         return failsafeElement;
     }
 
+    /*******     Read BigQuery Deadletter JSON Schema if table not exist  *********/
     static String getDeadletterTableSchemaJson() {
         String schemaJson = null;
         try {
