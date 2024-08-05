@@ -13,18 +13,14 @@
 #  limitations under the License.
 
 locals {
-  spanner_instance         = "test-spanner-instance"
-  spanner_database         = "taxis_database"
-  spanner_table            = "events"
-  spanner_change_stream    = "events_stream"
-  spanner_metadata_db      = "metadata"
-  spanner_configuration    = "regional-${var.region}"
-  spanner_name             = "Spanner instance managed by TF"
-  bigquery_dataset         = "replica"
   dataflow_service_account = "my-dataflow-sa"
-  worker_type              = "n2-standard-4"
-  max_dataflow_workers     = 10
+  max_dataflow_workers     = 1
+  worker_disk_size_gb      = 200
+  machine_type             = "g2-standard-4"
+  bigquery_dataset         = "output_dataset"
+  bigtable_instance        = "bt-enrichment"
 }
+
 
 // Project
 module "google_cloud_project" {
@@ -34,13 +30,40 @@ module "google_cloud_project" {
   name            = var.project_id
   parent          = var.organization
   services = [
+    "cloudbuild.googleapis.com",
     "dataflow.googleapis.com",
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
     "autoscaling.googleapis.com",
-    "spanner.googleapis.com",
-    "bigquery.googleapis.com"
+    "artifactregistry.googleapis.com",
+    "bigtable.googleapis.com",
+    "bigtableadmin.googleapis.com",
+    "bigquery.googleapis.com",
   ]
+}
+
+module "registry_docker" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v32.0.0"
+  project_id = module.google_cloud_project.project_id
+  location   = var.region
+  name       = "dataflow-containers"
+  iam = {
+    "roles/artifactregistry.admin" = [
+      "serviceAccount:${module.google_cloud_project.number}@cloudbuild.gserviceaccount.com"
+    ]
+    "roles/artifactregistry.reader" = [
+      module.dataflow_sa.iam_email
+    ]
+  }
+  cleanup_policy_dry_run = false
+  cleanup_policies = {
+    keep-3-versions = {
+      action = "KEEP"
+      most_recent_versions = {
+        keep_count = 3
+      }
+    }
+  }
 }
 
 // Buckets for staging data, scripts, etc, in the two regions
@@ -53,81 +76,45 @@ module "buckets" {
   force_destroy = var.destroy_all_resources
 }
 
-// BigQuery dataset for final destination
-module "dataset" {
+module "input_topic" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
+  project_id = module.google_cloud_project.project_id
+  name       = "transactions"
+  subscriptions = {
+    transactions-sub = {}
+  }
+}
+
+module "output_topic" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
+  project_id = module.google_cloud_project.project_id
+  name       = "detections"
+  subscriptions = {
+    detections-sub = {}
+  }
+}
+
+//bigtable table
+module "enrichment_table" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigtable-instance?ref=v32.0.0"
+  project_id = module.google_cloud_project.project_id
+  name       = local.bigtable_instance
+  clusters = {
+    cluster1 = {
+      zone      = var.zone
+      num_nodes = 3
+    }
+  }
+  tables = {
+    features = {}
+  }
+}
+
+//bigquery dataset
+module "output_dataset" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
   id         = local.bigquery_dataset
-  access = {
-    dataflow-writer = { role = "OWNER", type = "user" }
-  }
-  access_identities = {
-    dataflow-writer = module.dataflow_sa.email
-  }
-}
-
-// Spanner instance for change streams / CDC, using minimal instances size for demo purposes
-resource "google_spanner_instance" "spanner_instance" {
-  config           = local.spanner_configuration
-  name             = local.spanner_instance
-  project          = module.google_cloud_project.project_id
-  display_name     = local.spanner_name
-  processing_units = 1000
-  force_destroy    = var.destroy_all_resources
-}
-
-resource "google_spanner_database" "taxis" {
-  instance = google_spanner_instance.spanner_instance.name
-  project  = module.google_cloud_project.project_id
-  name     = local.spanner_database
-  ddl = [
-    <<DDL1
-CREATE TABLE ${local.spanner_table} (
-  ride_id STRING(64),
-  point_idx INT64,
-  latitude FLOAT64,
-  longitude FLOAT64,
-  timestamp TIMESTAMP,
-  meter_reading FLOAT64,
-  meter_increment FLOAT64,
-  ride_status STRING(64),
-  passenger_count INT64,
-) PRIMARY KEY(ride_id, point_idx)
-DDL1
-    ,
-    <<DDL2
-CREATE CHANGE STREAM ${local.spanner_change_stream} FOR ${local.spanner_table}
-OPTIONS(value_capture_type = 'NEW_ROW_AND_OLD_VALUES')
-DDL2
-  ]
-  deletion_protection = !var.destroy_all_resources
-}
-
-resource "google_spanner_database_iam_binding" "read_write_taxis" {
-  project  = module.google_cloud_project.project_id
-  instance = google_spanner_instance.spanner_instance.name
-  database = google_spanner_database.taxis.name
-  role     = "roles/spanner.databaseUser"
-  members = [
-    module.dataflow_sa.iam_email
-  ]
-}
-
-resource "google_spanner_database" "metadata" {
-  instance            = google_spanner_instance.spanner_instance.name
-  project             = module.google_cloud_project.project_id
-  name                = local.spanner_metadata_db
-  deletion_protection = !var.destroy_all_resources
-}
-
-resource "google_spanner_database_iam_binding" "read_write_metadata" {
-  project  = module.google_cloud_project.project_id
-  instance = google_spanner_instance.spanner_instance.name
-  database = google_spanner_database.metadata.name
-  role     = "roles/spanner.databaseUser"
-  members = [
-    module.dataflow_sa.iam_email
-  ]
 }
 
 // Service account
@@ -145,6 +132,7 @@ module "dataflow_sa" {
     ]
   }
 }
+
 
 // Network
 module "vpc_network" {
@@ -191,10 +179,8 @@ module "firewall_rules" {
     }
   }
 }
-
-// So we can get to Internet if necessary (from the Dataflow region)
 module "regional_nat" {
-  count          = var.internet_access ? 1 : 0
+  // So we can get to Internet if necessary (from the Dataflow region)
   source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v32.0.0"
   project_id     = module.google_cloud_project.project_id
   region         = var.region
@@ -202,29 +188,30 @@ module "regional_nat" {
   router_network = module.vpc_network.self_link
 }
 
-// Script with variables to launch the Dataflow jobs
 resource "local_file" "variables_script" {
-  filename        = "${path.module}/../../pipelines/etl_integration_java/scripts/01_set_variables.sh"
+  filename        = "${path.module}/../../pipelines/anomaly_detection/scripts/00_set_variables.sh"
   file_permission = "0644"
   content         = <<FILE
 # This file is generated by the Terraform code of this Solution Guide.
 # We recommend that you modify this file only through the Terraform deployment.
 export PROJECT=${module.google_cloud_project.project_id}
 export REGION=${var.region}
-export NETWORK=regions/${var.region}/subnetworks/${var.network_prefix}-subnet
+export SUBNETWORK=regions/${var.region}/subnetworks/${var.network_prefix}-subnet
 export TEMP_LOCATION=gs://$PROJECT/tmp
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 
-export TOPIC=projects/pubsub-public-data/topics/taxirides-realtime
-export SPANNER_INSTANCE=${google_spanner_instance.spanner_instance.name}
-export SPANNER_DATABASE=${local.spanner_database}
-export SPANNER_METADATA_DB=${local.spanner_metadata_db}
-export SPANNER_TABLE=${local.spanner_table}
-export SPANNER_CHANGE_STREAM=${local.spanner_change_stream}
+export DOCKER_REPOSITORY=${module.registry_docker.name}
+export IMAGE_NAME=dataflow-solutions-anomaly-detection
+export DOCKER_TAG=0.1
+export DOCKER_IMAGE=$REGION-docker.pkg.dev/$PROJECT/$DOCKER_REPOSITORY/$IMAGE_NAME
 
-export BIGQUERY_DATASET=${local.bigquery_dataset}
+export CONTAINER_URI=$DOCKER_IMAGE:$DOCKER_TAG
 
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
-export WORKER_TYPE=${local.worker_type}
+export DISK_SIZE_GB=${local.worker_disk_size_gb}
+export MACHINE_TYPE=${local.machine_type}
+
+export BIGTABLE_INSTANCE=${module.enrichment_table.id}
+export BQ_DATASET=${module.output_dataset.dataset_id}
 FILE
 }
