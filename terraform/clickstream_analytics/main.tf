@@ -76,6 +76,25 @@ resource "google_bigquery_table" "wikipedia" {
   ])
 }
 
+resource "google_bigquery_table" "deadletter" {
+  dataset_id          = google_bigquery_dataset.clickstream_analytics.dataset_id
+  table_id            = "deadletter"
+  deletion_protection = false
+
+  schema = jsonencode([
+    { name = "timestamp", type = "TIMESTAMP", mode = "REQUIRED" },
+    { name = "payloadString", type = "STRING", mode = "REQUIRED" },
+    { name = "payloadBytes", type = "BYTES", mode = "REQUIRED" },
+    { 
+      name = "attributes", type = "RECORD", mode = "REPEATED", fields = [
+        { name = "key", type = "STRING", mode = "NULLABLE" },
+        { name = "value", type = "STRING", mode = "NULLABLE" }
+      ]
+    },
+    { name = "errorMessage", type = "STRING", mode = "NULLABLE" },
+    { name = "stacktrace", type = "STRING", mode = "NULLABLE" }
+  ])
+}
 
 module "registry_docker" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v32.0.0"
@@ -117,15 +136,6 @@ module "input_topic" {
   name       = "input"
   subscriptions = {
     messages-sub = {}
-  }
-}
-
-module "deadletter_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
-  project_id = module.google_cloud_project.project_id
-  name       = "deadletter"
-  subscriptions = {
-    predictions-sub = {}
   }
 }
 
