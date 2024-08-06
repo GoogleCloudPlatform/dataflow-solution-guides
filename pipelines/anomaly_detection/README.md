@@ -1,9 +1,9 @@
 # Anomaly Detection sample pipeline (Python)
-This sample pipeline demonstrates how to use Dataflow to process data, and calculate predictions
+This sample pipeline demonstrates how to use Dataflow to process data, and detect anomalies
 using GenAI.
 This pipeline is written in Python.
 
-This pipeline is part of the [Dataflow Gen AI & ML solution guide](../../use_cases/Anomaly_Detection.md).
+This pipeline is part of the [Dataflow Anomaly Detection solution guide](../../use_cases/Anomaly_Detection.md).
 
 ## Architecture
 
