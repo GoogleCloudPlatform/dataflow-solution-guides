@@ -13,16 +13,10 @@
 #  limitations under the License.
 
 steps:
-  - name: 'gcr.io/cloud-builders/gsutil'
-    script: |
-      echo Copying Gemma model from $_GCS_GEMMA_PATH
-      gsutil -m -q cp -r $_GCS_GEMMA_PATH /workspace
-      echo All files copied.
   - name: 'gcr.io/cloud-builders/docker'
     script: |
       docker build -t ${_TAG} .
 substitutions:
-    _GCS_GEMMA_PATH: unset
     _TAG: unset
 options:
     substitutionOption: 'ALLOW_LOOSE'
