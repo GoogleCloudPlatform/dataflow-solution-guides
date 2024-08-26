@@ -1,0 +1,9 @@
+# google-cloud-storage
+# google-cloud-pubsub
+# apache-beam[gcp] 
+# fsspec
+# pandas
+# gcsfs
+apache-beam[gcp]  # Example, use your actual versions
+google-cloud-storage
+

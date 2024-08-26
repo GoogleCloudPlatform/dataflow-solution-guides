@@ -1,0 +1,18 @@
+python ./main.py \
+  --runner=DataflowRunner \
+  --project=malhotradi \
+  --temp_location=gs://malhotradi/tmp \
+  --region=us-central1 \
+  --save_main_session \
+  --service_account_email=my-dataflow-sa@malhotradi.iam.gserviceaccount.com \
+  --subnetwork=$SUBNETWORK \
+  --sdk_container_image=$CONTAINER_URI \
+  --max_workers=$MAX_DATAFLOW_WORKERS \
+  --disk_size_gb=$DISK_SIZE_GB \
+  --machine_type=$MACHINE_TYPE \
+  --transactions_topic=projects/malhotradi/topics/transactions \
+  --coupons_redemption_topic=projects/malhotradi/topics/coupon_redemption \
+  --output_dataset=$BQ_DATASET \
+  --output_table='unified_table' \
+  --project_id=malhotradi \
+  --enable_streaming_engine
