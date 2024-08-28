@@ -8,7 +8,7 @@ This pipeline is part of the [Dataflow Gen AI & ML solution guide](../../use_cas
 
 ## Architecture
 
-The generic architecture for an inference pipeline looks like as follows:
+The generic architecture for an inference pipeline is shown below:
 
 ![Architecture](../imgs/market_intel.png)
 
@@ -16,49 +16,56 @@ In this directory, you will find a specific implementation of the above architec
 following stages:
 
 1. **Data ingestion:** Reads data from a Pub/Sub topic.
-2. **Data preprocessing:** The sample pipeline does not do any transformation, but it is trivial
-   to add a preprocessing step leveraging 
-   [the Enrichment transform](https://cloud.google.com/dataflow/docs/guides/enrichment) to perform
-   feature engineering before calling the model.
-3. **Inference:** Uses the RunInference transform with VertexAIModelHandlerJSON, which in turn sends online prediction request to an Auto-ML generated model. The pipeline uses a GPU with the Dataflow worker, to speed up the inference.
+For more information about Pub/Sub [ Cloud Pub/Sub Overview]( https://cloud.google.com/pubsub/docs/overview).
+2. **Data preprocessing:** While this sample pipeline doesn't perform any transformations, you can easily add a preprocessing step using the
+   [the Enrichment transform](https://cloud.google.com/dataflow/docs/guides/enrichment) for feature engineering before invoking the model. 
+
+3. **Inference:** Uses the RunInference transform with VertexAIModelHandlerJSON, which in turn sends online prediction request to an Auto-ML generated model. The pipeline uses a GPU with the Dataflow worker, to speed up the inference. For more information about Vertex AI [Vertex AI Overview](https://cloud.google.com/vertex-ai/docs/overview).
+
 4. **Predictions:** The predictions are sent to another Pub/Sub topic as output.
 
 ## Auto-ML model
 
-The model can be deployed on Vertex AI end-point through various purposes. 
-For the purpose of this demonstration, the following steps have been followed to create, train and deploy the model:
+The model can be deployed on a Vertex AI endpoint to serve various purposes.
+To demonstrate the process, we followed these steps to create, train, and deploy the model:
 
 1. Create a [Vertex-AI Dataset](https://cloud.google.com/vertex-ai/docs/tutorials/tabular-bq-prediction/create-dataset) using an existing Bigquery table. 
 2. Train a [Text-Classification Model](https://cloud.google.com/vertex-ai/docs/beginner/beginners-guide#train_model) using AutoML.
 3. Once the model is ready, it can be [deployed and tested](https://cloud.google.com/vertex-ai/docs/tutorials/image-classification-automl/deploy-predict#deploy_your_model_to_an_endpoint) on Vertex-AI endpoint.
 4. Take a note of the end-point ID.
 
-## Selecting the cloud region
+## Getting Started
 
-Not all the resources may be available in all the regions. The default values included in this
-directory have been tested using `us-central1` as region.
+## Choosing Your Cloud Region
 
-The file `cloudbuild.yaml` is using the machine type `E2_HIGHCPU_8` as the default machine type. If
-that's not available in your preferred region, try with other machine types that are available
-in Cloud Build:
-* https://cloud.google.com/build/docs/api/reference/rest/v1/projects.builds#machinetype
+It's important to choose your cloud region carefully, as not all Google Cloud services and features are available in every region.
 
-Moreover, the file `scripts/00_set_environment.sh` specifies a machine type for the Datalow workers.
-The selected machine type, `g2-standard-4`, is the recommended one for inference with GPU. If that
-type is not available in your region, you can check what machines are available to use with the
-following command:
+Tip: The default settings in this directory have been tested and work well in the us-central1 region. If you choose a different region, you may need to adjust some settings.
+
+## Choosing Your Machine Type: 
+
+The cloudbuild.yaml file currently uses the E2_HIGHCPU_8 machine type. If this type isn't available in your chosen region, you'll need to edit the file and select a different machine type that is supported.
+[Machine types](https://cloud.google.com/compute/docs/machine-types)
+
+
+## Choosing Your Dataflow Worker Machine Type
+
+The `scripts/00_set_environment.sh` file also specifies the machine type for your Dataflow workers. We recommend `g2-standard-4` for optimal GPU inference performance.
+
+If `g2-standard-4` isn't available in your region, you can list suitable machine types using this command (replace <ZONE A>, <ZONE B>, etc. with your desired zones):
 
 ```sh
-gcloud compute machine-types list --zones=<ZONE A>,<ZONE B>,...
+gcloud compute machine-types list --zones=<ZONE A>,<ZONE B>,.
 ```
 
-See more info about selecting the right type of machine in the following link:
-* https://cloud.google.com/compute/docs/machine-resource
+See more info about selecting the right type of machine Type in the [Machine Types](https://cloud.google.com/compute/docs/machine-types)
+ 
 
-## How to launch the pipeline
+## Next Steps
 
-All the scripts are located in the `scripts` directory and prepared to be launched from the top 
-sources directory.
+## Launch the pipeline
+
+All scripts are in the scripts directory and designed to run from the project's root directory.
 
 In the script `scripts/00_set_environment.sh`, define the value of the project id and the region variable:
 
@@ -67,16 +74,15 @@ export PROJECT=<YOUR PROJECT ID>
 export REGION=<YOUR CLOUD REGION>
 ```
 
-Leave the rest of variables untouched, although you can override them if you prefer.
+You can leave the remaining variables at their default values, but feel free to override them if you have specific preferences or requirements.
 
-After you edit the script, load those variables into the environment
+Once you've finished editing the script, make sure to source it again to load the updated variables into your current environment by running the following command.
 
 ```sh
 source scripts/00_set_environment.sh
 ```
 
-And then run the script that builds and publishes the custom Dataflow container. This container will
-contain the Gemma model, and all the required dependencies.
+Next, run the script to build and publish the custom Dataflow container. This container will include the Gemma model and its necessary dependencies.
 
 ```sh
 ./scripts/01_build_and_push_container.sh
@@ -91,10 +97,8 @@ can trigger the pipeline with the following:
 
 ## Input data
 
-To send data into the pipeline, you need to publish messages in the `dataflow-solutions-guide-market-intelligence-input` topic. Those
-messages are passed "as is" to the end-point.
+To feed data into the pipeline, publish messages to the Pub/Sub topic `dataflow-solutions-guide-market-intelligence-input` These messages are sent directly to the endpoint without modification.
 
 ## Output data
 
-The predictions are published into the topic `dataflow-solutions-guide-market-intelligence-output`, and can be observed using the 
-subscription `dataflow-solutions-guide-market-intelligence-output-sub`.
+Predictions are published to the Pub/Sub topic `dataflow-solutions-guide-market-intelligence-output topic and can be viewed using the Pub/Sub console.dataflow-solutions-guide-market-intelligence-output-sub subscription.
