@@ -22,7 +22,6 @@ steps:
     script: |
       docker build -t ${_TAG} .
 substitutions:
-    # _GCS_GEMMA_PATH: unset
     _TAG: unset
 options:
     substitutionOption: 'ALLOW_LOOSE'

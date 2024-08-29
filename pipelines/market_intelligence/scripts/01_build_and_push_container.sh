@@ -15,5 +15,5 @@
 gcloud builds submit \
   --region=$REGION \
   --default-buckets-behavior=regional-user-owned-bucket \
-  --substitutions _TAG=$CONTAINER_URI,_GCS_GEMMA_PATH=$GCS_GEMMA_PATH \
+  --substitutions _TAG=$CONTAINER_URI\
   .
