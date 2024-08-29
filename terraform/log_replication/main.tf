@@ -12,12 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# TODO:
+
 locals {
   pubsub_logging_topic     = "all-logs"
+  pubsub_deadletter_topic  = "deadletter-topic"
   pubsub_sink_name         = "pubsub-sink"
-  splunk_gke_cluster_name  = "splunk-gke-cluster"
   dataflow_service_account = "my-dataflow-sa"
-  logging_service_account  = "my-logging-sa"
   worker_type              = "n2-standard-2"
   max_dataflow_workers     = 10
 }
@@ -30,12 +31,12 @@ module "google_cloud_project" {
   name            = var.project_id
   parent          = var.organization
   services = [
+    "cloudresourcemanager.googleapis.com",
     "dataflow.googleapis.com",
+    "secretmanager.googleapis.com",
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
     "autoscaling.googleapis.com",
-    "spanner.googleapis.com",
-    "bigquery.googleapis.com",
     "container.googleapis.com"
   ]
 }
@@ -62,31 +63,9 @@ module "dataflow_sa" {
       "roles/storage.admin",
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
-      "roles/pubsub.editor"
+      "roles/pubsub.subscriber",
+      "roles/pubsub.publisher"
     ]
-  }
-}
-
-module "splunk_gke_cluster" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gke-cluster-autopilot?ref=v32.0.0"
-  project_id = module.google_cloud_project.project_id
-  name       = local.splunk_gke_cluster_name
-  location   = var.region
-  vpc_config = {
-    network    = module.vpc_network.self_link
-    subnetwork = module.vpc_network.subnets["${var.region}/${var.network_prefix}-subnet"].name
-    secondary_range_names = {
-      pods     = "pods"
-      services = "services"
-    }
-    master_authorized_ranges = {
-      internal-vms = module.vpc_network.subnets["${var.region}/${var.network_prefix}-subnet"].ip_cidr_range
-    }
-    master_ipv4_cidr_block = "192.168.0.0/28"
-  }
-  private_cluster_config = {
-    enable_private_endpoint = true
-    master_global_access    = false
   }
 }
 
@@ -95,6 +74,18 @@ module "logging_topic" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
   name       = local.pubsub_logging_topic
+  subscriptions = {
+    all-logs-sub = {}
+  }
+}
+
+module "deadletter_topic" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
+  project_id = module.google_cloud_project.project_id
+  name       = local.pubsub_deadletter_topic
+  subscriptions = {
+    deadletter-sub = {}
+  }
 }
 
 // Logging sink in Pubsub
@@ -112,6 +103,20 @@ resource "google_project_iam_binding" "pubsub_log_writer" {
   members = [
     google_logging_project_sink.my_logging_sink.writer_identity
   ]
+}
+
+// Splunk token in Secret Manager
+module "splunk_token_secret" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/secret-manager?ref=v32.0.0"
+  project_id = module.google_cloud_project.project_id
+  secrets = {
+    splunk-token = {}
+  }
+  versions = {
+    splunk-token = {
+      v1 = { enabled = true, data = var.splunk_token }
+    }
+  }
 }
 
 // Network
@@ -132,7 +137,6 @@ module "vpc_network" {
     }
   ]
 }
-
 
 module "firewall_rules" {
   // Default rules for internal traffic + SSH access via IAP
@@ -186,5 +190,9 @@ export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 export WORKER_TYPE=${local.worker_type}
+
+export INPUT_SUBSCRIPTION=${module.logging_topic.subscriptions["all-logs-sub"].id}
+export DEADLETTER_TOPIC=${module.deadletter_topic.id}
+export TOKEN_SECRET_ID=${module.splunk_token_secret.ids["splunk-token"]}
 FILE
 }

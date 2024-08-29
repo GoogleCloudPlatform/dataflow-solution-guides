@@ -57,3 +57,13 @@ variable "region" {
   type        = string
 }
 
+variable "splunk_hec_url" {
+  description = "The URL for the Splunk HEC endpoint"
+  type        = string
+}
+
+variable "splunk_token" {
+  description = "The token for the Splunk HEC endpoint. It will be stored in Secret Manager"
+  type        = string
+}
+
