@@ -1,9 +1,5 @@
-# google-cloud-storage
-# google-cloud-pubsub
-# apache-beam[gcp] 
-# fsspec
-# pandas
-# gcsfs
-apache-beam[gcp]  # Example, use your actual versions
-google-cloud-storage
-
+apache-beam[gcp]==2.57.0  # Example, use your actual versions
+## Below dependencies are required if you have to run script /cdp_pipeline/generate_transaction_data.py
+pandas
+fsspec
+gcsfs

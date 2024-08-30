@@ -18,7 +18,7 @@ locals {
   worker_disk_size_gb      = 200
   machine_type             = "e2-standard-8"
   bigquery_dataset         = "output_dataset"
-  //bigtable_instance        = "bt-enrichment"
+  bigquery_table           = "unified_data"
 }
 
 
@@ -36,8 +36,6 @@ module "google_cloud_project" {
     "pubsub.googleapis.com",
     "autoscaling.googleapis.com",
     "artifactregistry.googleapis.com",
-   // "bigtable.googleapis.com",
-    //"bigtableadmin.googleapis.com",
     "bigquery.googleapis.com",
     "sqladmin.googleapis.com",
   ]
@@ -96,40 +94,13 @@ module "coupon_redemption_topic" {
   }
 }
 
-/*
-module "output_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
-  project_id = module.google_cloud_project.project_id
-  name       = "detections"
-  subscriptions = {
-    detections-sub = {}
-  }
-}
-
-
-//bigtable table
-module "enrichment_table" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigtable-instance?ref=v32.0.0"
-  project_id = module.google_cloud_project.project_id
-  name       = local.bigtable_instance
-  clusters = {
-    cluster1 = {
-      zone      = var.zone
-      num_nodes = 3
-    }
-  }
-  tables = {
-    features = {}
-  }
-}
-*/
-
 //bigquery dataset
 module "output_dataset" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
   id         = local.bigquery_dataset
 }
+
 
 // Service account
 module "dataflow_sa" {
@@ -225,8 +196,8 @@ export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 export DISK_SIZE_GB=${local.worker_disk_size_gb}
 export MACHINE_TYPE=${local.machine_type}
 
-export BQ_DATASET=${module.output_dataset.dataset_id}
-export BQ_CDP_DATASET="cdp"
+export BQ_DATASET=${var.bq_dataset}
+export BQ_UNIFIED_TABLE=${var.bq_table}
 export GCS_BUCKET=gs://$PROJECT/assets/dataflow-solution-guide-cdp
 FILE
 }

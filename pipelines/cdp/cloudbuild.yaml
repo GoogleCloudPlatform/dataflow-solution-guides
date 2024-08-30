@@ -7,6 +7,5 @@ substitutions:
 options:
     substitutionOption: 'ALLOW_LOOSE'
     automapSubstitutions: true
-    # machineType: E2_STANDARD_8
 images:
   - ${_TAG}

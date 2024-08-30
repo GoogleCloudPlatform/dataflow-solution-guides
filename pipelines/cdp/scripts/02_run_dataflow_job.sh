@@ -1,0 +1,18 @@
+python3 -m main \
+  --runner=DataflowRunner \
+  --project=$PROJECT \
+  --temp_location=gs://$PROJECT/tmp \
+  --region=$REGION \
+  --save_main_session \
+  --service_account_email=my-dataflow-sa@$PROJECT.iam.gserviceaccount.com \
+  --subnetwork=$SUBNETWORK \
+  --sdk_container_image=$CONTAINER_URI \
+  --max_workers=$MAX_DATAFLOW_WORKERS \
+  --disk_size_gb=$DISK_SIZE_GB \
+  --machine_type=$MACHINE_TYPE \
+  --transactions_topic=projects/$PROJECT/topics/transactions \
+  --coupons_redemption_topic=projects/$PROJECT/topics/coupon_redemption \
+  --output_dataset=$BQ_DATASET \
+  --output_table=$BQ_UNIFIED_TABLE \
+  --project_id=$PROJECT \
+  --enable_streaming_engine

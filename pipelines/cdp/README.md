@@ -58,14 +58,19 @@ And then run the script that builds and publishes the custom Dataflow container.
 contain all the required dependencies.
 
 ```sh
-./scripts/02_cloudbuild_and_push_container.sh
+./scripts/01_cloudbuild_and_push_container.sh
 ```
 
 This will create a Cloud Build job that can take a few minutes to complete. Once it completes, you
 can trigger the pipeline with the following:
 
 ```sh
-./scripts/03_run_dataflow_job.sh
+./scripts/02_run_dataflow_job.sh
+```
+You can also directly run below script instead of above 3 steps.
+
+```sh
+./scripts/run.sh
 ```
 
 ## Input data

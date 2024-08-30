@@ -57,14 +57,16 @@ variable "region" {
   type        = string
 }
 
-variable "sql_instance_name" {
-  description = "SQL instance name"
+variable "bq_dataset" {
+  description = "The output bq dataset"
   type        = string
 }
 
-variable "db_name" {
-  description = "DB name"
+variable "bq_table" {
+  description = "The output bq table"
   type        = string
 }
+
+
 
 

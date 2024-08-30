@@ -6,7 +6,7 @@ RUN apt-get update -y && apt-get install -y \
 
 COPY requirements.txt requirements.txt
 COPY main.py main.py
-COPY pipeline pipeline
+COPY cdp_pipeline cdp_pipeline
 COPY schema schema
 COPY MANIFEST.in MANIFEST.in
 COPY setup.py setup.py

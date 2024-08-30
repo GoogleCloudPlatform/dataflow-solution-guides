@@ -13,11 +13,8 @@ with open('./schema/unified_table.json') as schema_file:
         output_schema = json.load(schema_file)
         
 def left_join(key_value_pair):
-    logging.info(key_value_pair)
     key, values = key_value_pair
     trans_values, coupon_redempt_values = values
-    logging.info(trans_values)
-    logging.info(coupon_redempt_values)
     if not coupon_redempt_values:
         coupon_redempt_values = [None]  # Fill missing values with None
     for trans_value in trans_values:
@@ -30,8 +27,6 @@ def left_join(key_value_pair):
                 'product_id': trans_value['product_id'],
                 'coupon_discount': trans_value['coupon_disc'], 
                 }
-                logging.info("Unified Data")
-                logging.info(unified_data)
                 yield unified_data
 
 @beam.ptransform_fn
