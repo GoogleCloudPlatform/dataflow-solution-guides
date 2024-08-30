@@ -44,7 +44,7 @@ This deployment accepts the following configuration variables:
 | `destroy_all_resources` |  `bool`   | Optional. Default true. Destroy buckets and the Spanner instance with `tf destroy `.                                                                                                                                  |
 | `internet_access`       |  `bool`   | Optional. Default false. Create a NAT for the Dataflow workers to access the Internet.                                                                                                                                |
 | `network_prefix`        | `string`  | Optional. Default "dataflow". Add a prefix to the network net, subnet, NAT                                                                                                                                            |
-| `splunk_hec_url`        | `string`  | The URL of the Splunk HEC endpoint, including protocol and port. For instance, `http://my-endpoint:8080`                                                                                                              |
+| `splunk_hec_url`        | `string`  | The URL of the Splunk HEC endpoint, including protocol and port. For instance, `http://my-endpoint:8088`                                                                                                              |
 | `splunk-token`          | `string`  | The token to use for authentication in Splunk. It will not be printed in the Terraform logs, or included in any script. It will be stored in Secret Manager                                                           |
 
 The default values of all the optional configuration variables are set for development projects.
@@ -64,7 +64,7 @@ default values create a very small instance for testing purposes only.
       project_create = TRUE_OR_FALSE
       project_id = "YOUR_PROJECT_ID"
       region = "YOUR_REGION"
-      splunk_hec_url = "http://some-endpoint:8080"
+      splunk_hec_url = "http://some-endpoint:8088"
       splunk_token = "YOUR_TOKEN"
       ```
     - If this is a production deployment, make sure you change also the optional variables.
