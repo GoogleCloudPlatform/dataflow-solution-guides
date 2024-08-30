@@ -12,8 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-# TODO:
-
 locals {
   pubsub_logging_topic     = "all-logs"
   pubsub_deadletter_topic  = "deadletter-topic"
