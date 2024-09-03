@@ -113,7 +113,8 @@ module "dataflow_sa" {
       "roles/storage.admin",
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
-      "roles/pubsub.editor"
+      "roles/pubsub.editor",
+      "roles/bigquery.dataEditor"
     ]
   }
 }
@@ -191,7 +192,8 @@ export DOCKER_TAG=0.1
 export DOCKER_IMAGE=$REGION-docker.pkg.dev/$PROJECT/$DOCKER_REPOSITORY/$IMAGE_NAME
 
 export CONTAINER_URI=$DOCKER_IMAGE:$DOCKER_TAG
-
+export TRANSACTIONS_TOPIC=${module.transactions_topic.id}
+export COUPON_REDEMPTION_TOPIC=${module.coupon_redemption_topic.id}
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 export DISK_SIZE_GB=${local.worker_disk_size_gb}
 export MACHINE_TYPE=${local.machine_type}

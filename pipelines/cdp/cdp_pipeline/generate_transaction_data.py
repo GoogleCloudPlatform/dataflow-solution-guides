@@ -8,15 +8,14 @@ import time
 
 async def publish_coupons_to_pubsub():
     bucket_name = '<bucket_name>'
-    project_id = 'malhotradi'
+    project_id = '<project_id>'
     
-    #transactions_id = ['27601281299','27757099033','28235291311','27021203242','27101290145','27853175697']
-    transactions_id = ['<List of sample transaction IDs to test the pipeline on.>'] #['27601281299','27757099033','28235291311','27021203242','27101290145','27853175697']
+    transactions_id = ['<List of sample transaction IDs to test the pipeline on.>'] # For example - ['27601281299','27757099033','28235291311','27021203242','27101290145','27853175697']
     transactions_topic_name = "transactions"
-    transactions_data = '<path to transactions data in gcs bucket>' #'assets/dataflow-solution-guide-cdp/input_data/transaction_data.csv'
+    transactions_data = '<path to transactions data in gcs bucket>' # reference example - 'dataflow-solution-guide-cdp/input_data/transaction_data.csv'
     coupons_topic_name = "coupon_redemption"
-    coupons_data = '<path to coupon redemption data in gcs bucket>' #'assets/dataflow-solution-guide-cdp/input_data/coupon_redempt.csv'
-                                                                        
+    coupons_data = '<path to coupon redemption data in gcs bucket>' # reference example - 'dataflow-solution-guide-cdp/input_data/coupon_redempt.csv'
+                                                                     
     transactions_df = pd.read_csv(f"gs://{bucket_name}/{transactions_data}",dtype=str)
     coupons_df = pd.read_csv(f"gs://{bucket_name}/{coupons_data}",dtype=str)
     publisher = pubsub_v1.PublisherClient() 
