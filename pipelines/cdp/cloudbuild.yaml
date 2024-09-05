@@ -1,0 +1,11 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    script: |
+      docker build -t ${_TAG} .
+substitutions:
+    _TAG: unset
+options:
+    substitutionOption: 'ALLOW_LOOSE'
+    automapSubstitutions: true
+images:
+  - ${_TAG}
