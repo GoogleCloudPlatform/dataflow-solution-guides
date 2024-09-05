@@ -5,8 +5,9 @@
 Welcome to the Dataflow Solution Guides!
 
 The Dataflow Solution Guides offer full end-to-end deployment for the most
-common streaming solutions to run on Dataflow. This repository contains the
-following assets for each guide:
+common streaming solutions to run on [Dataflow](https://cloud.google.com/dataflow/). 
+
+This repository contains the following assets for each guide:
 
 * Full Terraform code to spawn all the necessary Google Cloud infrastructure
 * Pipelines code in Python, Java and Go (coming soon) for a
