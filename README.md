@@ -16,12 +16,12 @@ following assets for each guide:
 
 This the list of solution guides available at this moment:
 
-|                             Guide                             |                                              Description                                               |                                         Development status                                          |
-|:-------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------------------:|
-| [GenAI & machine learning inference](./use_cases/GenAI_ML.md) |                        Real-time inference with local GenAI models, using a GPU                        | <span style="color:#00FF00; background-color:#333; padding:2px 4px; border-radius:3px">Ready</span> |
-|      [ETL / Integration](./use_cases/ETL_integration.md)      | Replicate a Spanner database into BigQuery using a change-data-capture streaming pipeline in Dataflow. | <span style="color:#00FF00; background-color:#333; padding:2px 4px; border-radius:3px">Ready</span> | 
-|         [Customer Data Platform](./use_cases/CDP.md)          |         Real time customer data platform that unifies a customer view from different sources.          | <span style="color:#FFD700; background-color:#333; padding:2px 4px; border-radius:3px">Beta</span>  |
-|     [Anomaly detection](./use_cases/Anomaly_Detection.md)     |     Detection of anomalies in a stream of data leveraging GenAI, with models deployed in Vertex AI     | <span style="color:#FFD700; background-color:#333; padding:2px 4px; border-radius:3px">Beta</span>  |
+|                             Guide                             |                                              Description                                               |    Development status    |
+|:-------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------:|:------------------------:|
+| [GenAI & machine learning inference](./use_cases/GenAI_ML.md) |                        Real-time inference with local GenAI models, using a GPU                        | :white_check_mark: Ready |
+|      [ETL / Integration](./use_cases/ETL_integration.md)      | Replicate a Spanner database into BigQuery using a change-data-capture streaming pipeline in Dataflow. | :white_check_mark: Ready | 
+|         [Customer Data Platform](./use_cases/CDP.md)          |         Real time customer data platform that unifies a customer view from different sources.          |      :factory: Beta      |
+|     [Anomaly detection](./use_cases/Anomaly_Detection.md)     |     Detection of anomalies in a stream of data leveraging GenAI, with models deployed in Vertex AI     |      :factory: Beta      |
 
 ## Bugs? Issues?
 
