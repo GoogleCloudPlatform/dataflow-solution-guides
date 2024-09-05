@@ -33,26 +33,35 @@ Run the following command to apply that configuration:
 source scripts/01_set_variables.sh
 ```
 
-And then run the script that builds and publishes the custom Dataflow container. This container will
-contain the Gemma model, and all the required dependencies.
-
-```sh
-./scripts/01_build_and_push_container.sh
-```
-
-This will create a Cloud Build job that can take a few minutes to complete. Once it completes, you
-can trigger the pipeline with the following:
+Then run the publisher pipeline. This pipeline will take data from the input 
+topic, and will write it to Spanner. This pipeline is meant only to have 
+some data in the Spanner change streams for the sake of running this guide 
+as an example, in a real setting your data would land in Spanner by many 
+other different means:
 
 ```sh
 ./scripts/02_run_publisher_dataflow.sh
 ```
 
+Once you have the publisher pipeline populating some data into Spanner, you 
+can read from the change streams to replicate the database into BigQuery. 
+For that, execute the following:
+
+```sh
+./scripts/03_run_changestream_template.sh
+```
+
 ## Input data
 
-To send data into the pipeline, you need to publish messages in the `messages` topic. Those
-messages are passed "as is" to Gemma, so you may want to add some prompting to the question.
+All the input data is taken by default from the following public Pub/Sub topic:
+* `projects/pubsub-public-data/topics/taxirides-realtime`
+
+So you don't need to send any data anywhere to run this guide as an example.
 
 ## Output data
 
-The predictions are published into the topic `predictions`, and can be observed using the
-subscription `predictions-sub`.
+The BigQuery dataset (by default, `replica`) will contain a table (by default, 
+called `events`, in the `taxis` database), with the same contents as the 
+Spanner table. This replication will happen in real time with low latency, 
+as new data lands in the Spanner table (or if any existing record is 
+modified or deleted).
