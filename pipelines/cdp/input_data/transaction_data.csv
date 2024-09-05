@@ -1,0 +1,3 @@
+household_key,transaction_id,day,product_id,quantity,sales_value,store_id,retail_disc,trans_time,week_no,coupon_disc,coupon_match_disc
+1,27601281299,51,941769,1,3.99,436,0,1456,8,0,0
+1,27601281299,51,910635,1,2.99,436,0,1456,8,0,0

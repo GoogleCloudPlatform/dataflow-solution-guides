@@ -1,0 +1,29 @@
+{
+    "fields": [
+        {
+            "name": "transaction_id",
+            "type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "household_key",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "coupon_upc",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "product_id",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "coupon_discount",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        }
+    ]
+}
