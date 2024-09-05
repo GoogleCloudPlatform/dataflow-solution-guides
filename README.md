@@ -23,13 +23,6 @@ This the list of solution guides available at this moment:
 |         [Customer Data Platform](./use_cases/CDP.md)          |         Real time customer data platform that unifies a customer view from different sources.          |      Beta :factory:      |
 |     [Anomaly detection](./use_cases/Anomaly_Detection.md)     |     Detection of anomalies in a stream of data leveraging GenAI, with models deployed in Vertex AI     |      Beta :factory:      |
 
-## Bugs? Issues?
-
-Some of the guides in this repo are still under development. If you find any
-issue or bug, please report it using Github:
-
-* https://github.com/GoogleCloudPlatform/dataflow-solution-guides/issues
-
 ## Repository structure
 
 * `terraform`: This directory contains the Terraform code for deploying the
@@ -42,8 +35,11 @@ issue or bug, please report it using Github:
 ## Getting help
 
 * GitHub Issues: Report any issues or ask questions on the GitHub repository.
-* Stack Overflow: Search for existing solutions or ask [questions on Stack
-  Overflow using the `google-cloud-dataflow` tag](https://stackoverflow.com/questions/tagged/google-cloud-dataflow).
+  * https://github.com/GoogleCloudPlatform/dataflow-solution-guides/issues 
+* Stack Overflow: Search for existing solutions or ask questions on Stack
+  Overflow using the `google-cloud-dataflow` tag:
+  * https://stackoverflow.com/questions/tagged/google-cloud-dataflow
+  
 
 ## Contributing
 
