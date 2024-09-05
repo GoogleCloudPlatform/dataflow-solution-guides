@@ -50,7 +50,7 @@ The default values of all the optional configuration variables are set for devel
       ```
       billing_account = "YOUR_BILLING_ACCOUNT"
       organization = "YOUR_ORGANIZATION_ID"
-      project_create = TRUE_OR_FALSE
+      project_create = true/false
       project_id = "YOUR_PROJECT_ID"
       region = "YOUR_REGION"
       ```
