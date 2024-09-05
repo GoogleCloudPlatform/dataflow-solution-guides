@@ -8,7 +8,8 @@ architecture designed for real-time predictions, guaranteeing low latency outcom
 and third-party models. Leveraging the capabilities of graphics processing units (GPUs), 
 the proposed architecture effectively reduces prediction times to seconds.
 
-Please refer to **FIXME** for the full version of this solution guide.
+For the full documentation of this solution guide, please refer to:
+* https://solutions.cloud.google.com/app/solutions/data-flow-real-time-ml-and-genai
 
 ## Assets included in this repository
 
