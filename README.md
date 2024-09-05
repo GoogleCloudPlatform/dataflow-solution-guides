@@ -42,9 +42,8 @@ issue or bug, please report it using Github:
 ## Getting help
 
 * GitHub Issues: Report any issues or ask questions on the GitHub repository.
-* Stack Overflow: Search for existing solutions or ask questions on Stack
-  Overflow using the
-  `google-cloud-dataflow` tag.
+* Stack Overflow: Search for existing solutions or ask [questions on Stack
+  Overflow using the `google-cloud-dataflow` tag](https://stackoverflow.com/questions/tagged/google-cloud-dataflow).
 
 ## Contributing
 
