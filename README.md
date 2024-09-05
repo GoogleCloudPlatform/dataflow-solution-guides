@@ -16,12 +16,12 @@ following assets for each guide:
 
 This the list of solution guides available at this moment:
 
-* [GenAI & machine learning inference](./use_cases/GenAI_ML.md). This guide
-  demonstrates how to use Dataflow to perform real-time inference with GenAI
-  models.
-* [ETL / Integration](./use_cases/ETL_integration.md). This guide shows how 
-  to replicate a database into BigQuery using a change-data-capture 
-  streaming pipeline in Dataflow.
+|                             Guide                             |                                              Description                                               |                                         Development status                                          |
+|:-------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------------------:|
+| [GenAI & machine learning inference](./use_cases/GenAI_ML.md) |                        Real-time inference with local GenAI models, using a GPU                        | <span style="color:#00FF00; background-color:#333; padding:2px 4px; border-radius:3px">Ready</span> |
+|      [ETL / Integration](./use_cases/ETL_integration.md)      | Replicate a Spanner database into BigQuery using a change-data-capture streaming pipeline in Dataflow. | <span style="color:#00FF00; background-color:#333; padding:2px 4px; border-radius:3px">Ready</span> | 
+|         [Customer Data Platform](./use_cases/CDP.md)          |         Real time customer data platform that unifies a customer view from different sources.          | <span style="color:#FFD700; background-color:#333; padding:2px 4px; border-radius:3px">Beta</span>  |
+|     [Anomaly detection](./use_cases/Anomaly_Detection.md)     |     Detection of anomalies in a stream of data leveraging GenAI, with models deployed in Vertex AI     | <span style="color:#FFD700; background-color:#333; padding:2px 4px; border-radius:3px">Beta</span>  |
 
 ## Repository structure
 
