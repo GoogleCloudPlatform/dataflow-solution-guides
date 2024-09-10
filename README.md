@@ -5,7 +5,8 @@
 Welcome to the Dataflow Solution Guides!
 
 The Dataflow Solution Guides offer full end-to-end deployment for the most
-common streaming solutions to run on [Dataflow](https://cloud.google.com/dataflow/). 
+common streaming solutions to run
+on [Dataflow](https://cloud.google.com/dataflow/).
 
 This repository contains the following assets for each guide:
 
@@ -23,6 +24,7 @@ This the list of solution guides available at this moment:
 |      [ETL / Integration](./use_cases/ETL_integration.md)      | Replicate a Spanner database into BigQuery using a change-data-capture streaming pipeline in Dataflow. | Ready :white_check_mark: | 
 |         [Customer Data Platform](./use_cases/CDP.md)          |         Real time customer data platform that unifies a customer view from different sources.          |      Beta :factory:      |
 |     [Anomaly detection](./use_cases/Anomaly_Detection.md)     |     Detection of anomalies in a stream of data leveraging GenAI, with models deployed in Vertex AI     |      Beta :factory:      |
+|       [Log replication](./use_cases/Log_replication.md)       |                                Replicate logs into Splunk, in real-time                                |      Beta :factory:      |
 
 ## Repository structure
 
@@ -36,11 +38,10 @@ This the list of solution guides available at this moment:
 ## Getting help
 
 * GitHub Issues: Report any issues or ask questions on the GitHub repository.
-  * https://github.com/GoogleCloudPlatform/dataflow-solution-guides/issues 
+    * https://github.com/GoogleCloudPlatform/dataflow-solution-guides/issues
 * Stack Overflow: Search for existing solutions or ask questions on Stack
   Overflow using the `google-cloud-dataflow` tag:
-  * https://stackoverflow.com/questions/tagged/google-cloud-dataflow
-  
+    * https://stackoverflow.com/questions/tagged/google-cloud-dataflow
 
 ## Contributing
 
