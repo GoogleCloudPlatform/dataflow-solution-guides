@@ -5,8 +5,9 @@
 Welcome to the Dataflow Solution Guides!
 
 The Dataflow Solution Guides offer full end-to-end deployment for the most
-common streaming solutions to run on Dataflow. This repository contains the
-following assets for each guide:
+common streaming solutions to run on [Dataflow](https://cloud.google.com/dataflow/). 
+
+This repository contains the following assets for each guide:
 
 * Full Terraform code to spawn all the necessary Google Cloud infrastructure
 * Pipelines code in Python, Java and Go (coming soon) for a
@@ -16,12 +17,12 @@ following assets for each guide:
 
 This the list of solution guides available at this moment:
 
-* [GenAI & machine learning inference](./use_cases/GenAI_ML.md). This guide
-  demonstrates how to use Dataflow to perform real-time inference with GenAI
-  models.
-* [ETL / Integration](./use_cases/ETL_integration.md). This guide shows how 
-  to replicate a database into BigQuery using a change-data-capture 
-  streaming pipeline in Dataflow.
+|                             Guide                             |                                              Description                                               |    Development status    |
+|:-------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------:|:------------------------:|
+| [GenAI & machine learning inference](./use_cases/GenAI_ML.md) |                        Real-time inference with local GenAI models, using a GPU                        | Ready :white_check_mark: |
+|      [ETL / Integration](./use_cases/ETL_integration.md)      | Replicate a Spanner database into BigQuery using a change-data-capture streaming pipeline in Dataflow. | Ready :white_check_mark: | 
+|         [Customer Data Platform](./use_cases/CDP.md)          |         Real time customer data platform that unifies a customer view from different sources.          |      Beta :factory:      |
+|     [Anomaly detection](./use_cases/Anomaly_Detection.md)     |     Detection of anomalies in a stream of data leveraging GenAI, with models deployed in Vertex AI     |      Beta :factory:      |
 
 ## Repository structure
 
@@ -35,11 +36,15 @@ This the list of solution guides available at this moment:
 ## Getting help
 
 * GitHub Issues: Report any issues or ask questions on the GitHub repository.
+  * https://github.com/GoogleCloudPlatform/dataflow-solution-guides/issues 
 * Stack Overflow: Search for existing solutions or ask questions on Stack
-  Overflow using the
-  `google-cloud-dataflow` tag.
+  Overflow using the `google-cloud-dataflow` tag:
+  * https://stackoverflow.com/questions/tagged/google-cloud-dataflow
+  
 
 ## Contributing
+
+Your contributions to this repository are welcome.
 
 * Fork and Pull Request: Fork the repository and submit a pull request with your
   changes.

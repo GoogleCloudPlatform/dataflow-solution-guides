@@ -27,7 +27,10 @@ To get started with the pipelines, follow these steps:
 
 These are the pipelines included in this directory
 
-|     Use case      | Programming language |                    Location                    |
-|:-----------------:|:--------------------:|:----------------------------------------------:|
-|    ML & GenAI     |        Python        |         [ml_ai_python](./ml_ai_python)         |
-| ETL & Integration |         Java         | [etl_integration_java](./etl_integration_java) |       
+|        Use case        | Programming language |                    Location                    |
+|:----------------------:|:--------------------:|:----------------------------------------------:|
+|       ML & GenAI       |        Python        |         [ml_ai_python](./ml_ai_python)         |
+|   ETL & Integration    |         Java         | [etl_integration_java](./etl_integration_java) |
+| Customer Data Platform |        Python        |                  [cdp](./cdp)                  |
+|   Anomaly detection    |        Python        |    [anomaly_detection](./anomaly_detection)    |
+
