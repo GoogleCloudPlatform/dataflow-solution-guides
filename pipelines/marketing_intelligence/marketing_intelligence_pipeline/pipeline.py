@@ -36,7 +36,7 @@ def _format_input(x: bytes) -> dict:
 @beam.ptransform_fn
 def _extract(p: Pipeline, subscription: str) -> PCollection[str]:
   msgs: PCollection[bytes] = p | "Read subscription" >> beam.io.ReadFromPubSub(subscription=subscription)
-  return msgs | "Parse and format Input" >> beam.Map(_format_input) 
+  return msgs | "Parse and format Input" >> beam.Map(_format_input)
 
 # TODO Add transformation for BigTable Enrichment
 

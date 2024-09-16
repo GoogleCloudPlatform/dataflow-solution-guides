@@ -16,7 +16,7 @@ To get started with the pipelines, follow these steps:
 
 1. Choose the pipeline that best suits your needs.
 2. Read the README file for the pipeline to understand its purpose, inputs,
-   outputs,  
+   outputs,
    and configuration options. MAke sure that you have the necessary
    infrastructure ready, using the
    corresponding deployment scripts in the `terraform` directory.
@@ -27,10 +27,11 @@ To get started with the pipelines, follow these steps:
 
 These are the pipelines included in this directory
 
-|        Use case        | Programming language |                    Location                    |
-|:----------------------:|:--------------------:|:----------------------------------------------:|
-|       ML & GenAI       |        Python        |         [ml_ai_python](./ml_ai_python)         |
-|   ETL & Integration    |         Java         | [etl_integration_java](./etl_integration_java) |
-| Customer Data Platform |        Python        |                  [cdp](./cdp)                  |
-|   Anomaly detection    |        Python        |    [anomaly_detection](./anomaly_detection)    |
-
+|        Use case        | Programming language |                      Location                       |
+| :--------------------: | :------------------: | :-------------------------------------------------: |
+|       ML & GenAI       |        Python        |           [ml_ai_python](./ml_ai_python)            |
+|   ETL & Integration    |         Java         |   [etl_integration_java](./etl_integration_java)    |
+| Customer Data Platform |        Python        |                    [cdp](./cdp)                     |
+|   Anomaly detection    |        Python        |      [anomaly_detection](./anomaly_detection)       |
+| Marketing Intelligence |        Python        | [marketing_intelligence](./marketing_intelligence/) |
+|    Log replication     |  Dataflow template   | [log_replication_splunk](./log_replication_splunk/) |
