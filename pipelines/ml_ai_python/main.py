@@ -24,7 +24,6 @@ def main(options: MyPipelineOptions):
   pipeline = create_pipeline(options)
   pipeline.run()
 
-
 if __name__ == "__main__":
   pipeline_options: PipelineOptions = PipelineOptions()
   dataflow_options: GoogleCloudOptions = pipeline_options.view_as(GoogleCloudOptions)

@@ -1,7 +1,7 @@
 # Market Intelligence sample pipeline (Python)
 
-This sample pipeline demonstrates how to use Dataflow to process data, and calculate predictions 
-using Vertex AI Endpoint, by training a model using AutoML and deploying it on Vertex AI Endpoint. 
+This sample pipeline demonstrates how to use Dataflow to process data, and calculate predictions
+using Vertex AI Endpoint, by training a model using AutoML and deploying it on Vertex AI Endpoint.
 This pipeline is written in Python.
 
 This pipeline is part of the [Dataflow Gen AI & ML solution guide](../../use_cases/Market_Intelligence.md).
@@ -12,13 +12,13 @@ The generic architecture for an inference pipeline is shown below:
 
 ![Architecture](../imgs/market_intel.png)
 
-In this directory, you will find a specific implementation of the above architecture, with the 
+In this directory, you will find a specific implementation of the above architecture, with the
 following stages:
 
 1. **Data ingestion:** Reads data from a Pub/Sub topic.
 For more information about Pub/Sub [ Cloud Pub/Sub Overview]( https://cloud.google.com/pubsub/docs/overview).
 2. **Data preprocessing:** While this sample pipeline doesn't perform any transformations, you can easily add a preprocessing step using the
-   [the Enrichment transform](https://cloud.google.com/dataflow/docs/guides/enrichment) for feature engineering before invoking the model. 
+   [the Enrichment transform](https://cloud.google.com/dataflow/docs/guides/enrichment) for feature engineering before invoking the model.
 
 3. **Inference:** Uses the RunInference transform with VertexAIModelHandlerJSON, which in turn sends online prediction request to an Auto-ML generated model. The pipeline uses a GPU with the Dataflow worker, to speed up the inference. For more information about Vertex AI [Vertex AI Overview](https://cloud.google.com/vertex-ai/docs/overview).
 
@@ -29,7 +29,7 @@ For more information about Pub/Sub [ Cloud Pub/Sub Overview]( https://cloud.goog
 The model can be deployed on a Vertex AI endpoint to serve various purposes.
 To demonstrate the process, we followed these steps to create, train, and deploy the model:
 
-1. Create a [Vertex-AI Dataset](https://cloud.google.com/vertex-ai/docs/tutorials/tabular-bq-prediction/create-dataset) using an existing Bigquery table. 
+1. Create a [Vertex-AI Dataset](https://cloud.google.com/vertex-ai/docs/tutorials/tabular-bq-prediction/create-dataset) using an existing Bigquery table.
 2. Train a [Text-Classification Model](https://cloud.google.com/vertex-ai/docs/beginner/beginners-guide#train_model) using AutoML.
 3. Once the model is ready, it can be [deployed and tested](https://cloud.google.com/vertex-ai/docs/tutorials/image-classification-automl/deploy-predict#deploy_your_model_to_an_endpoint) on Vertex-AI endpoint.
 4. Take a note of the end-point ID.
@@ -42,7 +42,7 @@ It's important to choose your cloud region carefully, as not all Google Cloud se
 
 Tip: The default settings in this directory have been tested and work well in the us-central1 region. If you choose a different region, you may need to adjust some settings.
 
-## Choosing Your Machine Type: 
+## Choosing Your Machine Type:
 
 The cloudbuild.yaml file currently uses the E2_HIGHCPU_8 machine type. If this type isn't available in your chosen region, you'll need to edit the file and select a different machine type that is supported.
 [Machine types](https://cloud.google.com/compute/docs/machine-types)
@@ -59,7 +59,7 @@ gcloud compute machine-types list --zones=<ZONE A>,<ZONE B>,.
 ```
 
 See more info about selecting the right type of machine Type in the [Machine Types](https://cloud.google.com/compute/docs/machine-types)
- 
+
 
 ## Next Steps
 
@@ -82,7 +82,7 @@ Once you've finished editing the script, make sure to source it again to load th
 source scripts/00_set_environment.sh
 ```
 
-Next, run the script to build and publish the custom Dataflow container. This container will include the Gemma model and its necessary dependencies.
+Next, run the script to build and publish the custom Dataflow container. This container will include the necessary dependencies for the worker.
 
 ```sh
 ./scripts/01_build_and_push_container.sh
