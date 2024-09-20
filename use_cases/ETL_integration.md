@@ -10,8 +10,10 @@ confer a number of competitive advantages to the company adopting them.
 
 For the full version of this solution guide, please refer to:
 
-* **FIXME** _the documentation has not been published yet in the Solutions 
-  Center_
+## Documentation
+
+* [One pager: ETL & reverse ETL in real-time with Dataflow (PDF)](./one_pagers/etl_dataflow_onepager.pdf)
+* [ETL & reverse ETL Solution Guide and Architecture (PDF)](./guides/etl_dataflow_guide.pdf)
 
 ## Assets included in this repository
 
