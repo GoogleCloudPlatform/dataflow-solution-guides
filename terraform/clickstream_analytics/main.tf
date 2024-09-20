@@ -14,9 +14,10 @@
 
 locals {
   dataflow_service_account = "my-dataflow-sa"
-  max_dataflow_workers     = 1
-  worker_disk_size_gb      = 200
-  machine_type             = "g2-standard-4"
+  bigtable_instance        = "clickstream-analytics"
+  bigtable_zone            = concat(var.region, "-a")
+  bigtable_lookup_key      = "bigtable-lookup-key"
+  bigquery_dataset         = "clickstream-analytics"
 }
 
 
@@ -28,38 +29,31 @@ module "google_cloud_project" {
   name            = var.project_id
   parent          = var.organization
   services = [
-    "cloudbuild.googleapis.com",
     "dataflow.googleapis.com",
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
     "autoscaling.googleapis.com",
-    "artifactregistry.googleapis.com",
     "bigtableadmin.googleapis.com",
     "bigquery.googleapis.com"
   ]
 }
 
 resource "google_bigtable_instance" "clickstream-analytics" {
-  name = "clickstream-analytics"
+  name = local.bigtable_instance
 
   cluster {
-    cluster_id   = "clickstream-analytics-c1"
+    cluster_id   = concat(local.bigtable_instance, "-c1")
     num_nodes    = 1
     storage_type = "HDD"
-    zone    = "us-central1-c"
-  }
-
-  labels = {
-    my-label = "clickstream-analytics"
+    zone         = local.bigtable_zone
   }
 }
 
 # Create BigQuery dataset
 resource "google_bigquery_dataset" "clickstream_analytics" {
-  dataset_id    = "clickstream_analytics"
-  friendly_name = "Clickstream Analytics"
-  description   = "Dataset for storing clickstream analytics data"
-  location      = "us-central1"
+  dataset_id  = local.bigquery_dataset
+  description = "Dataset for storing clickstream analytics data"
+  location    = var.region
 }
 
 # Create BigQuery table
@@ -85,7 +79,7 @@ resource "google_bigquery_table" "deadletter" {
     { name = "timestamp", type = "TIMESTAMP", mode = "REQUIRED" },
     { name = "payloadString", type = "STRING", mode = "REQUIRED" },
     { name = "payloadBytes", type = "BYTES", mode = "REQUIRED" },
-    { 
+    {
       name = "attributes", type = "RECORD", mode = "REPEATED", fields = [
         { name = "key", type = "STRING", mode = "NULLABLE" },
         { name = "value", type = "STRING", mode = "NULLABLE" }
@@ -94,30 +88,6 @@ resource "google_bigquery_table" "deadletter" {
     { name = "errorMessage", type = "STRING", mode = "NULLABLE" },
     { name = "stacktrace", type = "STRING", mode = "NULLABLE" }
   ])
-}
-
-module "registry_docker" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v32.0.0"
-  project_id = module.google_cloud_project.project_id
-  location   = var.region
-  name       = "dataflow-containers"
-  iam = {
-    "roles/artifactregistry.admin" = [
-      "serviceAccount:${module.google_cloud_project.number}@cloudbuild.gserviceaccount.com"
-    ]
-    "roles/artifactregistry.reader" = [
-      module.dataflow_sa.iam_email
-    ]
-  }
-  cleanup_policy_dry_run = false
-  cleanup_policies = {
-    keep-3-versions = {
-      action = "KEEP"
-      most_recent_versions = {
-        keep_count = 3
-      }
-    }
-  }
 }
 
 // Buckets for staging data, scripts, etc, in the two regions
@@ -150,7 +120,8 @@ module "dataflow_sa" {
       "roles/storage.admin",
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
-      "roles/pubsub.editor"
+      "roles/pubsub.editor",
+      "roles/bigtable.reader"
     ]
   }
 }
@@ -213,16 +184,14 @@ export SUBNETWORK=regions/${var.region}/subnetworks/${var.network_prefix}-subnet
 export TEMP_LOCATION=gs://$PROJECT/tmp
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 
-export DOCKER_REPOSITORY=${module.registry_docker.name}
-export IMAGE_NAME=dataflow-solutions-clicksteam-analytics
-export DOCKER_TAG=0.1
-export DOCKER_IMAGE=$REGION-docker.pkg.dev/$PROJECT/$DOCKER_REPOSITORY/$IMAGE_NAME
+export BQ_DATASET=${google_bigquery_dataset.clickstream_analytics.dataset_id}
+export BQ_TABLE=${google_bigquery_table.wikipedia.table_id}
+export BQ_DEADLETTER_TABLE=${google_bigquery_table.deadletter.table_id}
 
-export GCS_GEMMA_PATH=gs://$PROJECT/gemma_2B
-export CONTAINER_URI=$DOCKER_IMAGE:$DOCKER_TAG
+export SUBSCRIPTION=${module.input_topic.subscriptions["messages-sub"].id}
 
-export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
-export DISK_SIZE_GB=${local.worker_disk_size_gb}
-export MACHINE_TYPE=${local.machine_type}
+export BIGTABLE_INSTANCE=${google_bigtable_instance.clickstream-analytics.id}
+export BIGTABLE_TABLE=$BQ_TABLE
+export BT_LOOKUP_KEY=${local.bigtable_lookup_key}
 FILE
 }

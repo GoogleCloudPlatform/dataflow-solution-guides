@@ -1,0 +1,13 @@
+./gradlew run -Pargs="
+  --runner=DataflowRunner \
+  --region=$REGION \
+  --project=$PROJECT \
+  --gcpTempLocation=$TEMP_LOCATION \
+  --bqProjectId=$PROJECT \
+  --bqDataset=$BQ_DATASET \
+  --bqTable=$BQ_TABLE \
+  --pubsubSubscription=$SUBSCRIPTION \
+  --btInstance=$BIGTABLE_INSTANCE \
+  --btTable=$BIGTABLE_TABLE \
+  --outputDeadletterTable=$BQ_DEADLETTER_TABLE \
+  --btLookupKey=$BT_LOOKUP_KEY"

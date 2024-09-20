@@ -27,11 +27,12 @@ To get started with the pipelines, follow these steps:
 
 These are the pipelines included in this directory
 
-|        Use case        | Programming language |                      Location                       |
-| :--------------------: | :------------------: | :-------------------------------------------------: |
-|       ML & GenAI       |        Python        |           [ml_ai_python](./ml_ai_python)            |
-|   ETL & Integration    |         Java         |   [etl_integration_java](./etl_integration_java)    |
-| Customer Data Platform |        Python        |                    [cdp](./cdp)                     |
-|   Anomaly detection    |        Python        |      [anomaly_detection](./anomaly_detection)       |
-| Marketing Intelligence |        Python        | [marketing_intelligence](./marketing_intelligence/) |
-|    Log replication     |  Dataflow template   | [log_replication_splunk](./log_replication_splunk/) |
+|        Use case        | Programming language |                          Location                           |
+| :--------------------: | :------------------: | :---------------------------------------------------------: |
+|       ML & GenAI       |        Python        |               [ml_ai_python](./ml_ai_python)                |
+|   ETL & Integration    |         Java         |       [etl_integration_java](./etl_integration_java)        |
+| Customer Data Platform |        Python        |                        [cdp](./cdp)                         |
+|   Anomaly detection    |        Python        |          [anomaly_detection](./anomaly_detection)           |
+| Marketing Intelligence |        Python        |     [marketing_intelligence](./marketing_intelligence/)     |
+|    Log replication     |  Dataflow template   |     [log_replication_splunk](./log_replication_splunk/)     |
+| Clickstream Analytics  |         Java         | [clickstream_analytics_java](./clickstream_analytics_java/) |
