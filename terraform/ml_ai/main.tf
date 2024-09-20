@@ -28,6 +28,7 @@ module "google_cloud_project" {
   name            = var.project_id
   parent          = var.organization
   services = [
+    "serviceusage.googleapis.com",
     "cloudbuild.googleapis.com",
     "dataflow.googleapis.com",
     "monitoring.googleapis.com",
