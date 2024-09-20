@@ -17,7 +17,7 @@ locals {
   bigtable_instance        = "clickstream-analytics"
   bigtable_zone            = concat(var.region, "-a")
   bigtable_lookup_key      = "bigtable-lookup-key"
-  bigquery_dataset         = "clickstream-analytics"
+  bigquery_dataset         = "clickstream_analytics"
 }
 
 
