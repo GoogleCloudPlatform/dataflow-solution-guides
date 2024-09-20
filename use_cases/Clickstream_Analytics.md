@@ -5,7 +5,11 @@ and marketing campaigns. Clickstream analytics provides a continuous stream of d
 with digital platforms. But to truly capitalize on this information, businesses need insights in real time,
 not days later.
 
-Please refer to **FIXME** for the full version of this solution guide.
+For the full version of this solution guide, please refer to:
+
+## Documentation
+
+- [One pager: Clickstream analytics in real-time with Dataflow (PDF)](./one_pagers/clickstream_dataflow_onepager.pdf)
 
 ## Assets included in this repository
 
