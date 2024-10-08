@@ -5,7 +5,7 @@ Organizations employ Internet of Things (IoT) sensors to monitor their productio
 ## Documentation
 
 - [One pager: IoT analytics in real-time with Dataflow (PDF)](./one_pagers/iot_analytics_dataflowonepager.pdf)
-- [IoT Analytics Solution Guide & Architecture (PDF)](./use_cases/guides/iot_analytics_dataflow_guide.pdf)
+- [IoT Analytics Solution Guide & Architecture (PDF)](./guides/iot_analytics_dataflow_guide.pdf)
 
 ## Assets included in this repository
 - Terraform code to deploy a project for IoT Analytics (WORK IN PROGRESS)
