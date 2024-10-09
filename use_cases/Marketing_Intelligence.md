@@ -1,4 +1,4 @@
-# Market Interlligence inference
+# Market Intelligence inference
 
 Real-time marketing intelligence describes the practice of collecting and analyzing data about your market, customers, and competitors as it happens. This enables you to make informed, agile decisions and respond swiftly to emerging trends, customer behaviors, and competitive moves. The advent of data-driven marketing has transformed the way companies approach their marketing activities, and real-time marketing intelligence requires these companies to accelerate their response times to marketing moments. This reference architecture will describe how you can combine data from your various marketing data sources, common patterns for analyzing them, and integrating them with your data warehouse for faster analysis and databases for faster responses.
 
