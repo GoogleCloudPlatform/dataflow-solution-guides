@@ -9,8 +9,8 @@ Low latency is normally a requirement for these kinds of workloads given the inh
 
 ## Documentation
 
-- [One pager: Real-time Anomaly Detection with Dataflow (PDF)](./one_pagers/anomay_detection_dataflow_onepager.pdf)
-- [Real-time Anomaly Detection Solution Guide and Architecture (PDF)](./guides/anomaly_detection_dataflow_onepager.pdf)
+- [One pager: Real-time Anomaly Detection with Dataflow (PDF)](./one_pagers/anomaly_detection_dataflow_onepager.pdf)
+- [Real-time Anomaly Detection Solution Guide and Architecture (PDF)](./guides/anomaly_detection_dataflow_guide.pdf)
 
 ## Assets included in this repository
 
