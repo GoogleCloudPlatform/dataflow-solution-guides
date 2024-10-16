@@ -15,7 +15,7 @@
 locals {
   dataflow_service_account = "my-dataflow-sa"
   bigtable_instance        = "clickstream-analytics"
-  bigtable_zone            = concat(var.region, "-a")
+  bigtable_zone            = "${var.region}-a"
   bigtable_lookup_key      = "bigtable-lookup-key"
   bigquery_dataset         = "clickstream_analytics"
 }
@@ -42,7 +42,7 @@ resource "google_bigtable_instance" "clickstream-analytics" {
   name = local.bigtable_instance
 
   cluster {
-    cluster_id   = concat(local.bigtable_instance, "-c1")
+    cluster_id   = "${local.bigtable_instance}-c1"
     num_nodes    = 1
     storage_type = "HDD"
     zone         = local.bigtable_zone
