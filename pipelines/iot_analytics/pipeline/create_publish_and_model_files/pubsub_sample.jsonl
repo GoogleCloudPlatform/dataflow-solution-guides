@@ -1,0 +1,15 @@
+{ "vehicle_id": "1000", "timestamp": "2024-09-14T14:02:43Z", "temperature": 65, "rpm": 1502, "vibration": 0.30, "fuel_level": 76, "mileage": 46882 }
+{ "vehicle_id": "1000", "timestamp": "2024-09-14T14:12:43Z", "temperature": 60, "rpm": 1502, "vibration": 0.32, "fuel_level": 74, "mileage": 46782 }
+{ "vehicle_id": "1000", "timestamp": "2024-09-14T14:44:43Z", "temperature": 70, "rpm": 1502, "vibration": 0.25, "fuel_level": 72, "mileage": 45782 }
+{ "vehicle_id": "1000", "timestamp": "2024-09-14T14:57:43Z", "temperature": 68, "rpm": 1502, "vibration": 0.31, "fuel_level": 72, "mileage": 45783 }
+{ "vehicle_id": "1000", "timestamp": "2024-09-14T15:02:43Z", "temperature": 90, "rpm": 1502, "vibration": 0.48, "fuel_level": 76, "mileage": 46902 }
+{ "vehicle_id": "1000", "timestamp": "2024-09-14T15:32:43Z", "temperature": 60, "rpm": 1502, "vibration": 0.52, "fuel_level": 76, "mileage": 46922 }
+{ "vehicle_id": "1000", "timestamp": "2024-09-14T16:02:43Z", "temperature": 70, "rpm": 1502, "vibration": 0.48, "fuel_level": 76, "mileage": 46942 }
+{ "vehicle_id": "1000", "timestamp": "2024-09-14T16:32:43Z", "temperature": 70, "rpm": 1502, "vibration": 0.48, "fuel_level": 76, "mileage": 46962 }
+{ "vehicle_id": "1001", "timestamp": "2024-09-14T15:07:43Z", "temperature": 50, "rpm": 2521, "vibration": 0.33, "fuel_level": 68, "mileage": 56577 }
+{ "vehicle_id": "1001", "timestamp": "2024-09-14T15:17:43Z", "temperature": 65, "rpm": 2521, "vibration": 0.55, "fuel_level": 66, "mileage": 56617 }
+{ "vehicle_id": "1001", "timestamp": "2024-09-14T15:27:43Z", "temperature": 88, "rpm": 2521, "vibration": 0.30, "fuel_level": 64, "mileage": 56657 }
+{ "vehicle_id": "1001", "timestamp": "2024-09-14T15:37:43Z", "temperature": 40, "rpm": 2521, "vibration": 0.42, "fuel_level": 62, "mileage": 56697 }
+{ "vehicle_id": "1001", "timestamp": "2024-09-14T15:47:43Z", "temperature": 30, "rpm": 2521, "vibration": 0.32, "fuel_level": 60, "mileage": 56737 }
+{ "vehicle_id": "1001", "timestamp": "2024-09-14T15:49:43Z", "temperature": 81, "rpm": 2552, "vibration": 0.52, "fuel_level": 55, "mileage": 49737 }
+{ "vehicle_id": "1001", "timestamp": "2024-09-14T16:05:43Z", "temperature": 82, "rpm": 2552, "vibration": 0.53, "fuel_level": 55, "mileage": 49737 }
