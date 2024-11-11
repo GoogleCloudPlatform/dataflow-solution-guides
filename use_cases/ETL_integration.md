@@ -9,6 +9,7 @@ architectures are generally regarded as an essential part of modernizing your da
 confer a number of competitive advantages to the company adopting them.
 
 For the full version of this solution guide, please refer to:
+* https://solutions.cloud.google.com/app/solutions/dataflow-real-time-etl-integration
 
 ## Documentation
 
