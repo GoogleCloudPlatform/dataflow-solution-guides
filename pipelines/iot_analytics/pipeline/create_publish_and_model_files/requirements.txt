@@ -1,0 +1,3 @@
+google-cloud-bigtable
+pandas
+google-cloud-pubsub

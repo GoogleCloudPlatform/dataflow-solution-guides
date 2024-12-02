@@ -1,6 +1,6 @@
 # Create Bigtable Data (Weather data) and Load Records
 PROJECT_ID = 'learnings-421714'
-INSTANCE_ID = 'iot-data'
+INSTANCE_ID = 'iot-analytics'
 TABLE_ID = 'maintenance_data'
 
 # Create a bigtable and populate the weather data table
@@ -8,6 +8,7 @@ from google.cloud import bigtable
 from google.cloud.bigtable import column_family
 from google.cloud.bigtable import row
 from google.cloud.bigtable import Client
+from datetime import datetime
 
 # Create a Bigtable client
 client = Client(project=PROJECT_ID, admin=True)

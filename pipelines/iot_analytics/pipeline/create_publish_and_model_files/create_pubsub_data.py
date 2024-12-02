@@ -35,9 +35,7 @@ maintenance_data = [generate_maintenance_data(vehicle_id) for vehicle_id in vehi
 df_vehicle_data = pd.DataFrame(vehicle_data)
 df_maintenance_data = pd.DataFrame(maintenance_data)
 
-print(df_vehicle_data.head().to_markdown(index=False, numalign="left", stralign="left"))
 df_vehicle_json = df_vehicle_data.to_json(orient='records')
 print(df_vehicle_json)
-print(df_maintenance_data.head().to_markdown(index=False, numalign="left", stralign="left"))
 df_maintenance_json = df_maintenance_data.to_json(orient='records')
 print(df_maintenance_json)

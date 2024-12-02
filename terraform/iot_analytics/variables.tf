@@ -50,3 +50,8 @@ variable "region" {
   description = "The region for resources and networking"
   type        = string
 }
+
+variable "pubsub_topic" {
+  description = "Name for your pub sub topic"
+  type        = string
+}

@@ -30,5 +30,7 @@ python iot_analytics_pipeline.py \
 
 
 # Push data to pubsub after launching pipeline
-python publish.py
 
+cd create_publish_and_model_files
+
+python publish.py

@@ -13,11 +13,11 @@
 #  limitations under the License.
 
 locals {
-  dataflow_service_account = "dataflow-sa"
+  dataflow_service_account = "dataflow-service-account@learnings-421714.iam.gserviceaccount.com"
   bigtable_instance        = "iot-analytics"
-  bigtable_zone            = concat(var.region, "-a")
+  bigtable_zone            = "${var.region}-a"
   bigtable_lookup_key      = "bigtable-lookup-key"
-  bigquery_dataset         = "iot_analytics"
+  bigquery_dataset         = "iot"
 }
 
 
@@ -40,9 +40,9 @@ module "google_cloud_project" {
 
 resource "google_bigtable_instance" "iot-analytics" {
   name = local.bigtable_instance
-
+  project = var.project_id
   cluster {
-    cluster_id   = concat(local.bigtable_instance, "-c1")
+    cluster_id   = "${local.bigtable_instance}-c1"
     num_nodes    = 1
     storage_type = "HDD"
     zone         = local.bigtable_zone
@@ -51,6 +51,7 @@ resource "google_bigtable_instance" "iot-analytics" {
 
 # Create BigQuery dataset
 resource "google_bigquery_dataset" "iot_analytics" {
+  project = var.project_id
   dataset_id  = local.bigquery_dataset
   description = "Dataset for storing clickstream analytics data"
   location    = var.region
@@ -58,6 +59,7 @@ resource "google_bigquery_dataset" "iot_analytics" {
 
 # Create BigQuery table
 resource "google_bigquery_table" "maintenance_analytics" {
+  project = var.project_id
   dataset_id          = google_bigquery_dataset.iot_analytics.dataset_id
   table_id            = "maintenance_analytics"
   deletion_protection = false
@@ -88,7 +90,7 @@ module "buckets" {
 module "input_topic" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
-  name       = "input"
+  name       = var.pubsub_topic
   subscriptions = {
     messages-sub = {}
   }
@@ -170,8 +172,7 @@ export TEMP_LOCATION=gs://$PROJECT/tmp
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 
 export BQ_DATASET=${google_bigquery_dataset.iot_analytics.dataset_id}
-export BQ_TABLE=${google_bigquery_table.wikipedia.table_id}
-export BQ_DEADLETTER_TABLE=${google_bigquery_table.deadletter.table_id}
+export BQ_TABLE=${google_bigquery_table.maintenance_analytics.table_id}
 
 export SUBSCRIPTION=${module.input_topic.subscriptions["messages-sub"].id}
 
