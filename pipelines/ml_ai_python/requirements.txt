@@ -1,4 +1,4 @@
 apache-beam[gcp]==2.56.0
 keras_nlp==0.12.1
-keras==3.3.3
+keras==3.7.0
 protobuf==4.25.3
