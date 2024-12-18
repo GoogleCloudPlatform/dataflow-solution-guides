@@ -1,5 +1,6 @@
 gcloud dataflow flex-template run spanner-change-streams \
     --template-file-gcs-location=gs://dataflow-templates-$REGION/latest/flex/Spanner_Change_Streams_to_BigQuery \
+    --project=$PROJECT \
     --region $REGION \
     --temp-location=$TEMP_LOCATION \
     --service-account-email=$SERVICE_ACCOUNT \
