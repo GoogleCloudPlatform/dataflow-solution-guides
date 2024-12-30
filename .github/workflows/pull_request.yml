@@ -64,11 +64,12 @@ jobs:
           build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
           build-scan-terms-of-use-agree: "yes"
       - name: Build with Gradle Wrapper
+        working-directory: pipelines
         run: |-
           ls -d */ | while read d;
           do
             if [ -f "$d/gradlew" ]
             then
-              cd $d; echo "Found in $d"; cd ..
+              cd $d; ./gradlew build --scan; cd ..
             fi
           done
