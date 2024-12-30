@@ -51,7 +51,7 @@ jobs:
         run: |
           ls -d */ | while read d
           do
-          echo "Running tf format check in directory: $d"
+          echo "Running tf plan in directory: $d"
           cd $d
           echo project_create = false > terraform.tfvars
           echo project_id = ${{ secrets.TESTING_PROJECT }} >> terraform.tfvars
