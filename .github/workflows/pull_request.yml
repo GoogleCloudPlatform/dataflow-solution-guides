@@ -71,13 +71,16 @@ jobs:
       - name: Build with Gradle Wrapper
         working-directory: pipelines
         run: |
-          ls -d */ | while read d
+          for pipeline_dir in */
           do
-            if [ -f "$d/gradlew" ]
+            echo "Checking pipelines/$pipeline_dir"
+            if [ -f "$pipeline_dir/gradlew" ]
             then
-              echo Gradle build in directory pipelines/$d
-              cd $d && ./gradlew build --scan && cd ..
+              echo Gradle build found
+              cd $pipeline_dir
+              ./gradlew build
+              cd ..
             else
-              echo Ignoring pipelines/$d, no gradlew found
+              echo Ignoring, no gradlew found
             fi
           done
