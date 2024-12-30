@@ -2,6 +2,7 @@ name: 'Terraform deploy'
 on: [workflow_dispatch]
 permissions:
   contents: read
+  id-token: write  
 jobs:
   google-cloud:
     name: 'Google Cloud auth'
