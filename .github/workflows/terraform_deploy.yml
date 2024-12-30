@@ -1,4 +1,4 @@
-name: 'Terraform static validation'
+name: 'Terraform deploy'
 on:
   pull_request:
 permissions:
