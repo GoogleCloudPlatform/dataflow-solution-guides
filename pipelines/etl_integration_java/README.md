@@ -33,18 +33,18 @@ Run the following command to apply that configuration:
 source scripts/01_set_variables.sh
 ```
 
-Then run the publisher pipeline. This pipeline will take data from the input 
-topic, and will write it to Spanner. This pipeline is meant only to have 
-some data in the Spanner change streams for the sake of running this guide 
-as an example, in a real setting your data would land in Spanner by many 
+Then run the publisher pipeline. This pipeline will take data from the input
+topic, and will write it to Spanner. This pipeline is meant only to have
+some data in the Spanner change streams for the sake of running this guide
+as an example, in a real setting your data would land in Spanner by many
 other different means:
 
 ```sh
 ./scripts/02_run_publisher_dataflow.sh
 ```
 
-Once you have the publisher pipeline populating some data into Spanner, you 
-can read from the change streams to replicate the database into BigQuery. 
+Once you have the publisher pipeline populating some data into Spanner, you
+can read from the change streams to replicate the database into BigQuery.
 For that, execute the following:
 
 ```sh
@@ -60,8 +60,8 @@ So you don't need to send any data anywhere to run this guide as an example.
 
 ## Output data
 
-The BigQuery dataset (by default, `replica`) will contain a table (by default, 
-called `events`, in the `taxis` database), with the same contents as the 
-Spanner table. This replication will happen in real time with low latency, 
-as new data lands in the Spanner table (or if any existing record is 
+The BigQuery dataset (by default, `replica`) will contain a table (by default,
+called `events`, in the `taxis` database), with the same contents as the
+Spanner table. This replication will happen in real time with low latency,
+as new data lands in the Spanner table (or if any existing record is
 modified or deleted).
