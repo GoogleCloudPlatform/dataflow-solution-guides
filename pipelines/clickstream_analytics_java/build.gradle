@@ -20,7 +20,7 @@ ext {
 	beamVersion = "2.59.0"
 	slf4jVersion = "1.7.36"
 	junitVersion = "4.13.2"
-	hamcrestVersion = "2.2"
+	hamcrestVersion = "3.0"
 	googleJavaFormat = '1.17.0'
 	errorProneCoreVersion = '2.26.1'
 
