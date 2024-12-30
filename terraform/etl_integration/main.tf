@@ -26,14 +26,22 @@ locals {
   max_dataflow_workers     = 10
 }
 
+resource "google_project_service" "crm" {
+  project                    = var.project_id
+  service                    = "cloudresourcemanager.googleapis.com"
+  disable_dependent_services = true
+}
+
 // Project
 module "google_cloud_project" {
+  depends_on      = [google_project_service.crm]
   source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v32.0.0"
   billing_account = var.billing_account
   project_create  = var.project_create
   name            = var.project_id
   parent          = var.organization
   services = [
+    "iam.googleapis.com",
     "dataflow.googleapis.com",
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
@@ -41,6 +49,10 @@ module "google_cloud_project" {
     "spanner.googleapis.com",
     "bigquery.googleapis.com"
   ]
+  service_config = {
+    disable_on_destroy         = true
+    disable_dependent_services = true
+  }
 }
 
 // Buckets for staging data, scripts, etc, in the two regions
@@ -63,6 +75,10 @@ module "dataset" {
   }
   access_identities = {
     dataflow-writer = module.dataflow_sa.email
+  }
+
+  options = {
+    delete_contents_on_destroy = true
   }
 }
 
