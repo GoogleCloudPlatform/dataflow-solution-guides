@@ -37,7 +37,12 @@ jobs:
           done
       - name: Terraform Validate
         working-directory: terraform
-        run: "ls -d */ | while read d\ndo\necho \"Running tf validate in directory: $d\"        \ncd $d && terraform validate && cd ..\ndone"
+        run: |
+          ls -d */ | while read d
+          do
+          echo "Running tf validate in directory: $d"
+          cd $d && terraform validate && cd ..
+          done
   java-builds:
     name: 'Java pipelines build'
     runs-on: ubuntu-latest
@@ -70,6 +75,7 @@ jobs:
           do
             if [ -f "$d/gradlew" ]
             then
+              echo "Gradle build in directory pipelines/$d"
               cd $d; ./gradlew build --scan; cd ..
             fi
           done
