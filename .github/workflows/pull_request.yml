@@ -44,7 +44,7 @@ jobs:
           echo "Running tf validate in directory: $d"
           cd $d && terraform validate && cd ..
           done
-  java-builds:
+  java-build:
     name: 'Java pipelines build'
     runs-on: ubuntu-latest
     defaults:
@@ -71,7 +71,7 @@ jobs:
           build-scan-terms-of-use-agree: "yes"
       - name: Build with Gradle Wrapper
         working-directory: pipelines
-        run: |-
+        run: |
           for pipeline_dir in */
           do
             echo "Checking pipelines/$pipeline_dir"
@@ -83,5 +83,38 @@ jobs:
               cd ..
             else
               echo Ignoring, no gradlew found
+            fi
+          done
+  python-build:
+    name: 'Python pipelines build'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: "Pipelines:\n  - 'pipelines/**'     \n"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          for pipeline_dir in */
+          do
+            echo "Checking pipelines/$pipeline_dir"
+            if [ -f "$pipeline_dir/setup.py" ]
+            then
+              echo Python pipeline found
+              cd $pipeline_dir
+              for req_txt in requirements*.txt
+              do
+                pipenv -r $req_txt
+              done
+              pipenv run python setup.py sdist
+              cd ..
+            else
+              echo Ignoring, no Python pipeline found
             fi
           done
