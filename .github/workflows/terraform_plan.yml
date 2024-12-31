@@ -10,7 +10,7 @@ permissions:
   id-token: write
 jobs:
   terraform-plan:
-    name: 'Google Cloud auth'
+    name: 'Terraform plan with Google Cloud'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -18,9 +18,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Checkout PR
+        uses: dawidd6/action-checkout-pr@v1.2.0
         with:
-          ref: pull/${{ github.event.inputs.prnumber }}/head
-          fetch-depth: 0
+          pr: ${{ github.event.inputs.prnumber }}
       - uses: dorny/paths-filter@v3
         id: filter
         with:
