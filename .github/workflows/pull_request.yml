@@ -112,13 +112,19 @@ jobs:
             echo "Checking pipelines/$pipeline_dir"
             if [ -f "$pipeline_dir/setup.py" ]
             then
-              echo Python pipeline found
+              echo
+              echo *************************************
+              echo Building $pipeline_dir
+              echo *************************************
+              echo
               cd $pipeline_dir
-              pipenv install
+              pipenv install --verbose
               for req_txt in requirements*.txt
               do
-                pipenv install -r $req_txt
+                echo ****** Installing dependencies in $req_txt ******
+                pipenv install -r $req_txt --verbose
               done
+              echo ****** Building package ******
               pipenv run python setup.py sdist
               cd ..
             else
