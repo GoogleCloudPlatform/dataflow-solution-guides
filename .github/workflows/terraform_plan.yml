@@ -1,11 +1,16 @@
 name: 'Terraform deploy'
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+    inputs:
+      prnumber:
+        type: string
+        description: PR number to build
 permissions:
   contents: read
-  id-token: write  
+  id-token: write
 jobs:
-  google-cloud:
-    name: 'Google Cloud auth'
+  terraform-plan:
+    name: 'Terraform plan with Google Cloud'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -13,6 +18,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Checkout PR
+        uses: dawidd6/action-checkout-pr@v1.2.0
+        with:
+          pr: ${{ github.event.inputs.prnumber }}
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -23,19 +32,6 @@ jobs:
           project_id: '${{ secrets.TESTING_PROJECT }}'
           workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
           service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
-  terraform:
-    name: 'Terraform'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: "Terraform:\n  - 'terraform/**'     \n"
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
       - name: Terraform Init
@@ -48,7 +44,7 @@ jobs:
           done
       - name: Terraform Plan
         working-directory: terraform
-        run: |
+        run: |-
           ls -d */ | while read d
           do
           echo "Running tf plan in directory: $d"
