@@ -116,7 +116,7 @@ jobs:
               cd $pipeline_dir
               for req_txt in requirements*.txt
               do
-                pipenv -r $req_txt
+                pipenv install -r $req_txt
               done
               pipenv run python setup.py sdist
               cd ..
