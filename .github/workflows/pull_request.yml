@@ -97,10 +97,13 @@ jobs:
         id: filter
         with:
           filters: "Pipelines:\n  - 'pipelines/**'     \n"
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: |
+      - name: Python builds
+        working-directory: pipelines
+        run: |
           for pipeline_dir in */
           do
             echo "Checking pipelines/$pipeline_dir"
