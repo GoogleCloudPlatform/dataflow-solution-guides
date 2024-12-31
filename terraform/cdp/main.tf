@@ -96,7 +96,7 @@ module "coupon_redemption_topic" {
 module "output_dataset" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v32.0.0"
   project_id = module.google_cloud_project.project_id
-  id         = var.bigquery_dataset
+  id         = var.bq_dataset
 }
 
 
