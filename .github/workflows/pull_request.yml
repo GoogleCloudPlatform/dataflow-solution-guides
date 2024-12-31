@@ -1,4 +1,4 @@
-name: 'Pull request'
+name: 'TF validate & builds'
 on:
   pull_request:
   push:
@@ -71,7 +71,7 @@ jobs:
           build-scan-terms-of-use-agree: "yes"
       - name: Build with Gradle Wrapper
         working-directory: pipelines
-        run: |
+        run: |-
           for pipeline_dir in */
           do
             echo "Checking pipelines/$pipeline_dir"
