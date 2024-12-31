@@ -118,11 +118,11 @@ jobs:
               echo *************************************
               echo
               cd $pipeline_dir
-              pipenv install --verbose
+              pipenv install
               for req_txt in requirements*.txt
               do
                 echo ****** Installing dependencies in $req_txt ******
-                pipenv install -r $req_txt --verbose
+                pipenv install -r $req_txt
               done
               echo ****** Building package ******
               pipenv run python setup.py sdist
