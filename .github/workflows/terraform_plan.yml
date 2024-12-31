@@ -9,7 +9,7 @@ permissions:
   contents: read
   id-token: write
 jobs:
-  google-cloud:
+  terraform-plan:
     name: 'Google Cloud auth'
     runs-on: ubuntu-latest
     defaults:
@@ -31,19 +31,6 @@ jobs:
           project_id: '${{ secrets.TESTING_PROJECT }}'
           workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
           service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
-  terraform:
-    name: 'Terraform'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: "Terraform:\n  - 'terraform/**'     \n"
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
       - name: Terraform Init
