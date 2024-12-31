@@ -60,10 +60,13 @@ variable "region" {
 variable "splunk_hec_url" {
   description = "The URL for the Splunk HEC endpoint"
   type        = string
+  default     = "http://some-endpoint:8088"
+
 }
 
 variable "splunk_token" {
   description = "The token for the Splunk HEC endpoint. It will be stored in Secret Manager"
   type        = string
+  default     = "WRITE_YOUR_TOKEN_HERE"
 }
 
