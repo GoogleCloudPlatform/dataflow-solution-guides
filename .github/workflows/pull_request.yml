@@ -113,18 +113,18 @@ jobs:
             if [ -f "$pipeline_dir/setup.py" ]
             then
               echo
-              echo *************************************
+              echo -------------------------------------
               echo Building $pipeline_dir
-              echo *************************************
+              echo -------------------------------------
               echo
               cd $pipeline_dir
               pipenv install
               for req_txt in requirements*.txt
               do
-                echo ****** Installing dependencies in $req_txt ******
+                echo ----- Installing dependencies in $req_txt -----
                 pipenv install -r $req_txt
               done
-              echo ****** Building package ******
+              echo ----- Building package -----
               pipenv run python setup.py sdist
               cd ..
             else
