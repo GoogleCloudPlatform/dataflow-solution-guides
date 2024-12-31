@@ -101,7 +101,7 @@ module "enrichment_table" {
   name       = local.bigtable_instance
   clusters = {
     cluster1 = {
-      zone      = var.zone
+      zone      = "${var.region}-${var.zone}"
       num_nodes = 3
     }
   }
