@@ -17,8 +17,6 @@ locals {
   max_dataflow_workers     = 1
   worker_disk_size_gb      = 200
   machine_type             = "e2-standard-8"
-  bigquery_dataset         = "output_dataset"
-  bigquery_table           = "unified_data"
 }
 
 
@@ -98,7 +96,7 @@ module "coupon_redemption_topic" {
 module "output_dataset" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v32.0.1"
   project_id = module.google_cloud_project.project_id
-  id         = local.bigquery_dataset
+  id         = var.bq_dataset
 }
 
 

@@ -1,0 +1,57 @@
+name: 'Terraform deploy'
+on:
+  workflow_dispatch:
+    inputs:
+      prnumber:
+        type: string
+        description: PR number to build
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  terraform-plan:
+    name: 'Terraform plan with Google Cloud'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Checkout PR
+        uses: dawidd6/action-checkout-pr@v1.2.0
+        with:
+          pr: ${{ github.event.inputs.prnumber }}
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: "Terraform:\n  - 'terraform/**'     \n"
+      - name: 'Google Cloud auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          project_id: '${{ secrets.TESTING_PROJECT }}'
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          ls -d */ | while read d
+          do
+          echo "Running tf init in directory: $d"
+          cd $d && terraform init && cd ..
+          done
+      - name: Terraform Plan
+        working-directory: terraform
+        run: |-
+          ls -d */ | while read d
+          do
+          echo "Running tf plan in directory: $d"
+          cd $d
+          echo 'project_create = "false"' > terraform.tfvars
+          echo 'project_id = "${{ secrets.TESTING_PROJECT }}"' >> terraform.tfvars
+          echo 'region = "us-central-1"' >> terraform.tfvars
+          terraform plan -input=false
+          cd ..
+          done

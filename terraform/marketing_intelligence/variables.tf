@@ -58,6 +58,7 @@ variable "region" {
 }
 
 variable "zone" {
-  description = "The zone for big table"
+  description = "The zone for Bigtable. Just a single lower case letter for the zone. Default is a."
   type        = string
+  default     = "a"
 }
