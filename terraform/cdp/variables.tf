@@ -60,11 +60,13 @@ variable "region" {
 variable "bq_dataset" {
   description = "The output bq dataset"
   type        = string
+  default     = "output_dataset"
 }
 
 variable "bq_table" {
   description = "The output bq table"
   type        = string
+  default     = "unified_data"
 }
 
 
