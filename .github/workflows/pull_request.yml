@@ -103,10 +103,10 @@ jobs:
           python-version: '3.11'
       - name: Install pipenv
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
-      - run: pipenv install
       - name: Python builds
         working-directory: pipelines
         run: |
+          export PIPENV_VENV_IN_PROJECT=1
           for pipeline_dir in */
           do
             echo "Checking pipelines/$pipeline_dir"
@@ -114,6 +114,7 @@ jobs:
             then
               echo Python pipeline found
               cd $pipeline_dir
+              pipenv install
               for req_txt in requirements*.txt
               do
                 pipenv install -r $req_txt
