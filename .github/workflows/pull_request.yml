@@ -99,19 +99,6 @@ jobs:
               echo Ignoring, no gradlew found
             fi
           done
-  pylint-google-style:
-    name: 'Python PyLint Google style'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: advanced-security/python-lint-code-scanning-action@v1
-        with:
-          linter: pylint
-      - name: Run pylint
-        working-directory: pipelines
-        run: pylint --rcfile pylintrc **/*py
   python-build:
     name: 'Python pipelines build'
     runs-on: ubuntu-latest
@@ -153,6 +140,8 @@ jobs:
               done
               echo ----- Building package -----
               pipenv run python setup.py sdist
+              echo ----- Linting with Google Style -----
+              pipenv run python -m pylint --rcfile ../pylintrc
               cd ..
             else
               echo Ignoring, no Python pipeline found
