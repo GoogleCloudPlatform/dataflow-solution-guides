@@ -43,6 +43,7 @@ module "registry_docker" {
   project_id = module.google_cloud_project.project_id
   location   = var.region
   name       = "dataflow-containers"
+  format     = { docker = { standard = {} } }
   iam = {
     "roles/artifactregistry.admin" = [
       "serviceAccount:${module.google_cloud_project.number}@cloudbuild.gserviceaccount.com"
