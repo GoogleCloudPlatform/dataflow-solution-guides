@@ -1,6 +1,21 @@
-name: 'Pull request'
+#  Copyright 2025 Google LLC
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+name: 'Build and validation'
 on:
   pull_request:
+  push:
 permissions:
   contents: read
 jobs:
@@ -43,7 +58,7 @@ jobs:
           echo "Running tf validate in directory: $d"
           cd $d && terraform validate && cd ..
           done
-  java-builds:
+  java-build:
     name: 'Java pipelines build'
     runs-on: ubuntu-latest
     defaults:
@@ -82,5 +97,121 @@ jobs:
               cd ..
             else
               echo Ignoring, no gradlew found
+            fi
+          done
+  pylint-google-style:
+    name: 'Python PyLint Google style'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: "Pipelines:\n  - 'pipelines/**'     \n"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pylint
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint
+      - name: Run pylint
+        working-directory: pipelines
+        run: |
+          for pipeline_dir in */
+          do
+            echo "Checking pipelines/$pipeline_dir"
+            if [ -f "$pipeline_dir/setup.py" ]
+            then
+              echo
+              echo -------------------------------------
+              echo Checking format $pipeline_dir
+              echo -------------------------------------
+              echo
+              cd $pipeline_dir
+              pylint --rcfile ../pylintrc .
+              cd ..
+            else
+              echo Ignoring, no Python pipeline found
+            fi
+          done
+  python-build:
+    name: 'Python pipelines build'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: "Pipelines:\n  - 'pipelines/**'     \n"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pipenv
+        run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
+      - name: Python builds
+        working-directory: pipelines
+        run: |
+          export PIPENV_VENV_IN_PROJECT=1
+          for pipeline_dir in */
+          do
+            echo "Checking pipelines/$pipeline_dir"
+            if [ -f "$pipeline_dir/setup.py" ]
+            then
+              echo
+              echo -------------------------------------
+              echo Building $pipeline_dir
+              echo -------------------------------------
+              echo
+              cd $pipeline_dir
+              pipenv install
+              for req_txt in requirements*.txt
+              do
+                echo ----- Installing dependencies in $req_txt -----
+                pipenv install -r $req_txt
+              done
+              echo ----- Building package -----
+              pipenv run python setup.py sdist
+              cd ..
+            else
+              echo Ignoring, no Python pipeline found
+            fi
+          done
+  docker-build:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Docker builds
+        working-directory: pipelines
+        run: |
+          for pipeline_dir in */
+          do
+            echo "Checking pipelines/$pipeline_dir"
+            if [ -f "$pipeline_dir/Dockerfile" ]
+            then
+              echo
+              echo -------------------------------------
+              echo Building Docker $pipeline_dir
+              echo -------------------------------------
+              echo
+              cd $pipeline_dir
+              mkdir gemma_2B && touch gemma_2B/DUMMY
+              docker build -t github-actions .
+              cd ..
+            else
+              echo Ignoring, no Dockerfile found
             fi
           done

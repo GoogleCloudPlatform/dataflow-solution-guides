@@ -1,4 +1,4 @@
-#  Copyright 2024 Google LLC
+#  Copyright 2025 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,14 +17,12 @@ locals {
   max_dataflow_workers     = 1
   worker_disk_size_gb      = 200
   machine_type             = "e2-standard-8"
-  bigquery_dataset         = "output_dataset"
-  bigquery_table           = "unified_data"
 }
 
 
 // Project
 module "google_cloud_project" {
-  source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v32.0.0"
+  source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v36.0.1"
   billing_account = var.billing_account
   project_create  = var.project_create
   name            = var.project_id
@@ -42,10 +40,11 @@ module "google_cloud_project" {
 }
 
 module "registry_docker" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v32.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v36.0.1"
   project_id = module.google_cloud_project.project_id
   location   = var.region
   name       = "dataflow-containers"
+  format     = { docker = { standard = {} } }
   iam = {
     "roles/artifactregistry.admin" = [
       "serviceAccount:${module.google_cloud_project.number}@cloudbuild.gserviceaccount.com"
@@ -68,7 +67,7 @@ module "registry_docker" {
 
 // Buckets for staging data, scripts, etc, in the two regions
 module "buckets" {
-  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v32.0.0"
+  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v36.0.1"
   project_id    = module.google_cloud_project.project_id
   name          = module.google_cloud_project.project_id
   location      = var.region
@@ -77,7 +76,7 @@ module "buckets" {
 }
 
 module "transactions_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v36.0.1"
   project_id = module.google_cloud_project.project_id
   name       = "transactions"
   subscriptions = {
@@ -86,7 +85,7 @@ module "transactions_topic" {
 }
 
 module "coupon_redemption_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v32.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v36.0.1"
   project_id = module.google_cloud_project.project_id
   name       = "coupon_redemption"
   subscriptions = {
@@ -96,15 +95,15 @@ module "coupon_redemption_topic" {
 
 //bigquery dataset
 module "output_dataset" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v32.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v36.0.1"
   project_id = module.google_cloud_project.project_id
-  id         = local.bigquery_dataset
+  id         = var.bq_dataset
 }
 
 
 // Service account
 module "dataflow_sa" {
-  source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v32.0.0"
+  source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v36.0.1"
   project_id   = module.google_cloud_project.project_id
   name         = local.dataflow_service_account
   generate_key = false
@@ -122,7 +121,7 @@ module "dataflow_sa" {
 
 // Network
 module "vpc_network" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v32.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v36.0.1"
   project_id = module.google_cloud_project.project_id
   name       = "${var.network_prefix}-net"
   subnets = [
@@ -141,7 +140,7 @@ module "vpc_network" {
 
 module "firewall_rules" {
   // Default rules for internal traffic + SSH access via IAP
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v32.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v36.0.1"
   project_id = module.google_cloud_project.project_id
   network    = module.vpc_network.name
   default_rules_config = {
@@ -167,7 +166,7 @@ module "firewall_rules" {
 }
 module "regional_nat" {
   // So we can get to Internet if necessary (from the Dataflow region)
-  source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v32.0.0"
+  source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v36.0.1"
   project_id     = module.google_cloud_project.project_id
   region         = var.region
   name           = "${var.network_prefix}-nat"

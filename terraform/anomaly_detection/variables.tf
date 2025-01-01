@@ -1,4 +1,4 @@
-#  Copyright 2024 Google LLC
+#  Copyright 2025 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ variable "region" {
 }
 
 variable "zone" {
-  description = "The zone for big table"
+  description = "The zone for big table. Just a single letter specifying a zone in the region. The default is zone a"
   type        = string
+  default     = "a"
 }

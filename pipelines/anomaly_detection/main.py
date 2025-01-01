@@ -1,4 +1,4 @@
-#  Copyright 2024 Google LLC
+#  Copyright 2025 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,6 +11,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+
+"""
+An Anomaly Detection example for the Dataflow Solution Guides.
+"""
 
 import time
 
@@ -27,8 +31,10 @@ def main(options: MyPipelineOptions):
 
 if __name__ == "__main__":
   pipeline_options: PipelineOptions = PipelineOptions()
-  dataflow_options: GoogleCloudOptions = pipeline_options.view_as(GoogleCloudOptions)
-  now_epoch_ms = int(time.time()*1000)
+  dataflow_options: GoogleCloudOptions = pipeline_options.view_as(
+      GoogleCloudOptions)
+  now_epoch_ms = int(time.time() * 1000)
   dataflow_options.job_name = f"anomaly-detection-pipeline-{now_epoch_ms}"
-  custom_options: MyPipelineOptions = pipeline_options.view_as(MyPipelineOptions)
+  custom_options: MyPipelineOptions = pipeline_options.view_as(
+      MyPipelineOptions)
   main(custom_options)

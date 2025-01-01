@@ -1,4 +1,4 @@
-#  Copyright 2024 Google LLC
+#  Copyright 2025 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,6 +11,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""
+Custom model handlers to be used with RunInference.
+"""
 
 from typing import Sequence, Optional, Any, Iterable
 
@@ -20,6 +23,10 @@ from keras_nlp.src.models import GemmaCausalLM
 
 
 class GemmaModelHandler(ModelHandler[str, PredictionResult, GemmaCausalLM]):
+  """
+  A RunInference model handler for the Gemma model.
+  """
+
   def __init__(self, model_name: str = "gemma_2B"):
     """ Implementation of the ModelHandler interface for Gemma using text as input.
 
@@ -46,23 +53,21 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, GemmaCausalLM]):
     return keras_nlp.models.GemmaCausalLM.from_preset(self._model_name)
 
   def run_inference(
-    self,
-    batch: Sequence[str],
-    model: GemmaCausalLM,
-    inference_args: Optional[dict[str, Any]] = None
-  ) -> Iterable[PredictionResult]:
+      self,
+      batch: Sequence[str],
+      model: GemmaCausalLM,
+      unused: Optional[dict[str, Any]] = None) -> Iterable[PredictionResult]:
     """Runs inferences on a batch of text strings.
 
     Args:
       batch: A sequence of examples as text strings.
       model: The Gemma model being used.
-      inference_args: Any additional arguments for an inference.
 
     Returns:
       An Iterable of type PredictionResult.
     """
+    _ = unused  # for interface compatibility with Model Handler
     # Loop each text string, and use a tuple to store the inference results.
-    predictions = []
     for one_text in batch:
       result = model.generate(one_text, max_length=64)
       yield PredictionResult(one_text, result, self._model_name)
