@@ -15,6 +15,11 @@ You generally only need to submit a CLA once, so if you've already submitted one
 (even if it was for a different project), you probably don't need to do it
 again.
 
+## Run in Dataflow and Google Cloud
+
+Before submitting your contribution, make sure that all your code runs correctly 
+in Google Cloud, including any Terraform code and any pipeline you write.
+
 ## Code Quality Checks
 
 ### For Python code
@@ -39,7 +44,25 @@ Please note that the configuration file `../pylintrc` is located in the
 
  ### For Java code
 
- TBD
+ Make sure you are using Gradle with the same settings as the existing pipelines 
+ (e.g. use `pipelines/etl_integration_java` as an example), and run the following 
+ command to make your build passes:
+
+ ```shell
+ ./gradlew build
+ ```
+
+ If you find code style issues, run this command to fix them:
+
+ ```
+ shell
+ ./gradlew spotlessApply
+ ```
+
+ You can use the following files to copy the Gradle settings to your pipeline:
+ * `build.gradle`
+ * `gradlew` and `gradlew.bat`
+ * The directory `gradle` and all its contents.
 
  ### For Terraform code
 
