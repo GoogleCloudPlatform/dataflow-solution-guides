@@ -1,4 +1,5 @@
 python3 -m main \
+  --streaming \
   --runner=DataflowRunner \
   --project=$PROJECT \
   --temp_location=gs://$PROJECT/tmp \
