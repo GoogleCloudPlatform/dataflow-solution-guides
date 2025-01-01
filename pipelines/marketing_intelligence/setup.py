@@ -11,11 +11,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""
+Setup file for Market Intelligence pipeline.
+"""
 
 from setuptools import setup, find_packages
 
-with open("requirements.txt") as f:
-    requirements = f.readlines()
+with open("requirements.txt", encoding="utf-8") as f:
+  requirements = f.readlines()
 
 setup(
     name="Dataflow Solution for Market Intelligence pipelines",

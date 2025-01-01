@@ -11,6 +11,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""
+A machine learning streaming inference example for the Dataflow Solution Guides.
+"""
 
 import time
 
@@ -24,10 +27,13 @@ def main(options: MyPipelineOptions):
   pipeline = create_pipeline(options)
   pipeline.run()
 
+
 if __name__ == "__main__":
   pipeline_options: PipelineOptions = PipelineOptions()
-  dataflow_options: GoogleCloudOptions = pipeline_options.view_as(GoogleCloudOptions)
-  now_epoch_ms = int(time.time()*1000)
+  dataflow_options: GoogleCloudOptions = pipeline_options.view_as(
+      GoogleCloudOptions)
+  now_epoch_ms = int(time.time() * 1000)
   dataflow_options.job_name = f"gemma-inference-pipeline-{now_epoch_ms}"
-  custom_options: MyPipelineOptions = pipeline_options.view_as(MyPipelineOptions)
+  custom_options: MyPipelineOptions = pipeline_options.view_as(
+      MyPipelineOptions)
   main(custom_options)
