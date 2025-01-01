@@ -17,7 +17,7 @@ FROM ${SERVING_BUILD_IMAGE}
 WORKDIR /workspace
 
 RUN apt-get update -y && apt-get install -y \
-    cmake
+  cmake
 
 COPY requirements.txt requirements.txt
 COPY main.py main.py
@@ -26,11 +26,11 @@ COPY MANIFEST.in MANIFEST.in
 COPY setup.py setup.py
 
 RUN pip install --upgrade --no-cache-dir pip \
-    && pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir -e .
+  && pip install --no-cache-dir -r requirements.txt \
+  && pip install --no-cache-dir -e .
 
 # Copy files from official SDK image, including script/dependencies.
-COPY --from=apache/beam_python3.11_sdk:2.61.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.12_sdk:2.61.0 /opt/apache/beam /opt/apache/beam
 
 COPY gemma_2B gemma_2B
 
