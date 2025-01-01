@@ -12,6 +12,9 @@ jobs:
   terraform-plan:
     name: 'Terraform plan with Google Cloud'
     runs-on: ubuntu-latest
+    concurrency:
+      group: terraform-plan-group
+      cancel-in-progress: true
     defaults:
       run:
         shell: bash
