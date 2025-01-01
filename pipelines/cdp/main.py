@@ -12,7 +12,7 @@ def main(options: MyPipelineOptions):
 
 
 if __name__ == "__main__":
-  pipeline_options: PipelineOptions = PipelineOptions(streaming=True,requirements_file='/Users/malhotradi/GoogleProjects/Assets/dataflow-solution-guide/dataflow-solution-guides/pipelines/cdp/requirements.txt',)
+  pipeline_options: PipelineOptions = PipelineOptions()
   dataflow_options: GoogleCloudOptions = pipeline_options.view_as(GoogleCloudOptions)
   now_epoch_ms = int(time.time()*1000)
   dataflow_options.job_name = f"customer-data-platform-{now_epoch_ms}"
