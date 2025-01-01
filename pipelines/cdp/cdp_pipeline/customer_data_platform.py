@@ -44,8 +44,9 @@ def left_join(key_value_pair):
             "household_key":
                 trans_value["household_key"],
             "coupon_upc":  # FIXME: Is this a dictionary?
-                coupon_redempt_value["coupon_upc"]
-                if coupon_redempt_value is not None else None,
+                #coupon_redempt_value["coupon_upc"]
+                #if coupon_redempt_value is not None else None,
+                pass
             "product_id":
                 trans_value["product_id"],
             "coupon_discount":
