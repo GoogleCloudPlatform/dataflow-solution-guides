@@ -11,6 +11,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""
+Option class for Customer Data Platform pipeline.
+"""
 
 from argparse import ArgumentParser
 
@@ -18,6 +21,7 @@ from apache_beam.options.pipeline_options import PipelineOptions
 
 
 class MyPipelineOptions(PipelineOptions):
+
   @classmethod
   def _add_argparse_args(cls, parser: ArgumentParser):
     parser.add_argument("--transactions_topic", type=str)

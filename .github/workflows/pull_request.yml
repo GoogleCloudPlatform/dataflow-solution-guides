@@ -99,6 +99,36 @@ jobs:
               echo Ignoring, no gradlew found
             fi
           done
+  pylint-google-style:
+    name: 'Python PyLint Google style'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: advanced-security/python-lint-code-scanning-action@v1
+        with:
+          linter: pylint
+      - name: Run pylint
+        working-directory: pipelines
+        run: |
+          for pipeline_dir in */
+          do
+            echo "Checking pipelines/$pipeline_dir"
+            if [ -f "$pipeline_dir/setup.py" ]
+            then
+              echo
+              echo -------------------------------------
+              echo Checking format $pipeline_dir
+              echo -------------------------------------
+              echo
+              cd $pipeline_dir
+              pylint --rcfile ../pylintrc .
+              cd ..
+            else
+              echo Ignoring, no Python pipeline found
+            fi
+          done
   python-build:
     name: 'Python pipelines build'
     runs-on: ubuntu-latest
