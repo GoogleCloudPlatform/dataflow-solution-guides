@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-ARG SERVING_BUILD_IMAGE=tensorflow/tensorflow:2.16.1-gpu
+ARG SERVING_BUILD_IMAGE=tensorflow/tensorflow:2.18.0-gpu
 FROM ${SERVING_BUILD_IMAGE}
 WORKDIR /workspace
 
