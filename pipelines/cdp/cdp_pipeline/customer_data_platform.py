@@ -38,15 +38,15 @@ def left_join(key_value_pair):
   for trans_value in trans_values:
     if trans_value is not None:
       for coupon_redempt_value in coupon_redempt_values:
+        coupon_redempt_value: dict
         unified_data = {
             "transaction_id":
                 trans_value["transaction_id"],
             "household_key":
                 trans_value["household_key"],
             "coupon_upc":  # FIXME: Is this a dictionary?
-                #coupon_redempt_value["coupon_upc"]
-                #if coupon_redempt_value is not None else None,
-                None,
+                coupon_redempt_value["coupon_upc"]
+                if coupon_redempt_value is not None else None,
             "product_id":
                 trans_value["product_id"],
             "coupon_discount":
