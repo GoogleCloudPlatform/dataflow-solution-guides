@@ -131,3 +131,33 @@ jobs:
               echo Ignoring, no Python pipeline found
             fi
           done
+  docker-build:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Docker builds
+        working-directory: pipelines
+        run: |
+          for pipeline_dir in */
+          do
+            echo "Checking pipelines/$pipeline_dir"
+            if [ -f "$pipeline_dir/Dockerfile" ]
+            then
+              echo
+              echo -------------------------------------
+              echo Building Docker $pipeline_dir
+              echo -------------------------------------
+              echo
+              cd $pipeline_dir
+              mkdir gemma_2B && touch gemma_2B/DUMMY
+              docker build -t github-actions .
+              cd ..
+            else
+              echo Ignoring, no Dockerfile found
+            fi
+          done
