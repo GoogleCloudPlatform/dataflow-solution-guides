@@ -141,7 +141,7 @@ jobs:
               echo ----- Building package -----
               pipenv run python setup.py sdist
               echo ----- Linting with Google Style -----
-              pipenv install pylint
+              pipenv install pylint lazy-object-proxy
               pipenv run python -m pylint --rcfile ../pylintrc
               cd ..
             else
