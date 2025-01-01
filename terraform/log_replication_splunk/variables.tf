@@ -1,4 +1,4 @@
-#  Copyright 2024 Google LLC
+#  Copyright 2025 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -60,10 +60,13 @@ variable "region" {
 variable "splunk_hec_url" {
   description = "The URL for the Splunk HEC endpoint"
   type        = string
+  default     = "http://some-endpoint:8088"
+
 }
 
 variable "splunk_token" {
   description = "The token for the Splunk HEC endpoint. It will be stored in Secret Manager"
   type        = string
+  default     = "WRITE_YOUR_TOKEN_HERE"
 }
 

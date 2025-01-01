@@ -1,4 +1,4 @@
-#  Copyright 2024 Google LLC
+#  Copyright 2025 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,6 +11,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""
+A machine learning streaming inference pipeline for the Dataflow Solution Guides.
+"""
 
 from apache_beam import Pipeline, PCollection
 from apache_beam.ml.inference import RunInference
@@ -24,19 +27,21 @@ from .options import MyPipelineOptions
 
 
 def _format_output(element: PredictionResult) -> str:
-  return "Input: \n{input}, \n\n\nOutput: \n{output}".format(
-    input=element.example, output=element.inference)
+  return f"Input: \n{element.example}, \n\n\nOutput: \n{element.inference}"
 
 
 @beam.ptransform_fn
 def _extract(p: Pipeline, subscription: str) -> PCollection[str]:
-  msgs: PCollection[bytes] = p | "Read subscription" >> beam.io.ReadFromPubSub(subscription=subscription)
+  msgs: PCollection[bytes] = p | "Read subscription" >> beam.io.ReadFromPubSub(
+      subscription=subscription)
   return msgs | "Parse" >> beam.Map(lambda x: x.decode("utf-8"))
 
 
 @beam.ptransform_fn
 def _transform(msgs: PCollection[str], model_path: str) -> PCollection[str]:
-  preds: PCollection[PredictionResult] = msgs | "RunInference-Gemma" >> RunInference(GemmaModelHandler(model_path))
+  preds: PCollection[
+      PredictionResult] = msgs | "RunInference-Gemma" >> RunInference(
+          GemmaModelHandler(model_path))
   return preds | "Format Output" >> beam.Map(_format_output)
 
 
@@ -51,10 +56,13 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
     """
   pipeline = beam.Pipeline(options=options)
   # Extract
-  msgs: PCollection[str] = pipeline | "Read" >> _extract(subscription=options.messages_subscription)
+  msgs: PCollection[str] = pipeline | "Read" >> _extract(
+      subscription=options.messages_subscription)
   # Transform
-  responses: PCollection[str] = msgs | "Transform" >> _transform(model_path=options.model_path)
+  responses: PCollection[str] = msgs | "Transform" >> _transform(
+      model_path=options.model_path)
   # Load
-  responses | "Publish Result" >> pubsub.WriteStringsToPubSub(topic=options.responses_topic)
+  responses | "Publish Result" >> pubsub.WriteStringsToPubSub(
+      topic=options.responses_topic)
 
   return pipeline

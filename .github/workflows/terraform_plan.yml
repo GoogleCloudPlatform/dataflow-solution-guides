@@ -1,0 +1,74 @@
+#  Copyright 2025 Google LLC
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+name: 'Terraform deploy'
+on:
+  workflow_dispatch:
+    inputs:
+      prnumber:
+        type: string
+        description: PR number to build
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  terraform-plan:
+    name: 'Terraform plan with Google Cloud'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: terraform-plan-group
+      cancel-in-progress: true
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Checkout PR
+        uses: dawidd6/action-checkout-pr@v1.2.0
+        with:
+          pr: ${{ github.event.inputs.prnumber }}
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: "Terraform:\n  - 'terraform/**'     \n"
+      - name: 'Google Cloud auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          project_id: '${{ secrets.TESTING_PROJECT }}'
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          ls -d */ | while read d
+          do
+          echo "Running tf init in directory: $d"
+          cd $d && terraform init && cd ..
+          done
+      - name: Terraform Plan
+        working-directory: terraform
+        run: |-
+          ls -d */ | while read d
+          do
+          echo "Running tf plan in directory: $d"
+          cd $d
+          echo 'project_create = "false"' > terraform.tfvars
+          echo 'project_id = "${{ secrets.TESTING_PROJECT }}"' >> terraform.tfvars
+          echo 'region = "us-central-1"' >> terraform.tfvars
+          terraform plan -input=false
+          cd ..
+          done
