@@ -123,7 +123,7 @@ jobs:
               echo -------------------------------------
               echo
               cd $pipeline_dir
-              pylint --rcfile pylintrc .
+              pylint --rcfile ../pylintrc .
               cd ..
             else
               echo Ignoring, no Python pipeline found
