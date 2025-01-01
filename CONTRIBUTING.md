@@ -17,7 +17,37 @@ again.
 
 ## Code Quality Checks
 
-TBD
+### For Python code
+
+You normally will write Python code in a subdirectory of the `pipelines` folder. 
+Install `yapf` and run the following command in the top level directory of your
+ pipeline, to reformat your code:
+
+```shell
+ yapf -i -r --style yapf .
+ ```
+
+ If you install `pylint`, you can check if your code will pass the build with the 
+ following command:
+
+ ```shell
+pylint --rcfile ../pylintrc .
+```
+
+Please note that the configuration file `../pylintrc` is located in the
+ `pipelines` folder.
+
+ ### For Java code
+
+ TBD
+
+ ### For Terraform code
+
+ Run the following command in the top level directory where your Terraform code is located:
+
+ ```shell
+ terraform fmt
+ ```
 
 ## Code Reviews
 

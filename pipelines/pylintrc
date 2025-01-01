@@ -69,6 +69,7 @@ disable=R,
         div-method,
         eq-without-hash,
         execfile-builtin,
+        expression-not-assigned,  # this does not play well with Beam pipelines
         file-builtin,
         filter-builtin-not-iterating,
         fixme,
@@ -97,6 +98,7 @@ disable=R,
         no-member,
         no-name-in-module,
         no-self-use,
+        no-value-for-parameter,  # this does not play well with Beam ptrasform fn
         nonzero-method,
         oct-method,
         old-division,
@@ -238,7 +240,7 @@ generated-members=
 [FORMAT]
 
 # Maximum number of characters on a single line.
-max-line-length=80
+max-line-length=100
 
 # TODO(https://github.com/pylint-dev/pylint/issues/3352): Direct pylint to exempt
 # lines made too long by directives to pytype.

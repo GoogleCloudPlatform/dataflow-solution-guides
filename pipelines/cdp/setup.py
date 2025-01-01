@@ -1,4 +1,3 @@
-
 #  Copyright 2025 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +11,19 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""
+Setup file for Customer Data Platform analytics pipeline.
+"""
 
 from setuptools import setup, find_packages
 
-with open("requirements.txt") as f:
-    requirements = f.readlines()
+with open("requirements.txt", encoding="utf-8") as f:
+  requirements = f.readlines()
 
 setup(
     name="Dataflow Solution for Customer Data Platform",
     version="0.1",
-    description="A Customer Data Platform example for the Dataflow Solution Guides.",
+    description="Customer Data Platform example for the Dataflow Solution Guides",
     packages=find_packages(),
     install_requires=requirements,
 )
