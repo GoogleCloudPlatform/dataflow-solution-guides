@@ -98,7 +98,7 @@ dependencies {
 	testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
 
 
-	implementation 'org.checkerframework:checker-qual:3.48.3'
+	implementation 'org.checkerframework:checker-qual:3.48.4'
 	errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
 }
 
