@@ -21,7 +21,7 @@ ext {
   slf4jVersion = "1.7.36"
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
-  googleJavaFormat = '1.17.0'
+  googleJavaFormat = '1.24.0'
   errorProneCoreVersion = '2.26.1'
 
 }
@@ -88,7 +88,7 @@ spotless {
     target '*.gradle', '*.md', '.gitignore'
     // define the steps to apply to those files
     trimTrailingWhitespace()
-    indentWithSpaces(2) // or spaces. Takes an integer argument if you don't like 4
+    leadingTabsToSpaces(2)
     endWithNewline()
   }
   java {
