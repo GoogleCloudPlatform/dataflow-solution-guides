@@ -38,7 +38,7 @@ ext {
   autoServiceVersion = '1.1.1'
   errorProneCoreVersion = '2.28.0'
 
-  googleJavaFormat = '1.17.0'
+  googleJavaFormat = '1.24.0'
   confluentRepoURL = "https://packages.confluent.io/maven"
 }
 
@@ -129,7 +129,7 @@ spotless {
 
     // define the steps to apply to those files
     trimTrailingWhitespace()
-    indentWithSpaces(2) // or spaces. Takes an integer argument if you don't like 4
+    leadingTabsToSpaces(2)
     endWithNewline()
   }
 
