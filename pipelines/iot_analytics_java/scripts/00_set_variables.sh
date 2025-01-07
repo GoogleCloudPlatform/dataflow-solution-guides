@@ -2,9 +2,9 @@
 # We recommend that you modify this file only through the Terraform deployment.
 export PROJECT=learnings-421714
 export REGION=us-central1
-export SUBNETWORK=regions/us-central1/subnetworks/default-subnet
+export SUBNETWORK=regions/us-central1/subnetworks/iot-dataflow-nw-subnet
 export TEMP_LOCATION=gs://$PROJECT/tmp
-export SERVICE_ACCOUNT=dataflow-service-account@learnings-421714.iam.gserviceaccount.com
+export SERVICE_ACCOUNT=dataflow-svc-account@learnings-421714.iam.gserviceaccount.com
 
 export BQ_DATASET=iot
 export BQ_TABLE=maintenance_analytics

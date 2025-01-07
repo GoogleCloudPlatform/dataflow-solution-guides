@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 locals {
-  dataflow_service_account = "dataflow-service-account@learnings-421714.iam.gserviceaccount.com"
+  dataflow_service_account = "dataflow-svc-account@learnings-421714.iam.gserviceaccount.com"
   bigtable_instance        = "iot-analytics"
   bigtable_zone            = "${var.region}-a"
   bigtable_lookup_key      = "bigtable-lookup-key"
@@ -39,7 +39,7 @@ module "google_cloud_project" {
 }
 
 resource "google_bigtable_instance" "iot-analytics" {
-  name = local.bigtable_instance
+  name    = local.bigtable_instance
   project = var.project_id
   cluster {
     cluster_id   = "${local.bigtable_instance}-c1"
@@ -51,7 +51,7 @@ resource "google_bigtable_instance" "iot-analytics" {
 
 # Create BigQuery dataset
 resource "google_bigquery_dataset" "iot_analytics" {
-  project = var.project_id
+  project     = var.project_id
   dataset_id  = local.bigquery_dataset
   description = "Dataset for storing clickstream analytics data"
   location    = var.region
@@ -59,21 +59,21 @@ resource "google_bigquery_dataset" "iot_analytics" {
 
 # Create BigQuery table
 resource "google_bigquery_table" "maintenance_analytics" {
-  project = var.project_id
+  project             = var.project_id
   dataset_id          = google_bigquery_dataset.iot_analytics.dataset_id
   table_id            = "maintenance_analytics"
   deletion_protection = false
 
   schema = jsonencode([
-  { "name": "vehicle_id",  "type": "STRING" },
-  { "name": "max_temperature", "type": "INTEGER" },
-  { "name": "max_vibration", "type": "FLOAT" },
-  { "name": "latest_timestamp", "type": "TIMESTAMP" },
-  { "name": "last_service_date", "type": "STRING" },
-  { "name": "maintenance_type", "type": "STRING" },
-  { "name": "model", "type": "STRING" },
-  { "name": "needs_maintenance", "type": "INTEGER" }
-])
+    { "name" : "vehicle_id", "type" : "STRING" },
+    { "name" : "max_temperature", "type" : "INTEGER" },
+    { "name" : "max_vibration", "type" : "FLOAT" },
+    { "name" : "latest_timestamp", "type" : "TIMESTAMP" },
+    { "name" : "last_service_date", "type" : "STRING" },
+    { "name" : "maintenance_type", "type" : "STRING" },
+    { "name" : "model", "type" : "STRING" },
+    { "name" : "needs_maintenance", "type" : "INTEGER" }
+  ])
 }
 
 
