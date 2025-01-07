@@ -97,11 +97,11 @@ dependencies {
 	testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
 	testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
 
-	implementation 'org.checkerframework:checker-qual:3.48.3'
+	implementation 'org.checkerframework:checker-qual:3.48.4'
 	errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
 
-// Google Java format for Gradle
-implementation "com.google.googlejavaformat:google-java-format:${googleJavaFormat}"
+  // Google Java format for Gradle
+  implementation "com.google.googlejavaformat:google-java-format:${googleJavaFormat}"
 }
 
 // Package a self-contained jar file.

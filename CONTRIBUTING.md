@@ -72,6 +72,9 @@ Please note that the configuration file `../pylintrc` is located in the
  terraform fmt
  ```
 
+You can also check for other types of issues with your Terraform code by using the 
+`terraform validate` command (but bear in mind you need to run `terraform init` command first).
+
 ## Code Reviews
 
 All submissions, including submissions by project members, require review. We
