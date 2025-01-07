@@ -16,89 +16,89 @@
 
 
 plugins {
-	id 'application'
-	id "maven-publish"
-	id "com.diffplug.spotless" version "6.25.0"
-	id 'com.palantir.git-version' version '3.1.0'
-	id 'net.ltgt.errorprone' version "4.1.0"
+  id 'application'
+  id "maven-publish"
+  id "com.diffplug.spotless" version "6.25.0"
+  id 'com.palantir.git-version' version '3.1.0'
+  id 'net.ltgt.errorprone' version "4.1.0"
 }
 
 ext {
-	packageName = "dataflow-solutions-etl-integration"
-	javaPackagePath = "com.google.cloud.dataflow.solutions"
-	appName = "ETLIntegration"
-	appVersion = "${gitVersion()}-SNAPSHOT"
+  packageName = "dataflow-solutions-etl-integration"
+  javaPackagePath = "com.google.cloud.dataflow.solutions"
+  appName = "ETLIntegration"
+  appVersion = "${gitVersion()}-SNAPSHOT"
 
-	beamVersion = "2.61.0"
+  beamVersion = "2.61.0"
 
-	slf4jVersion = "2.0.16"
-	junitVersion = "4.13.2"
-	hamcrestVersion = "3.0"
-	autoValueVersion = '1.11.0'
-	autoServiceVersion = '1.1.1'
-	errorProneCoreVersion = '2.28.0'
+  slf4jVersion = "2.0.16"
+  junitVersion = "4.13.2"
+  hamcrestVersion = "3.0"
+  autoValueVersion = '1.11.0'
+  autoServiceVersion = '1.1.1'
+  errorProneCoreVersion = '2.28.0'
 
-	googleJavaFormat = '1.17.0'
-	confluentRepoURL = "https://packages.confluent.io/maven"
+  googleJavaFormat = '1.17.0'
+  confluentRepoURL = "https://packages.confluent.io/maven"
 }
 
 repositories {
-	mavenCentral()
+  mavenCentral()
 
-	maven {  // Apache Snapshots repository
-		url "https://repository.apache.org/content/repositories/snapshots/"
-	}
+  maven {  // Apache Snapshots repository
+    url "https://repository.apache.org/content/repositories/snapshots/"
+  }
 
-	maven {  // For Kafka required packages for Beam Google Cloud IO pkgs
-		url confluentRepoURL
-	}
+  maven {  // For Kafka required packages for Beam Google Cloud IO pkgs
+    url confluentRepoURL
+  }
 }
 
 application {
-	mainClass = "${javaPackagePath}.${appName}"
-	version = appVersion
+  mainClass = "${javaPackagePath}.${appName}"
+  version = appVersion
 }
 
 test {
-	// JUnit 4.
-	useJUnit()
-	dependsOn cleanTest
-	testLogging.showStandardStreams = true
+  // JUnit 4.
+  useJUnit()
+  dependsOn cleanTest
+  testLogging.showStandardStreams = true
 }
 
 compileJava {
-	options.compilerArgs.addAll(['-Xlint:deprecation', '-Xlint:unchecked'])
+  options.compilerArgs.addAll(['-Xlint:deprecation', '-Xlint:unchecked'])
 }
 
 run {
-	if (project.hasProperty('args')) {
-		args project.args.split('\\s')
-	}
+  if (project.hasProperty('args')) {
+    args project.args.split('\\s')
+  }
 }
 
 dependencies {
-	// App dependencies.
-	implementation "org.apache.beam:beam-sdks-java-core:${beamVersion}"
-	runtimeOnly "org.apache.beam:beam-runners-direct-java:${beamVersion}"
-	implementation "org.apache.beam:beam-runners-google-cloud-dataflow-java:${beamVersion}"
-	implementation "org.apache.beam:beam-sdks-java-io-google-cloud-platform:${beamVersion}"
+  // App dependencies.
+  implementation "org.apache.beam:beam-sdks-java-core:${beamVersion}"
+  runtimeOnly "org.apache.beam:beam-runners-direct-java:${beamVersion}"
+  implementation "org.apache.beam:beam-runners-google-cloud-dataflow-java:${beamVersion}"
+  implementation "org.apache.beam:beam-sdks-java-io-google-cloud-platform:${beamVersion}"
 
 
-	implementation "org.slf4j:slf4j-jdk14:${slf4jVersion}"
+  implementation "org.slf4j:slf4j-jdk14:${slf4jVersion}"
 
-	implementation "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
-	annotationProcessor "com.google.auto.value:auto-value:${autoValueVersion}"
+  implementation "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
+  annotationProcessor "com.google.auto.value:auto-value:${autoValueVersion}"
 
-	implementation "com.google.auto.service:auto-service-annotations:${autoServiceVersion}"
-	annotationProcessor "com.google.auto.service:auto-service:${autoServiceVersion}"
+  implementation "com.google.auto.service:auto-service-annotations:${autoServiceVersion}"
+  annotationProcessor "com.google.auto.service:auto-service:${autoServiceVersion}"
 
-	// Tests dependencies.
-	testImplementation "junit:junit:${junitVersion}"
-	testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
-	testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
+  // Tests dependencies.
+  testImplementation "junit:junit:${junitVersion}"
+  testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
+  testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
 
-	implementation 'org.checkerframework:checker-qual:3.48.4'
-	errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
+  implementation 'org.checkerframework:checker-qual:3.48.4'
+  errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
 
   // Google Java format for Gradle
   implementation "com.google.googlejavaformat:google-java-format:${googleJavaFormat}"
@@ -106,46 +106,46 @@ dependencies {
 
 // Package a self-contained jar file.
 jar {
-	archiveBaseName = packageName
-	destinationDirectory = file('build')
-	manifest {
-		attributes 'Main-Class': "${javaPackagePath}.${appName}"
-	}
-	exclude 'META-INF/*.SF'
-	exclude 'META-INF/*.DSA'
-	exclude 'META-INF/*.RSA'
-	duplicatesStrategy = DuplicatesStrategy.INCLUDE
-	from {
-		configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-	}
-	zip64 true
+  archiveBaseName = packageName
+  destinationDirectory = file('build')
+  manifest {
+    attributes 'Main-Class': "${javaPackagePath}.${appName}"
+  }
+  exclude 'META-INF/*.SF'
+  exclude 'META-INF/*.DSA'
+  exclude 'META-INF/*.RSA'
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
+  from {
+    configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+  }
+  zip64 true
 }
 
 
 spotless {
-	format 'misc', {
-		// define the files to apply `misc` to
-		target '*.gradle', '*.md', '.gitignore'
+  format 'misc', {
+    // define the files to apply `misc` to
+    target '*.gradle', '*.md', '.gitignore'
 
-		// define the steps to apply to those files
-		trimTrailingWhitespace()
-		indentWithTabs() // or spaces. Takes an integer argument if you don't like 4
-		endWithNewline()
-	}
+    // define the steps to apply to those files
+    trimTrailingWhitespace()
+    indentWithSpaces(2) // or spaces. Takes an integer argument if you don't like 4
+    endWithNewline()
+  }
 
-	java {
-		target project.fileTree(project.rootDir) {
-			include '**/*.java'
-			exclude 'build/*'
-		}
+  java {
+    target project.fileTree(project.rootDir) {
+      include '**/*.java'
+      exclude 'build/*'
+    }
 
-		// apply a specific flavor of google-java-format
-		googleJavaFormat("${googleJavaFormat}").aosp().reflowLongStrings()
+    // apply a specific flavor of google-java-format
+    googleJavaFormat("${googleJavaFormat}").aosp().reflowLongStrings()
 
-		// fix formatting of type annotations
-		formatAnnotations()
-		// make sure every file has the following copyright header.
-		licenseHeader '''/*
+    // fix formatting of type annotations
+    formatAnnotations()
+    // make sure every file has the following copyright header.
+    licenseHeader '''/*
 *  Copyright 2024 Google LLC
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -162,5 +162,5 @@ spotless {
 */
 
 '''
-	}
+  }
 }
