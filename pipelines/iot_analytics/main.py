@@ -15,12 +15,12 @@
 A Product predicter example for the Dataflow Solution Guides.
 """
 
-import time
+import time,os
 
 from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions
 
-from iot_analytics_pipeline.transformations import MyPipelineOptions
-from iot_analytics_pipeline import create_pipeline
+from iot_analytics_pipeline.options import MyPipelineOptions
+from iot_analytics_pipeline.pipeline import create_pipeline
 
 
 def main(options: MyPipelineOptions):
@@ -30,10 +30,8 @@ def main(options: MyPipelineOptions):
 
 if __name__ == "__main__":
   pipeline_options: PipelineOptions = PipelineOptions()
-  dataflow_options: GoogleCloudOptions = pipeline_options.view_as(
-      GoogleCloudOptions)
+  dataflow_options: GoogleCloudOptions = pipeline_options.view_as(GoogleCloudOptions)
   now_epoch_ms = int(time.time() * 1000)
   dataflow_options.job_name = f"iot-analytics-pipeline-{now_epoch_ms}"
-  custom_options: MyPipelineOptions = pipeline_options.view_as(
-      MyPipelineOptions)
+  custom_options: MyPipelineOptions = pipeline_options.view_as(MyPipelineOptions)
   main(custom_options)

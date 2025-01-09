@@ -13,3 +13,66 @@
 { "vehicle_id": "1001", "timestamp": "2024-09-14T15:47:43Z", "temperature": 30, "rpm": 2521, "vibration": 0.32, "fuel_level": 60, "mileage": 56737 }
 { "vehicle_id": "1001", "timestamp": "2024-09-14T15:49:43Z", "temperature": 81, "rpm": 2552, "vibration": 0.52, "fuel_level": 55, "mileage": 49737 }
 { "vehicle_id": "1001", "timestamp": "2024-09-14T16:05:43Z", "temperature": 82, "rpm": 2552, "vibration": 0.53, "fuel_level": 55, "mileage": 49737 }
+
+
+maintenance_data = [{
+    "vehicle_id": "1000",
+    "last_service_date": "2023-12-22",
+    "maintenance_type": "filter_replacement",
+    "make": "Ford",
+    "model": "F-150"
+}, {
+    "vehicle_id": "1001",
+    "last_service_date": "2024-05-31",
+    "maintenance_type": "tire_rotation",
+    "make": "Ford",
+    "model": "F-150"
+}, {
+    "vehicle_id": "1002",
+    "last_service_date": "2024-04-06",
+    "maintenance_type": "tire_rotation",
+    "make": "Ford",
+    "model": "F-150"
+}, {
+    "vehicle_id": "1003",
+    "last_service_date": "2023-11-26",
+    "maintenance_type": "filter_replacement",
+    "make": "Ford",
+    "model": "F-150"
+}, {
+    "vehicle_id": "1004",
+    "last_service_date": "2023-10-18",
+    "maintenance_type": "filter_replacement",
+    "make": "Ford",
+    "model": "F-150"
+}, {
+    "vehicle_id": "1005",
+    "last_service_date": "2024-07-14",
+    "maintenance_type": "tire_rotation",
+    "make": "Ford",
+    "model": "F-150"
+}, {
+    "vehicle_id": "1006",
+    "last_service_date": "2024-01-25",
+    "maintenance_type": "filter_replacement",
+    "make": "Ford",
+    "model": "F-150"
+}, {
+    "vehicle_id": "1007",
+    "last_service_date": "2024-04-07",
+    "maintenance_type": "tire_rotation",
+    "make": "Ford",
+    "model": "F-150"
+}, {
+    "vehicle_id": "1008",
+    "last_service_date": "2023-10-05",
+    "maintenance_type": "brake_check",
+    "make": "Ford",
+    "model": "F-150"
+}, {
+    "vehicle_id": "1009",
+    "last_service_date": "2023-11-30",
+    "maintenance_type": "oil_change",
+    "make": "Ford",
+    "model": "F-150"
+}]

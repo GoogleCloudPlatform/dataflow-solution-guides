@@ -28,7 +28,10 @@ class MyPipelineOptions(PipelineOptions):
         help='Provide pub/sub subscription name - "projects/your_project_id/subscriptions/subscription"'
     )
     parser.add_argument(
-        '--project_id', dest='project_id', help='Enter BigQuery Project ID')
+        '--project_id',
+        dest='project',
+        help='Your Google Cloud project ID'
+    )
     parser.add_argument(
         '--dataset', dest='dataset', help='Enter BigQuery Dataset Id')
     parser.add_argument('--table', dest='table', help='Enter BigQuery Table Id')

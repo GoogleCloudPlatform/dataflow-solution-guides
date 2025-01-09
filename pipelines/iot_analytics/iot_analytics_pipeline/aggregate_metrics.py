@@ -20,7 +20,7 @@ from apache_beam.transforms.timeutil import TimeDomain
 from apache_beam import coders
 from apache_beam.utils.timestamp import Timestamp, Duration
 from typing import Tuple, Iterable
-from transformations.parse_timestamp import VehicleStateEvent
+from .parse_timestamp import VehicleStateEvent
 import logging
 
 

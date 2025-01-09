@@ -21,9 +21,9 @@ import argparse, json
 from datetime import datetime, timedelta
 import pickle
 import logging
-from transformations.aggregate_metrics import AggregateMetrics
-from transformations.parse_timestamp import VehicleStateEvent
-from transformations.trigger_inference import RunInference
+from .aggregate_metrics import AggregateMetrics
+from .parse_timestamp import VehicleStateEvent
+from .trigger_inference import RunInference
 from apache_beam.transforms.window import FixedWindows
 from apache_beam.transforms.trigger import AccumulationMode, AfterWatermark
 from typing import Any, Dict, Tuple
@@ -46,7 +46,7 @@ def custom_join(left: Dict[str, Any], right: Dict[str, Any]):
   return enriched
 
 
-with open('transformations/maintenance_model.pkl', 'rb') as model_file:
+with open('maintenance_model.pkl', 'rb') as model_file:
   sklearn_model_handler = pickle.load(model_file)
 
 
@@ -63,7 +63,7 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
     pipeline = beam.Pipeline(options=options)
     options.view_as(beam.options.pipeline_options.StandardOptions).streaming = True
     bigtable_handler = BigTableEnrichmentHandler(
-        project_id=options.project_id,
+        project_id=options.project,
         instance_id=options.bigtable_instance_id,
         table_id=options.bigtable_table_id,
         row_key=options.row_key)
@@ -86,7 +86,7 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
     | 'RunInference' >> beam.ParDo(RunInference(model=sklearn_model_handler)) \
     | 'WriteToBigQuery' >> beam.io.gcp.bigquery.WriteToBigQuery(
         method=beam.io.WriteToBigQuery.Method.STORAGE_WRITE_API,
-        project=options.project_id,
+        project=options.project,
         dataset=options.dataset,
         table=options.table,
         schema=BQ_SCHEMA,

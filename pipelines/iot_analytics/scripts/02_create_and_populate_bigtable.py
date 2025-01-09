@@ -15,17 +15,20 @@
 Pipeline of the Marketing Intelligence Dataflow Solution guide.
 """
 
-# Create Bigtable Data (Weather data) and Load Records
-PROJECT_ID = 'learnings-421714'
-INSTANCE_ID = 'iot-analytics'
-TABLE_ID = 'maintenance_data'
-
 # Create a bigtable and populate the weather data table
 from google.cloud import bigtable
 from google.cloud.bigtable import column_family
 from google.cloud.bigtable import row
 from google.cloud.bigtable import Client
 from datetime import datetime
+import os, json
+
+# Create Bigtable Data (Weather data) and Load Records
+current_directory = os.getcwd()
+PROJECT_ID = os.environ.get('PROJECT_ID')
+INSTANCE_ID = os.environ.get('INSTANCE_ID')
+TABLE_ID = os.environ.get('TABLE_ID')
+MAINTENANCE_DATA_PATH=os.environ.get('MAINTENANCE_DATA_PATH')
 
 # Create a Bigtable client
 client = Client(project=PROJECT_ID, admin=True)
@@ -55,67 +58,11 @@ make = 'make'
 model = 'model'
 
 # Sample weather data
-maintenance_data = [{
-    "vehicle_id": "1000",
-    "last_service_date": "2023-12-22",
-    "maintenance_type": "filter_replacement",
-    "make": "Ford",
-    "model": "F-150"
-}, {
-    "vehicle_id": "1001",
-    "last_service_date": "2024-05-31",
-    "maintenance_type": "tire_rotation",
-    "make": "Ford",
-    "model": "F-150"
-}, {
-    "vehicle_id": "1002",
-    "last_service_date": "2024-04-06",
-    "maintenance_type": "tire_rotation",
-    "make": "Ford",
-    "model": "F-150"
-}, {
-    "vehicle_id": "1003",
-    "last_service_date": "2023-11-26",
-    "maintenance_type": "filter_replacement",
-    "make": "Ford",
-    "model": "F-150"
-}, {
-    "vehicle_id": "1004",
-    "last_service_date": "2023-10-18",
-    "maintenance_type": "filter_replacement",
-    "make": "Ford",
-    "model": "F-150"
-}, {
-    "vehicle_id": "1005",
-    "last_service_date": "2024-07-14",
-    "maintenance_type": "tire_rotation",
-    "make": "Ford",
-    "model": "F-150"
-}, {
-    "vehicle_id": "1006",
-    "last_service_date": "2024-01-25",
-    "maintenance_type": "filter_replacement",
-    "make": "Ford",
-    "model": "F-150"
-}, {
-    "vehicle_id": "1007",
-    "last_service_date": "2024-04-07",
-    "maintenance_type": "tire_rotation",
-    "make": "Ford",
-    "model": "F-150"
-}, {
-    "vehicle_id": "1008",
-    "last_service_date": "2023-10-05",
-    "maintenance_type": "brake_check",
-    "make": "Ford",
-    "model": "F-150"
-}, {
-    "vehicle_id": "1009",
-    "last_service_date": "2023-11-30",
-    "maintenance_type": "oil_change",
-    "make": "Ford",
-    "model": "F-150"
-}]
+maintenance_data = []
+with open(MAINTENANCE_DATA_PATH,'r') as f:
+  for line in f:
+    maintenance_data.append(json.loads(line))
+
 
 # Populate Bigtable
 

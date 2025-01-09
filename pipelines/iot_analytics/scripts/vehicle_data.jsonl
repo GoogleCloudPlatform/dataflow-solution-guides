@@ -1,0 +1,10 @@
+{"vehicle_id":"1000","timestamp":"2025-01-09T17:54:57Z","temperature":69,"rpm":2740,"vibration":0.49,"fuel_level":55,"mileage":42400}
+{"vehicle_id":"1001","timestamp":"2025-01-09T17:54:57Z","temperature":72,"rpm":2595,"vibration":0.38,"fuel_level":83,"mileage":49634}
+{"vehicle_id":"1002","timestamp":"2025-01-09T17:54:57Z","temperature":67,"rpm":1845,"vibration":0.18,"fuel_level":88,"mileage":42619}
+{"vehicle_id":"1003","timestamp":"2025-01-09T17:54:57Z","temperature":76,"rpm":1564,"vibration":0.42,"fuel_level":85,"mileage":54054}
+{"vehicle_id":"1004","timestamp":"2025-01-09T17:54:57Z","temperature":76,"rpm":2832,"vibration":0.14,"fuel_level":54,"mileage":50595}
+{"vehicle_id":"1005","timestamp":"2025-01-09T17:54:57Z","temperature":84,"rpm":2669,"vibration":0.44,"fuel_level":78,"mileage":54113}
+{"vehicle_id":"1006","timestamp":"2025-01-09T17:54:57Z","temperature":78,"rpm":3394,"vibration":0.13,"fuel_level":54,"mileage":47965}
+{"vehicle_id":"1007","timestamp":"2025-01-09T17:54:57Z","temperature":84,"rpm":2684,"vibration":0.16,"fuel_level":89,"mileage":41251}
+{"vehicle_id":"1008","timestamp":"2025-01-09T17:54:57Z","temperature":69,"rpm":3480,"vibration":0.23,"fuel_level":57,"mileage":44307}
+{"vehicle_id":"1009","timestamp":"2025-01-09T17:54:57Z","temperature":85,"rpm":2276,"vibration":0.18,"fuel_level":88,"mileage":51644}

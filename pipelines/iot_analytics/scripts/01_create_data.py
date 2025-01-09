@@ -18,7 +18,12 @@ Pipeline of the Marketing Intelligence Dataflow Solution guide.
 import random
 import datetime
 import pandas as pd
+import os
 
+# Get Env variables
+current_directory = os.getcwd()
+VEHICLE_DATA_PATH=os.environ.get('VEHICLE_DATA_PATH')
+MAINTENANCE_DATA_PATH=os.environ.get('MAINTENANCE_DATA_PATH')
 
 # Function to generate random vehicle data
 def generate_vehicle_data(vehicle_id):
@@ -64,7 +69,5 @@ maintenance_data = [
 df_vehicle_data = pd.DataFrame(vehicle_data)
 df_maintenance_data = pd.DataFrame(maintenance_data)
 
-df_vehicle_json = df_vehicle_data.to_json(orient='records')
-print(df_vehicle_json)
-df_maintenance_json = df_maintenance_data.to_json(orient='records')
-print(df_maintenance_json)
+df_vehicle_data.to_json(VEHICLE_DATA_PATH, orient='records', lines=True)
+df_maintenance_data.to_json(MAINTENANCE_DATA_PATH, orient='records', lines=True)
