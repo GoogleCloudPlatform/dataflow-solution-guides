@@ -36,7 +36,6 @@ class VehicleStateEvent(typing.NamedTuple):
   def convert_json_to_vehicleobj(input_json):
     dt_object = datetime.datetime.strptime(input_json["timestamp"],
                                            "%Y-%m-%dT%H:%M:%SZ")
-    # dt_time = dt_object.strftime("%Y-%m-%dT%H:%M:%SZ")
     event = VehicleStateEvent(
         vehicle_id=input_json["vehicle_id"],
         timestamp=dt_object,

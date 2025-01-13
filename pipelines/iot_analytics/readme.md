@@ -84,31 +84,31 @@ Once you've finished editing the script, make sure to source it again to load th
 ```sh
 source ./scripts/00_set_environment.sh
 ```
-Next, run the python script to generate maintenance and vehicle data. This will later be populated in BigTable and PubSub
+[optional] Next, run the python script to generate maintenance and vehicle data. This will later be populated in BigTable and PubSub
 
 ```
-python ./scripts/01_create_data.py
+python ./scripts/create_data.py
 ```
 This will create two .jsonl files in your local directory path, based on the variable that you specified in the first step.
 
 Now, Create the bigtable and populate the data init with the same time publish messages in pubsub topic
 
 ```
-python ./scripts/03_create_and_populate_bigtable.py
-python ./scripts/04_publish_on_pubsub.py
+python ./scripts/create_and_populate_bigtable.py
+python ./scripts/publish_on_pubsub.py
 ```
 
 Next, run the script to build and publish the custom Dataflow container. This container will include the necessary dependencies for the worker.
 
 ```sh
-./scripts/04_cloud_build_and_push.sh
+./scripts/01_cloud_build_and_push.sh
 ```
 
 This will create a Cloud Build job that can take a few minutes to complete. Once it completes, you
 can trigger the pipeline with the following:
 
 ```sh
-./scripts/05_submit_job.sh
+./scripts/02_submit_job.sh
 ```
 
 ## Input data

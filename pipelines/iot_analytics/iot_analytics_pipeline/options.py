@@ -26,7 +26,7 @@ class MyPipelineOptions(PipelineOptions):
     parser.add_argument(
         '--subscription',
         dest='subscription',
-        help='Provide pub/sub subscription name - "projects/your_project_id/subscriptions/subscription"'
+        help='Pub/sub subscription name :"projects/your_project_id/subscriptions/subscription"'
     )
     parser.add_argument(
         '--project_id', dest='project', help='Your Google Cloud project ID')

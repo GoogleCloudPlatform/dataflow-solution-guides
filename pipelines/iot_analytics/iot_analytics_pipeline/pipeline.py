@@ -41,7 +41,6 @@ def custom_join(left: Dict[str, Any], right: Dict[str, Any]):
   enriched["last_service_date"] = right["maintenance"]["last_service_date"]
   enriched["maintenance_type"] = right["maintenance"]["maintenance_type"]
   enriched["model"] = right["maintenance"]["model"]
-  logging.info(f" Enriched ====> {enriched}")
   return enriched
 
 
@@ -67,8 +66,16 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
       instance_id=options.bigtable_instance_id,
       table_id=options.bigtable_table_id,
       row_key=options.row_key)
-  BQ_SCHEMA = "vehicle_id:STRING, max_temperature:INTEGER, max_vibration:FLOAT, latest_timestamp:TIMESTAMP, last_service_date:STRING, maintenance_type:STRING, model:STRING, needs_maintenance:INTEGER"
-  messages: PCollection[str] = pipeline | "ReadFromPubSub" >> beam.io.ReadFromPubSub(subscription=options.subscription) \
+  bq_schema = "vehicle_id:STRING, \
+    max_temperature:INTEGER, \
+    max_vibration:FLOAT, \
+    latest_timestamp:TIMESTAMP, \
+    last_service_date:STRING, \
+    maintenance_type:STRING, \
+    model:STRING, \
+    needs_maintenance:INTEGER"
+  messages: PCollection[str] = pipeline \
+  | "ReadFromPubSub" >> beam.io.ReadFromPubSub(subscription=options.subscription) \
   | "Read JSON" >> beam.Map(json.loads) \
   | "Parse&EventTimestamp" >> beam.Map(
       VehicleStateEvent.convert_json_to_vehicleobj).with_output_types(
@@ -89,7 +96,7 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
       project=options.project,
       dataset=options.dataset,
       table=options.table,
-      schema=BQ_SCHEMA,
+      schema=bq_schema,
       create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
       write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND)
   return pipeline

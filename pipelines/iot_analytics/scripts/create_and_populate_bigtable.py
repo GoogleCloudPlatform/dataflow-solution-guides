@@ -49,7 +49,6 @@ if not table.exists():
 else:
   print(f"Table {TABLE_ID} already exists in {PROJECT_ID}:{INSTANCE_ID}")
 
-
 # Define column names for the table.
 vehicle_id = "vehicle_id"
 last_service_date = "last_service_date"
@@ -59,12 +58,21 @@ model = "model"
 
 # Sample weather data
 maintenance_data = []
-with open(MAINTENANCE_DATA_PATH, "r") as f:
-  for line in f:
-    maintenance_data.append(json.loads(line))
+try:
+  with open(MAINTENANCE_DATA_PATH, "r", encoding="utf-8") as f:
+    for line in f:
+      try:
+        data = json.loads(line)
+        maintenance_data.append(data)
+      except json.JSONDecodeError as e:
+        print(f"Error decoding JSON from line: {line.strip()}")
+        print(f"Error message: {e}")
+        # Handle the error (e.g., log it, skip the line, or raise an exception)
+
+except FileNotFoundError:
+  print(f"File not found: {MAINTENANCE_DATA_PATH}")
 
 # Populate Bigtable
-
 for record in maintenance_data:
   row_key = str(record[vehicle_id]).encode()
   row = table.direct_row(row_key)
