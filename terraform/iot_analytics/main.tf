@@ -18,6 +18,7 @@ locals {
   bigtable_zone            = "${var.region}-a"
   bigtable_lookup_key      = "bigtable-lookup-key"
   bigquery_dataset         = "iot"
+  bigquery_table           = "maintenance_analytics"
 }
 
 
@@ -61,7 +62,7 @@ resource "google_bigquery_dataset" "iot_analytics" {
 resource "google_bigquery_table" "maintenance_analytics" {
   project             = var.project_id
   dataset_id          = google_bigquery_dataset.iot_analytics.dataset_id
-  table_id            = "maintenance_analytics"
+  table_id            = local.bigquery_table
   deletion_protection = false
 
   schema = jsonencode([

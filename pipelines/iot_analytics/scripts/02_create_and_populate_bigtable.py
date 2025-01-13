@@ -26,8 +26,8 @@ import os, json
 # Create Bigtable Data (Weather data) and Load Records
 current_directory = os.getcwd()
 PROJECT_ID = os.environ.get('PROJECT_ID')
-INSTANCE_ID = os.environ.get('INSTANCE_ID')
-TABLE_ID = os.environ.get('TABLE_ID')
+INSTANCE_ID = os.environ.get('BIGTABLE_INSTANCE_ID')
+TABLE_ID = os.environ.get('BIGTABLE_TABLE_ID')
 MAINTENANCE_DATA_PATH=os.environ.get('MAINTENANCE_DATA_PATH')
 
 # Create a Bigtable client

@@ -1,10 +1,9 @@
 # IoT Analytics (Python)
 
-This sample pipeline demonstrates how to use Dataflow to process data, and calculate predictions
-using Vertex AI Endpoint, by training a model using AutoML and deploying it on Vertex AI Endpoint.
-This pipeline is written in Python.
+This sample pipeline demonstrates how to use Dataflow to process realtime IoT data (from a pubsub topic) and enrich it using BigTable to further use to run inference on live data and populate realtime results on BigQuery table.
 
-This pipeline is part of the [Dataflow Gen AI & ML solution guide](../../use_cases/IoT_Analytics.md).
+
+This pipeline is part of the [Dataflow IoT Analytics solution guide](../../use_cases/IoT_Analytics.md).
 
 ## Architecture
 
@@ -22,17 +21,7 @@ For more information about Pub/Sub [ Cloud Pub/Sub Overview]( https://cloud.goog
 
 3. **Inference:** Uses the RunInference transform with VertexAIModelHandlerJSON, which in turn sends online prediction request to an Auto-ML generated model. The pipeline uses a GPU with the Dataflow worker, to speed up the inference. For more information about Vertex AI [Vertex AI Overview](https://cloud.google.com/vertex-ai/docs/overview).
 
-4. **Predictions:** The predictions are sent to another Pub/Sub topic as output.
-
-## Auto-ML model
-
-The model can be deployed on a Vertex AI endpoint to serve various purposes.
-To demonstrate the process, we followed these steps to create, train, and deploy the model:
-
-1. Create a [Vertex-AI Dataset](https://cloud.google.com/vertex-ai/docs/tutorials/tabular-bq-prediction/create-dataset) using an existing Bigquery table.
-2. Train a [Text-Classification Model](https://cloud.google.com/vertex-ai/docs/beginner/beginners-guide#train_model) using AutoML.
-3. Once the model is ready, it can be [deployed and tested](https://cloud.google.com/vertex-ai/docs/tutorials/image-classification-automl/deploy-predict#deploy_your_model_to_an_endpoint) on Vertex-AI endpoint.
-4. Take a note of the end-point ID.
+4. **Predictions:** The predictions are sent to BigQuery table.
 
 ## Getting Started
 
@@ -70,8 +59,22 @@ All scripts are in the scripts directory and designed to run from the project's 
 In the script `scripts/00_set_environment.sh`, define the value of the project id and the region variable:
 
 ```
-export PROJECT=<YOUR PROJECT ID>
-export REGION=<YOUR CLOUD REGION>
+export PROJECT_ID=<YOUR_PROJECT_ID>
+export REGION=<YOUR_CLOUD_REGION>
+export CONTAINER_URI=<YOUR_CONTAINER_URI>
+export BIGTABLE_INSTANCE_ID=<BIGTABLE_INSTANCE_ID> #same as specified on terraform
+export BIGTABLE_TABLE_ID=<BIGTABLE_TABLE_ID> #same as specified on terraform
+export VEHICLE_DATA_PATH=<LOCAL_FILE_PATH_FOR_VEHICLE_DATA> #will get generated as part of the setup steps
+export MAINTENANCE_DATA_PATH=<LOCAL_FILE_PATH_FOR_MAINTENANCE_DATA> #will get generated as part of the setup steps
+export PUBSUB_TOPIC_ID=<YOUR_PUBSUB_TOPIC_ID> #same as specified on terraform
+export MODEL_FILE_PATH=<LOCAL_MODEL_FILE_PATH> #call model.py to generate the file
+export SERVICE_ACCOUNT=<YOUR_DATAFLOW_SERVICE_ACCOUNT> #same as specified on terraform
+export SUBNETWORK=<YOUR_SUBNET> #same as specified on terraform
+export MAX_DATAFLOW_WORKERS=<MAX_DATAFLOW_WORKERS>
+export SUBSCRIPTION_ID=<PUBSUB_SUBSCRIPTION_ID>
+export DATASET=<BIGQUERY_DATASET> #same as specified on terraform
+export TABLE=<BIGQUERY_TABLE> #same as specified on terraform
+export ROW_KEY=<BIGTABLE_ROW_KEY>
 ```
 
 You can leave the remaining variables at their default values, but feel free to override them if you have specific preferences or requirements.
@@ -79,26 +82,44 @@ You can leave the remaining variables at their default values, but feel free to 
 Once you've finished editing the script, make sure to source it again to load the updated variables into your current environment by running the following command.
 
 ```sh
-source scripts/00_set_environment.sh
+source ./scripts/00_set_environment.sh
+```
+Next, run the python script to generate maintenance and vehicle data. This will later be populated in BigTable and PubSub
+
+```
+python ./scripts/01_create_data.py
+```
+This will create two .jsonl files in your local directory path, based on the variable that you specified in the first step.
+
+Now, Create the bigtable and populate the data init with the same time publish messages in pubsub topic
+
+```
+python ./scripts/03_create_and_populate_bigtable.py
+python ./scripts/04_publish_on_pubsub.py
 ```
 
 Next, run the script to build and publish the custom Dataflow container. This container will include the necessary dependencies for the worker.
 
 ```sh
-./scripts/01_build_and_push_container.sh
+./scripts/04_cloud_build_and_push.sh
 ```
 
 This will create a Cloud Build job that can take a few minutes to complete. Once it completes, you
 can trigger the pipeline with the following:
 
 ```sh
-./scripts/02_run_dataflow.sh
+./scripts/05_submit_job.sh
 ```
 
 ## Input data
 
-To feed data into the pipeline, publish messages to the Pub/Sub topic `dataflow-solutions-guide-market-intelligence-input` These messages are sent directly to the endpoint without modification.
+To feed data into the pipeline, publish messages to the Pub/Sub topic `PUBSUB_TOPIC_ID` that you mentioned in environment variables and created via terraform. Using this command : 
+```
+python ./scripts/04_publish_on_pubsub.py
+```
+
+These messages are sent directly to the endpoint without modification.
 
 ## Output data
 
-Predictions are published to the Pub/Sub topic `dataflow-solutions-guide-market-intelligence-output topic and can be viewed using the Pub/Sub console.dataflow-solutions-guide-market-intelligence-output-sub subscription.
+Predictions are populated to the BigQuery table `TABLE` and can be viewed using the BigQuery console.
