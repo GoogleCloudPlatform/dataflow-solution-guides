@@ -18,6 +18,7 @@ Options class for the Marketing Intelligence pipeline.
 from argparse import ArgumentParser
 from apache_beam.options.pipeline_options import PipelineOptions
 
+
 class MyPipelineOptions(PipelineOptions):
 
   @classmethod
@@ -28,10 +29,7 @@ class MyPipelineOptions(PipelineOptions):
         help='Provide pub/sub subscription name - "projects/your_project_id/subscriptions/subscription"'
     )
     parser.add_argument(
-        '--project_id',
-        dest='project',
-        help='Your Google Cloud project ID'
-    )
+        '--project_id', dest='project', help='Your Google Cloud project ID')
     parser.add_argument(
         '--dataset', dest='dataset', help='Enter BigQuery Dataset Id')
     parser.add_argument('--table', dest='table', help='Enter BigQuery Table Id')

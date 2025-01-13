@@ -51,7 +51,7 @@ with open('maintenance_model.pkl', 'rb') as model_file:
 
 
 def create_pipeline(options: MyPipelineOptions) -> Pipeline:
-    """ Create the pipeline object.
+  """ Create the pipeline object.
 
     Args:
     options: The pipeline options, with type `MyPipelineOptions`.
@@ -59,38 +59,38 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
     Returns:
     The pipeline object.
     """
-    # Define your pipeline options
-    pipeline = beam.Pipeline(options=options)
-    options.view_as(beam.options.pipeline_options.StandardOptions).streaming = True
-    bigtable_handler = BigTableEnrichmentHandler(
-        project_id=options.project,
-        instance_id=options.bigtable_instance_id,
-        table_id=options.bigtable_table_id,
-        row_key=options.row_key)
-    BQ_SCHEMA = 'vehicle_id:STRING, max_temperature:INTEGER, max_vibration:FLOAT, latest_timestamp:TIMESTAMP, last_service_date:STRING, maintenance_type:STRING, model:STRING, needs_maintenance:INTEGER'
-    messages: PCollection[str] = pipeline | 'ReadFromPubSub' >> beam.io.ReadFromPubSub(subscription=options.subscription) \
-    | "Read JSON" >> beam.Map(json.loads) \
-    | 'Parse&EventTimestamp' >> beam.Map(
-        VehicleStateEvent.convert_json_to_vehicleobj).with_output_types(
-            VehicleStateEvent) \
-    | 'AddKeys' >>  beam.WithKeys(lambda event: event.vehicle_id).with_output_types(
-        Tuple[str, VehicleStateEvent]) \
-    | 'Window' >> beam.WindowInto(
-        FixedWindows(60 * 60),
-        trigger=AfterWatermark(),
-        accumulation_mode=AccumulationMode.ACCUMULATING) \
-    | 'AggregateMetrics' >> beam.ParDo(AggregateMetrics()).with_output_types(
-        VehicleStateEvent).with_input_types(Tuple[str, VehicleStateEvent]) \
-    | 'EnrichWithBigtable' >> Enrichment(
-        bigtable_handler, join_fn=custom_join, timeout=10) \
-    | 'RunInference' >> beam.ParDo(RunInference(model=sklearn_model_handler)) \
-    | 'WriteToBigQuery' >> beam.io.gcp.bigquery.WriteToBigQuery(
-        method=beam.io.WriteToBigQuery.Method.STORAGE_WRITE_API,
-        project=options.project,
-        dataset=options.dataset,
-        table=options.table,
-        schema=BQ_SCHEMA,
-        create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
-        write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND)
-    return pipeline
-
+  # Define your pipeline options
+  pipeline = beam.Pipeline(options=options)
+  options.view_as(
+      beam.options.pipeline_options.StandardOptions).streaming = True
+  bigtable_handler = BigTableEnrichmentHandler(
+      project_id=options.project,
+      instance_id=options.bigtable_instance_id,
+      table_id=options.bigtable_table_id,
+      row_key=options.row_key)
+  BQ_SCHEMA = 'vehicle_id:STRING, max_temperature:INTEGER, max_vibration:FLOAT, latest_timestamp:TIMESTAMP, last_service_date:STRING, maintenance_type:STRING, model:STRING, needs_maintenance:INTEGER'
+  messages: PCollection[str] = pipeline | 'ReadFromPubSub' >> beam.io.ReadFromPubSub(subscription=options.subscription) \
+  | "Read JSON" >> beam.Map(json.loads) \
+  | 'Parse&EventTimestamp' >> beam.Map(
+      VehicleStateEvent.convert_json_to_vehicleobj).with_output_types(
+          VehicleStateEvent) \
+  | 'AddKeys' >>  beam.WithKeys(lambda event: event.vehicle_id).with_output_types(
+      Tuple[str, VehicleStateEvent]) \
+  | 'Window' >> beam.WindowInto(
+      FixedWindows(60 * 60),
+      trigger=AfterWatermark(),
+      accumulation_mode=AccumulationMode.ACCUMULATING) \
+  | 'AggregateMetrics' >> beam.ParDo(AggregateMetrics()).with_output_types(
+      VehicleStateEvent).with_input_types(Tuple[str, VehicleStateEvent]) \
+  | 'EnrichWithBigtable' >> Enrichment(
+      bigtable_handler, join_fn=custom_join, timeout=10) \
+  | 'RunInference' >> beam.ParDo(RunInference(model=sklearn_model_handler)) \
+  | 'WriteToBigQuery' >> beam.io.gcp.bigquery.WriteToBigQuery(
+      method=beam.io.WriteToBigQuery.Method.STORAGE_WRITE_API,
+      project=options.project,
+      dataset=options.dataset,
+      table=options.table,
+      schema=BQ_SCHEMA,
+      create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
+      write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND)
+  return pipeline

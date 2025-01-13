@@ -21,5 +21,4 @@ setup(
     version='0.1',
     packages=find_packages(),
     install_requires=requirements,
-    package_data={'iot_analytics_pipeline': ['maintenance_model.pkl']}
-    )
+    package_data={'iot_analytics_pipeline': ['maintenance_model.pkl']})

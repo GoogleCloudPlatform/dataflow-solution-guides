@@ -28,7 +28,7 @@ current_directory = os.getcwd()
 PROJECT_ID = os.environ.get('PROJECT_ID')
 INSTANCE_ID = os.environ.get('BIGTABLE_INSTANCE_ID')
 TABLE_ID = os.environ.get('BIGTABLE_TABLE_ID')
-MAINTENANCE_DATA_PATH=os.environ.get('MAINTENANCE_DATA_PATH')
+MAINTENANCE_DATA_PATH = os.environ.get('MAINTENANCE_DATA_PATH')
 
 # Create a Bigtable client
 client = Client(project=PROJECT_ID, admin=True)
@@ -59,10 +59,9 @@ model = 'model'
 
 # Sample weather data
 maintenance_data = []
-with open(MAINTENANCE_DATA_PATH,'r') as f:
+with open(MAINTENANCE_DATA_PATH, 'r') as f:
   for line in f:
     maintenance_data.append(json.loads(line))
-
 
 # Populate Bigtable
 

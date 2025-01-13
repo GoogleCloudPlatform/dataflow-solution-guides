@@ -25,6 +25,7 @@ project_id = os.environ.get('PROJECT_ID')
 vehicle_data_path = os.environ.get('VEHICLE_DATA_PATH')
 topic_id = os.environ.get('PUBSUB_TOPIC_ID')
 
+
 def publish_messages(project_id, topic_id, vehicle_data_path):
   """
     Publishes JSON messages from a file to a Pub/Sub topic.

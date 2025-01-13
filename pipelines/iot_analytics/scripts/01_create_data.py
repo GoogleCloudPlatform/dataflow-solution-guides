@@ -22,8 +22,9 @@ import os
 
 # Get Env variables
 current_directory = os.getcwd()
-VEHICLE_DATA_PATH=os.environ.get('VEHICLE_DATA_PATH')
-MAINTENANCE_DATA_PATH=os.environ.get('MAINTENANCE_DATA_PATH')
+VEHICLE_DATA_PATH = os.environ.get('VEHICLE_DATA_PATH')
+MAINTENANCE_DATA_PATH = os.environ.get('MAINTENANCE_DATA_PATH')
+
 
 # Function to generate random vehicle data
 def generate_vehicle_data(vehicle_id):
