@@ -1,0 +1,19 @@
+python3 -m main \
+  --streaming \
+  --runner=DataflowRunner \
+  --project=$PROJECT_ID \
+  --temp_location=gs://$PROJECT_ID/tmp \
+  --region=$REGION \
+  --save_main_session \
+  --service_account_email=$SERVICE_ACCOUNT \
+  --subnetwork=$SUBNETWORK \
+  --sdk_container_image=$CONTAINER_URI \
+  --max_workers=$MAX_DATAFLOW_WORKERS \
+  --subscription=$SUBSCRIPTION_ID \
+  --dataset=$DATASET \
+  --table=$TABLE \
+  --bigtable_instance_id=$INSTANCE_ID \
+  --bigtable_table_id=$BIGTABLE_TABLE_ID \
+  --row_key=$ROW_KEY \
+  --project_id=$PROJECT_ID \
+  --enable_streaming_engine
