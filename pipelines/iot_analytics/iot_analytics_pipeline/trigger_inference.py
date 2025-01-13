@@ -12,37 +12,36 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Pipeline of the Marketing Intelligence Dataflow Solution guide.
+Pipeline of the IoT Analytics Dataflow Solution guide.
 """
 import apache_beam as beam
-from apache_beam import DoFn
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 import logging
 
 
 class RunInference(beam.DoFn):
+  """
+  A custom model to predict the if vehicle needs_maintenance
+  """
 
   def __init__(self, model):
     self.model = model
 
   def process(self, element):
     df = pd.DataFrame([element])
-    df['last_service_date'] = (
-        pd.to_datetime(df['last_service_date']) -
-        pd.to_datetime(df['last_service_date']).min()).dt.days
+    df["last_service_date"] = (
+        pd.to_datetime(df["last_service_date"]) -
+        pd.to_datetime(df["last_service_date"]).min()).dt.days
     prediction = self.model.predict(
-        df[['max_temperature', 'max_vibration', 'last_service_date']])
+        df[["max_temperature", "max_vibration", "last_service_date"]])
     results = beam.Row(
-        vehicle_id=str(element['vehicle_id']),
-        max_temperature=float(element['max_temperature']),
-        max_vibration=float(element['max_vibration']),
-        latest_timestamp=element['latest_timestamp'],
-        last_service_date=element['last_service_date'],
-        maintenance_type=element['maintenance_type'],
-        model=element['model'],
+        vehicle_id=str(element["vehicle_id"]),
+        max_temperature=float(element["max_temperature"]),
+        max_vibration=float(element["max_vibration"]),
+        latest_timestamp=element["latest_timestamp"],
+        last_service_date=element["last_service_date"],
+        maintenance_type=element["maintenance_type"],
+        model=element["model"],
         needs_maintenance=prediction[0])
-    # results = {**element, "needs_maintenance": prediction[0]}
     logging.info(f"Inference : {results}")
     yield results._asdict()

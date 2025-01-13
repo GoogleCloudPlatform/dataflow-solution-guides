@@ -12,10 +12,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-A Product predicter example for the Dataflow Solution Guides.
+A IoT Analytics example for the Dataflow Solution Guides.
 """
 
-import time, os
+import time
 
 from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions
 

@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Options class for the Marketing Intelligence pipeline.
+Options class for the IoT Analytics pipeline.
 """
 
 from argparse import ArgumentParser

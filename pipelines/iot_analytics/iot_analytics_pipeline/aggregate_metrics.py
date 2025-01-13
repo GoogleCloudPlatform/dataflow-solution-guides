@@ -12,14 +12,14 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Pipeline of the Marketing Intelligence Dataflow Solution guide.
+Pipeline of the IoT Analytics Dataflow Solution guide.
 """
 import apache_beam as beam
 from apache_beam.transforms.userstate import BagStateSpec, CombiningValueStateSpec, TimerSpec, on_timer
 from apache_beam.transforms.timeutil import TimeDomain
 from apache_beam import coders
-from apache_beam.utils.timestamp import Timestamp, Duration
-from typing import Tuple, Iterable
+from apache_beam.utils.timestamp import Timestamp
+from typing import Tuple
 from .parse_timestamp import VehicleStateEvent
 import logging
 
@@ -31,25 +31,25 @@ class AggregateMetrics(beam.DoFn):
 
   # State specifications
   VEHICLE_EVENTS_BAG = BagStateSpec(
-      'vehicle_events_bag', coders.registry.get_coder(VehicleStateEvent))
+      "vehicle_events_bag", coders.registry.get_coder(VehicleStateEvent))
   MAX_TIMESTAMP = CombiningValueStateSpec(
-      'max_timestamp_seen', coders.IterableCoder(coders.TimestampCoder()),
+      "max_timestamp_seen", coders.IterableCoder(coders.TimestampCoder()),
       lambda elements: max(elements, default=Timestamp(0)))
   MAX_TEMPERATURE = CombiningValueStateSpec(
-      'max_temperature', coders.IterableCoder(coders.FloatCoder()),
+      "max_temperature", coders.IterableCoder(coders.FloatCoder()),
       lambda elements: max(elements, default=0))
   MAX_VIBRATION = CombiningValueStateSpec(
-      'max_vibration', coders.IterableCoder(coders.FloatCoder()),
+      "max_vibration", coders.IterableCoder(coders.FloatCoder()),
       lambda elements: max(elements, default=0))
   SUM_MILEAGE = CombiningValueStateSpec(
-      'sum_mileage', coders.IterableCoder(coders.FloatCoder()),
+      "sum_mileage", coders.IterableCoder(coders.FloatCoder()),
       lambda elements: sum(i for i in elements))
   COUNT_MILEAGE = CombiningValueStateSpec(
-      'count_mileage', coders.IterableCoder(coders.FloatCoder()),
+      "count_mileage", coders.IterableCoder(coders.FloatCoder()),
       lambda elements: sum(1 for _ in elements))
 
   # Timer for window expiration
-  WINDOW_TIMER = TimerSpec('window_timer', TimeDomain.WATERMARK)
+  WINDOW_TIMER = TimerSpec("window_timer", TimeDomain.WATERMARK)
 
   def process(self,
               element: Tuple[str, VehicleStateEvent],

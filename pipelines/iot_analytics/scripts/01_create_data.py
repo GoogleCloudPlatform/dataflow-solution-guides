@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Pipeline of the Marketing Intelligence Dataflow Solution guide.
+Pipeline of the IoT Analytics Dataflow Solution guide.
 """
 
 import random
@@ -22,8 +22,8 @@ import os
 
 # Get Env variables
 current_directory = os.getcwd()
-VEHICLE_DATA_PATH = os.environ.get('VEHICLE_DATA_PATH')
-MAINTENANCE_DATA_PATH = os.environ.get('MAINTENANCE_DATA_PATH')
+VEHICLE_DATA_PATH = os.environ.get("VEHICLE_DATA_PATH")
+MAINTENANCE_DATA_PATH = os.environ.get("MAINTENANCE_DATA_PATH")
 
 
 # Function to generate random vehicle data
@@ -70,5 +70,5 @@ maintenance_data = [
 df_vehicle_data = pd.DataFrame(vehicle_data)
 df_maintenance_data = pd.DataFrame(maintenance_data)
 
-df_vehicle_data.to_json(VEHICLE_DATA_PATH, orient='records', lines=True)
-df_maintenance_data.to_json(MAINTENANCE_DATA_PATH, orient='records', lines=True)
+df_vehicle_data.to_json(VEHICLE_DATA_PATH, orient="records", lines=True)
+df_maintenance_data.to_json(MAINTENANCE_DATA_PATH, orient="records", lines=True)

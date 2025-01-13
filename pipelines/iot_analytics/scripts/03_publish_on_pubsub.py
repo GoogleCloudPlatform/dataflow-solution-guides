@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Pipeline of the Marketing Intelligence Dataflow Solution guide.
+Pipeline of the IoT Analytics Dataflow Solution guide.
 """
 
 import json
@@ -21,9 +21,9 @@ import os
 
 # Replace with your project ID and Pub/Sub topic ID
 current_directory = os.getcwd()
-project_id = os.environ.get('PROJECT_ID')
-vehicle_data_path = os.environ.get('VEHICLE_DATA_PATH')
-topic_id = os.environ.get('PUBSUB_TOPIC_ID')
+project_id = os.environ.get("PROJECT_ID")
+vehicle_data_path = os.environ.get("VEHICLE_DATA_PATH")
+topic_id = os.environ.get("PUBSUB_TOPIC_ID")
 
 
 def publish_messages(project_id, topic_id, vehicle_data_path):
@@ -39,7 +39,7 @@ def publish_messages(project_id, topic_id, vehicle_data_path):
   publisher = pubsub_v1.PublisherClient()
   topic_path = publisher.topic_path(project_id, topic_id)
 
-  with open(vehicle_data_path, 'r') as f:
+  with open(vehicle_data_path, "r") as f:
     for line in f:
       try:
         # Parse each line as a JSON object

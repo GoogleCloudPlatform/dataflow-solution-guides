@@ -12,13 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Pipeline of the Marketing Intelligence Dataflow Solution guide.
+Pipeline of the IoT Analytics Dataflow Solution guide.
 """
 import apache_beam as beam
 from apache_beam import Pipeline, PCollection
 from .options import MyPipelineOptions
-import argparse, json
-from datetime import datetime, timedelta
+import json
 import pickle
 import logging
 from .aggregate_metrics import AggregateMetrics
@@ -34,19 +33,19 @@ from apache_beam.transforms.enrichment_handlers.bigtable import BigTableEnrichme
 
 def custom_join(left: Dict[str, Any], right: Dict[str, Any]):
   enriched = {}
-  enriched['vehicle_id'] = left['vehicle_id']
-  enriched['max_temperature'] = left['max_temperature']
-  enriched['max_vibration'] = left['max_vibration']
-  enriched['latest_timestamp'] = left['max_timestamp']
-  enriched['avg_mileage'] = left['avg_mileage']
-  enriched['last_service_date'] = right['maintenance']['last_service_date']
-  enriched['maintenance_type'] = right['maintenance']['maintenance_type']
-  enriched['model'] = right['maintenance']['model']
+  enriched["vehicle_id"] = left["vehicle_id"]
+  enriched["max_temperature"] = left["max_temperature"]
+  enriched["max_vibration"] = left["max_vibration"]
+  enriched["latest_timestamp"] = left["max_timestamp"]
+  enriched["avg_mileage"] = left["avg_mileage"]
+  enriched["last_service_date"] = right["maintenance"]["last_service_date"]
+  enriched["maintenance_type"] = right["maintenance"]["maintenance_type"]
+  enriched["model"] = right["maintenance"]["model"]
   logging.info(f" Enriched ====> {enriched}")
   return enriched
 
 
-with open('maintenance_model.pkl', 'rb') as model_file:
+with open("maintenance_model.pkl", "rb") as model_file:
   sklearn_model_handler = pickle.load(model_file)
 
 
@@ -68,24 +67,24 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
       instance_id=options.bigtable_instance_id,
       table_id=options.bigtable_table_id,
       row_key=options.row_key)
-  BQ_SCHEMA = 'vehicle_id:STRING, max_temperature:INTEGER, max_vibration:FLOAT, latest_timestamp:TIMESTAMP, last_service_date:STRING, maintenance_type:STRING, model:STRING, needs_maintenance:INTEGER'
-  messages: PCollection[str] = pipeline | 'ReadFromPubSub' >> beam.io.ReadFromPubSub(subscription=options.subscription) \
+  BQ_SCHEMA = "vehicle_id:STRING, max_temperature:INTEGER, max_vibration:FLOAT, latest_timestamp:TIMESTAMP, last_service_date:STRING, maintenance_type:STRING, model:STRING, needs_maintenance:INTEGER"
+  messages: PCollection[str] = pipeline | "ReadFromPubSub" >> beam.io.ReadFromPubSub(subscription=options.subscription) \
   | "Read JSON" >> beam.Map(json.loads) \
-  | 'Parse&EventTimestamp' >> beam.Map(
+  | "Parse&EventTimestamp" >> beam.Map(
       VehicleStateEvent.convert_json_to_vehicleobj).with_output_types(
           VehicleStateEvent) \
-  | 'AddKeys' >>  beam.WithKeys(lambda event: event.vehicle_id).with_output_types(
+  | "AddKeys" >>  beam.WithKeys(lambda event: event.vehicle_id).with_output_types(
       Tuple[str, VehicleStateEvent]) \
-  | 'Window' >> beam.WindowInto(
+  | "Window" >> beam.WindowInto(
       FixedWindows(60 * 60),
       trigger=AfterWatermark(),
       accumulation_mode=AccumulationMode.ACCUMULATING) \
-  | 'AggregateMetrics' >> beam.ParDo(AggregateMetrics()).with_output_types(
+  | "AggregateMetrics" >> beam.ParDo(AggregateMetrics()).with_output_types(
       VehicleStateEvent).with_input_types(Tuple[str, VehicleStateEvent]) \
-  | 'EnrichWithBigtable' >> Enrichment(
+  | "EnrichWithBigtable" >> Enrichment(
       bigtable_handler, join_fn=custom_join, timeout=10) \
-  | 'RunInference' >> beam.ParDo(RunInference(model=sklearn_model_handler)) \
-  | 'WriteToBigQuery' >> beam.io.gcp.bigquery.WriteToBigQuery(
+  | "RunInference" >> beam.ParDo(RunInference(model=sklearn_model_handler)) \
+  | "WriteToBigQuery" >> beam.io.gcp.bigquery.WriteToBigQuery(
       method=beam.io.WriteToBigQuery.Method.STORAGE_WRITE_API,
       project=options.project,
       dataset=options.dataset,

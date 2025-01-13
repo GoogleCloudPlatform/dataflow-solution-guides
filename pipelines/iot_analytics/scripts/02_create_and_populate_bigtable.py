@@ -12,30 +12,30 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Pipeline of the Marketing Intelligence Dataflow Solution guide.
+Pipeline of the IoT Analytics Dataflow Solution guide.
 """
 
 # Create a bigtable and populate the weather data table
-from google.cloud import bigtable
 from google.cloud.bigtable import column_family
 from google.cloud.bigtable import row
 from google.cloud.bigtable import Client
 from datetime import datetime
-import os, json
+import os
+import json
 
 # Create Bigtable Data (Weather data) and Load Records
 current_directory = os.getcwd()
-PROJECT_ID = os.environ.get('PROJECT_ID')
-INSTANCE_ID = os.environ.get('BIGTABLE_INSTANCE_ID')
-TABLE_ID = os.environ.get('BIGTABLE_TABLE_ID')
-MAINTENANCE_DATA_PATH = os.environ.get('MAINTENANCE_DATA_PATH')
+PROJECT_ID = os.environ.get("PROJECT_ID")
+INSTANCE_ID = os.environ.get("BIGTABLE_INSTANCE_ID")
+TABLE_ID = os.environ.get("BIGTABLE_TABLE_ID")
+MAINTENANCE_DATA_PATH = os.environ.get("MAINTENANCE_DATA_PATH")
 
 # Create a Bigtable client
 client = Client(project=PROJECT_ID, admin=True)
 instance = client.instance(INSTANCE_ID)
 
 # Create a column family.
-column_family_id = 'maintenance'
+column_family_id = "maintenance"
 max_versions_rule = column_family.MaxVersionsGCRule(2)
 column_families = {column_family_id: max_versions_rule}
 
@@ -47,19 +47,19 @@ table = instance.table(TABLE_ID)
 if not table.exists():
   table.create(column_families=column_families)
 else:
-  print("Table %s already exists in %s:%s" %
-        (TABLE_ID, PROJECT_ID, INSTANCE_ID))
+  print(f"Table {TABLE_ID} already exists in {PROJECT_ID}:{INSTANCE_ID}")
+
 
 # Define column names for the table.
-vehicle_id = 'vehicle_id'
-last_service_date = 'last_service_date'
-maintenance_type = 'maintenance_type'
-make = 'make'
-model = 'model'
+vehicle_id = "vehicle_id"
+last_service_date = "last_service_date"
+maintenance_type = "maintenance_type"
+make = "make"
+model = "model"
 
 # Sample weather data
 maintenance_data = []
-with open(MAINTENANCE_DATA_PATH, 'r') as f:
+with open(MAINTENANCE_DATA_PATH, "r") as f:
   for line in f:
     maintenance_data.append(json.loads(line))
 
@@ -94,6 +94,6 @@ for record in maintenance_data:
       str(record[model]),
       timestamp=datetime.utcnow())
   row.commit()
-  print('Inserted row for key: %s' % record[vehicle_id])
+  print(f"Inserted row for key: {record[vehicle_id]}")
 
 print("Bigtable populated with sample weather information.")
