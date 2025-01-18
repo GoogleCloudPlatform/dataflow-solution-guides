@@ -15,11 +15,10 @@
 Pipeline of the IoT Analytics Dataflow Solution guide.
 """
 import apache_beam as beam
-from apache_beam import Pipeline, PCollection
+from apache_beam import Pipeline
 from .options import MyPipelineOptions
 import json
 import pickle
-import logging
 from .aggregate_metrics import AggregateMetrics
 from .parse_timestamp import VehicleStateEvent
 from .trigger_inference import RunInference
@@ -48,7 +47,7 @@ with open("maintenance_model.pkl", "rb") as model_file:
   sklearn_model_handler = pickle.load(model_file)
 
 
-def create_pipeline(options: MyPipelineOptions) -> Pipeline:
+def create_pipeline(pipeline_options: MyPipelineOptions) -> Pipeline:
   """ Create the pipeline object.
 
     Args:
@@ -58,14 +57,11 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
     The pipeline object.
     """
   # Define your pipeline options
-  pipeline = beam.Pipeline(options=options)
-  options.view_as(
-      beam.options.pipeline_options.StandardOptions).streaming = True
   bigtable_handler = BigTableEnrichmentHandler(
-      project_id=options.project,
-      instance_id=options.bigtable_instance_id,
-      table_id=options.bigtable_table_id,
-      row_key=options.row_key)
+      project_id=pipeline_options.project,
+      instance_id=pipeline_options.bigtable_instance_id,
+      table_id=pipeline_options.bigtable_table_id,
+      row_key=pipeline_options.row_key)
   bq_schema = "vehicle_id:STRING, \
     max_temperature:INTEGER, \
     max_vibration:FLOAT, \
@@ -74,8 +70,10 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
     maintenance_type:STRING, \
     model:STRING, \
     needs_maintenance:INTEGER"
-  messages: PCollection[str] = pipeline \
-  | "ReadFromPubSub" >> beam.io.ReadFromPubSub(subscription=options.subscription) \
+
+  pipeline = beam.Pipeline(options=pipeline_options)
+  enriched_data = pipeline \
+  | "ReadFromPubSub" >> beam.io.ReadFromPubSub(topic=pipeline_options.topic) \
   | "Read JSON" >> beam.Map(json.loads) \
   | "Parse&EventTimestamp" >> beam.Map(
       VehicleStateEvent.convert_json_to_vehicleobj).with_output_types(
@@ -83,19 +81,20 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
   | "AddKeys" >>  beam.WithKeys(lambda event: event.vehicle_id).with_output_types(
       Tuple[str, VehicleStateEvent]) \
   | "Window" >> beam.WindowInto(
-      FixedWindows(60 * 60),
+      FixedWindows(60),
       trigger=AfterWatermark(),
       accumulation_mode=AccumulationMode.ACCUMULATING) \
   | "AggregateMetrics" >> beam.ParDo(AggregateMetrics()).with_output_types(
       VehicleStateEvent).with_input_types(Tuple[str, VehicleStateEvent]) \
   | "EnrichWithBigtable" >> Enrichment(
-      bigtable_handler, join_fn=custom_join, timeout=10) \
-  | "RunInference" >> beam.ParDo(RunInference(model=sklearn_model_handler)) \
-  | "WriteToBigQuery" >> beam.io.gcp.bigquery.WriteToBigQuery(
+      bigtable_handler, join_fn=custom_join, timeout=10)
+  predictions = enriched_data | "RunInference" >> beam.ParDo(
+      RunInference(model=sklearn_model_handler))
+  predictions | "WriteToBigQuery" >> beam.io.gcp.bigquery.WriteToBigQuery(
       method=beam.io.WriteToBigQuery.Method.STORAGE_WRITE_API,
-      project=options.project,
-      dataset=options.dataset,
-      table=options.table,
+      project=pipeline_options.project,
+      dataset=pipeline_options.dataset,
+      table=pipeline_options.table,
       schema=bq_schema,
       create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
       write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND)

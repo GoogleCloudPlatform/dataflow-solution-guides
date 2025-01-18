@@ -109,7 +109,8 @@ module "dataflow_sa" {
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
       "roles/pubsub.editor",
-      "roles/bigtable.reader"
+      "roles/bigtable.reader",
+      "roles/bigquery.dataEditor"
     ]
   }
 }

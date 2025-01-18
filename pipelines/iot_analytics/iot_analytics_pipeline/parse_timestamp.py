@@ -17,7 +17,6 @@ Pipeline of the IoT Analytics Dataflow Solution guide.
 import typing
 import datetime
 from apache_beam.transforms.window import TimestampedValue
-import logging
 
 
 class VehicleStateEvent(typing.NamedTuple):
@@ -44,5 +43,4 @@ class VehicleStateEvent(typing.NamedTuple):
         vibration=input_json["vibration"],
         fuel_level=input_json["fuel_level"],
         mileage=input_json["mileage"])
-    logging.info(f"Parse Timestamp : {event}")
     return TimestampedValue(event, dt_object.timestamp())

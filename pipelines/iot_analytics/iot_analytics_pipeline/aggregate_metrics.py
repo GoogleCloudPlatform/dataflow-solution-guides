@@ -21,7 +21,6 @@ from apache_beam import coders
 from apache_beam.utils.timestamp import Timestamp
 from typing import Tuple
 from .parse_timestamp import VehicleStateEvent
-import logging
 
 
 class AggregateMetrics(beam.DoFn):
@@ -96,7 +95,6 @@ class AggregateMetrics(beam.DoFn):
         max_temperature=max_temperature.read(),
         max_vibration=max_vibration.read(),
         avg_mileage=int(avg_mileage))
-    logging.info(f"Beam row : {output_row}")
 
     # Output the aggregated metrics
     yield output_row

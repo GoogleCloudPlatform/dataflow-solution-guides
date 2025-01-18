@@ -9,7 +9,7 @@ python3 -m main \
   --subnetwork=$SUBNETWORK \
   --sdk_container_image=$CONTAINER_URI \
   --max_workers=$MAX_DATAFLOW_WORKERS \
-  --subscription=$SUBSCRIPTION_ID \
+  --topic=$TOPIC_ID \
   --dataset=$DATASET \
   --table=$TABLE \
   --bigtable_instance_id=$INSTANCE_ID \

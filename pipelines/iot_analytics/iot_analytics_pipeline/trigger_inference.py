@@ -16,16 +16,12 @@ Pipeline of the IoT Analytics Dataflow Solution guide.
 """
 import apache_beam as beam
 import pandas as pd
-import logging
 
 
 class RunInference(beam.DoFn):
   """
   A custom model to predict the if vehicle needs_maintenance
   """
-
-  def __init__(self, model):
-    self.model = model
 
   def process(self, element):
     df = pd.DataFrame([element])
@@ -43,5 +39,4 @@ class RunInference(beam.DoFn):
         maintenance_type=element["maintenance_type"],
         model=element["model"],
         needs_maintenance=prediction[0])
-    logging.info(f"Inference : {results}")
     yield results._asdict()

@@ -19,27 +19,21 @@ import json
 from google.cloud import pubsub_v1
 import os
 
-# Replace with your project ID and Pub/Sub topic ID
-current_directory = os.getcwd()
-project_id = os.environ.get("PROJECT_ID")
-vehicle_data_path = os.environ.get("VEHICLE_DATA_PATH")
-topic_id = os.environ.get("PUBSUB_TOPIC_ID")
 
-
-def publish_messages(project_id, topic_id, vehicle_data_path):
+def publish_messages(project, topic, data_path):
   """
     Publishes JSON messages from a file to a Pub/Sub topic.
 
     Args:
-        project_id: The ID of the Google Cloud project.
-        topic_id: The ID of the Pub/Sub topic.
-        vehicle_data_path: The path to the JSON data file.
+        project: The ID of the Google Cloud project.
+        topic: The ID of the Pub/Sub topic.
+        data_path: The path to the JSON data file.
     """
 
   publisher = pubsub_v1.PublisherClient()
-  topic_path = publisher.topic_path(project_id, topic_id)
+  topic_path = publisher.topic_path(project, topic)
 
-  with open(vehicle_data_path, "r") as f:
+  with open(data_path, "r", encoding="utf-8") as f:
     for line in f:
       try:
         # Parse each line as a JSON object
@@ -55,4 +49,7 @@ def publish_messages(project_id, topic_id, vehicle_data_path):
 
 
 if __name__ == "__main__":
-  publish_messages(project_id, topic_id, vehicle_data_path)
+  current_directory = os.getcwd()
+  publish_messages(
+      os.environ.get("PROJECT_ID"), os.environ.get("PUBSUB_TOPIC_ID"),
+      os.environ.get("VEHICLE_DATA_PATH"))

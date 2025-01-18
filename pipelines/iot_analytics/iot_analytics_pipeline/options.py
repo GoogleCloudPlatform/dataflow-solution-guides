@@ -20,14 +20,16 @@ from apache_beam.options.pipeline_options import PipelineOptions
 
 
 class MyPipelineOptions(PipelineOptions):
+  """
+    Options class for the IoT Analytics pipeline.
+    """
 
   @classmethod
   def _add_argparse_args(cls, parser: ArgumentParser):
     parser.add_argument(
-        '--subscription',
-        dest='subscription',
-        help='Pub/sub subscription name :"projects/your_project_id/subscriptions/subscription"'
-    )
+        '--topic',
+        dest='topic',
+        help='Pub/sub topic name :"projects/your_project_id/topics/topic_name"')
     parser.add_argument(
         '--project_id', dest='project', help='Your Google Cloud project ID')
     parser.add_argument(
