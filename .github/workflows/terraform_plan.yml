@@ -35,10 +35,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Checkout PR
-        uses: dawidd6/action-checkout-pr@v1.2.0
         with:
-          pr: ${{ github.event.inputs.prnumber }}
+          ref: 'refs/pull/${{ github.event.inputs.prnumber }}/head'
       - uses: dorny/paths-filter@v3
         id: filter
         with:
