@@ -18,12 +18,10 @@ The scripts will create the following resources
 | Pub/Sub topic        |         `input`         | The input Pub/Sub topic for the sample pipeline.                                                                                                                                                                                            |
 | Pub/Sub subscription |     `messages-sub`      | The subscription to the `input` topic that is actually used by the Dataflow pipeline.                                                                                                                                                       |
 | Service account      |    `my-dataflow-sa`     | Dataflow worker servive account. It has storage admin, Dataflow worker, metrics writer and Pub/Sub editor roles assigned at project level.                                                                                                  |
-| VPC network          |     `dataflow-net`      | If the project is created from scratch, the default network is removed and this network is re-created with a single regional sub-network.                                                                                                   |
-| Cloud NAT            |     `dataflow-nat`      | Cloud NAT in the region specified by the user, in case the Dataflow workers need to reach the Internet. This is not necessary for the sample pipeline provided.                                                                             |
-| Bigtable Instance    | `clickstream-analytics` | BigTable instance to store the information for enrichment of incoming messages                                                                                                                                                              |
-| BigQuery Dataset     | `clickstream_analytics` | BigQuery dataset where the tables will be created.                                                                                                                                                                                          |
-| BigQuery Table       |       `wikipedia`       | Store the processed records from dataflow job.                                                                                                                                                                                              |
-| BigQuery Table       |      `deadletter`       | Table for all the records that cannot be parsed, it contains more details about the error found processing each record.                                                                                                                     |
+| VPC network          |     `dataflow-net`      | If the project is created from scratch, the default network is removed and this network is re-created with a single regional sub-network.                                                                                       |
+| Bigtable Instance    | `iot-analytics` | BigTable instance to store the information for enrichment of incoming messages                                                                                                                                                              |
+| BigQuery Dataset     | `iot` | BigQuery dataset where the tables will be created.                                                                                                                                                                                          |
+| BigQuery Table       |       `maintenance_analytics`       | Store the processed records from dataflow job.                                                                                                                                                                                            |
 | Firewall rules       |      Several rules      | Ingress and egress rules to remove unnecessary traffic, and to ensure the traffice required by Dataflow. If you want to access a VM using SSH, apply the network tag `ssh` to that instance. Same for `http-server` and for `https-server`. |
 
 ## Configuration variables
@@ -52,10 +50,13 @@ The default values of all the optional configuration variables are set for devel
 
      ```bash
      billing_account = "YOUR_BILLING_ACCOUNT"
+     destroy_all_resources = TRUE_OR_FALSE
      organization = "YOUR_ORGANIZATION_ID"
      project_create = TRUE_OR_FALSE
      project_id = "YOUR_PROJECT_ID"
      region = "YOUR_REGION"
+     pubsub_topic = "YOUR_PUBSUB_TOPIC_NAME"
+     network_prefix = "YOUR_NETWORK_PREFIX"
      ```
 
    - If this is a production deployment, make sure you change also the optional variables.
