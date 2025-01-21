@@ -54,4 +54,5 @@ variable "region" {
 variable "pubsub_topic" {
   description = "Name for your pub sub topic"
   type        = string
+  default     = "maintenance-data"
 }
