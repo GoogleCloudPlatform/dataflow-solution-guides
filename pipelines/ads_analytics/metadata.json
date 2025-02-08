@@ -1,0 +1,66 @@
+{
+  "name": "Ads Analytics Pipeline",
+  "description": "Flex Template File for the Ads Analytics Pipeline",
+  "parameters": [
+    {
+      "name": "loginCustomerId",
+      "label": "loginCustomerId",
+      "helpText": "Google Ads manager account ID",
+      "isOptional": true
+    },
+    {
+      "name": "customerIds",
+      "label": "customerIds",
+      "helpText": "A list of Google Ads account IDs to use to execute the query",
+      "isOptional": false,
+      "regexes": [
+        "^[0-9]+(,[0-9]+)*$"
+      ]
+    },
+    {
+      "name": "query",
+      "label": "query",
+      "helpText": "The query to use to get the data. See Google Ads Query Language. For example: `SELECT campaign.id, campaign.name FROM campaign`.",
+      "isOptional": false
+    },
+    {
+      "name": "qpsPerWorker",
+      "label": "qpsPerWorker",
+      "helpText": "Required Google Ads request rate per worker",
+      "isOptional": false
+    },
+    {
+      "name": "googleAdsClientId",
+      "label": "googleAdsClientId",
+      "helpText": "OAuth 2.0 Client ID identifying the application",
+      "isOptional": false
+    },
+    {
+      "name": "googleAdsClientSecret",
+      "label": "googleAdsClientSecret",
+      "helpText": "OAuth 2.0 Client Secret for the specified Client ID",
+      "isOptional": false
+    },
+    {
+      "name": "googleAdsRefreshToken",
+      "label": "googleAdsRefreshToken",
+      "helpText": "OAuth 2.0 Refresh Token for the user connecting to the Google Ads API",
+      "isOptional": false
+    },
+    {
+      "name": "googleAdsDeveloperToken",
+      "label": "googleAdsDeveloperToken",
+      "helpText": "Google Ads developer token for the user connecting to the Google Ads API",
+      "isOptional": false
+    },
+    {
+      "name": "outputTableSpec",
+      "label": "outputTableSpec",
+      "helpText": "The BigQuery table to store the results in the following format: Project:Dataset.Table",
+      "isOptional": false,
+      "regexes": [
+        "^[[:alnum:]_-]+:[[:alnum:]_-]+\\.[[:alnum:]_-]+$"
+      ]
+    }
+  ]
+}
