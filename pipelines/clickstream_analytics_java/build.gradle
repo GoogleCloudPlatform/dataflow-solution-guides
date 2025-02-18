@@ -17,7 +17,7 @@ ext {
   javaPackagePath = "com.google.cloud.dataflow.solutions.clickstream_analytics"
   appName = "ClickStreamPubSubToBq"
   appVersion = "${gitVersion()}-SNAPSHOT"
-  beamVersion = "2.62.0"
+  beamVersion = "2.63.0"
   slf4jVersion = "1.7.36"
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
