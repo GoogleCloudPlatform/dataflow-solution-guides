@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-apache-beam[gcp]==2.62.0  # Example, use your actual versions
+apache-beam[gcp]==2.63.0  # Example, use your actual versions
 ## Below dependencies are required if you have to run script /cdp_pipeline/generate_transaction_data.py
 pandas
 fsspec
