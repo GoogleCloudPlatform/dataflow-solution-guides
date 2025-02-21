@@ -34,7 +34,8 @@ module "google_cloud_project" {
     "pubsub.googleapis.com",
     "autoscaling.googleapis.com",
     "bigtableadmin.googleapis.com",
-    "bigquery.googleapis.com"
+    "bigquery.googleapis.com",
+    "serviceusage.googleapis.com"
   ]
 }
 

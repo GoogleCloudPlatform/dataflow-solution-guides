@@ -156,7 +156,8 @@ module "dataflow_sa" {
       "roles/storage.admin",
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
-      "roles/pubsub.editor"
+      "roles/pubsub.editor",
+      "serviceusage.googleapis.com"
     ]
   }
 }

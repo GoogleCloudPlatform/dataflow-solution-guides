@@ -39,6 +39,7 @@ module "google_cloud_project" {
     "bigtable.googleapis.com",
     "bigtableadmin.googleapis.com",
     "bigquery.googleapis.com",
+    "serviceusage.googleapis.com"
   ]
 }
 

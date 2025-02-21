@@ -129,7 +129,8 @@ module "dataflow_sa" {
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
       "roles/pubsub.editor",
-      "roles/aiplatform.user"
+      "roles/aiplatform.user",
+      "serviceusage.googleapis.com"
     ]
   }
 }

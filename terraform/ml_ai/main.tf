@@ -34,7 +34,8 @@ module "google_cloud_project" {
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
     "autoscaling.googleapis.com",
-    "artifactregistry.googleapis.com"
+    "artifactregistry.googleapis.com",
+    "serviceusage.googleapis.com"
   ]
 }
 

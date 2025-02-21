@@ -36,6 +36,7 @@ module "google_cloud_project" {
     "artifactregistry.googleapis.com",
     "bigquery.googleapis.com",
     "sqladmin.googleapis.com",
+    "serviceusage.googleapis.com"
   ]
 }
 
