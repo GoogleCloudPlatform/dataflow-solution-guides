@@ -70,3 +70,17 @@ jobs:
           terraform plan -input=false
           cd ..
           done
+      - name: Terraform Apply and destroy
+        working-directory: terraform
+        run: |-
+          ls -d */ | while read d
+          do
+          echo "Running tf plan in directory: $d"
+          cd $d
+          echo 'project_create = "false"' > terraform.tfvars
+          echo 'project_id = "${{ secrets.TESTING_PROJECT }}"' >> terraform.tfvars
+          echo 'region = "us-central-1"' >> terraform.tfvars
+          terraform apply -input=false -auto-approve
+          terraform destroy -input=false -auto-approve
+          cd ..
+          done
