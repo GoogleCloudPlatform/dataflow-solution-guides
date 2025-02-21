@@ -19,23 +19,33 @@ locals {
   machine_type             = "g2-standard-4"
 }
 
+resource "google_project_service" "crm" {
+  project                    = var.project_id
+  service                    = "cloudresourcemanager.googleapis.com"
+  disable_dependent_services = true
+}
+
+resource "google_project_service" "su" {
+  project                    = var.project_id
+  service                    = "serviceusage.googleapis.com"
+  disable_dependent_services = true
+}
 
 // Project
 module "google_cloud_project" {
+  depends_on      = [google_project_service.crm, google_project_service.su]
   source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v38.0.0"
   billing_account = var.billing_account
   project_reuse   = var.project_create ? null : {}
   name            = var.project_id
   parent          = var.organization
   services = [
-    "serviceusage.googleapis.com",
     "cloudbuild.googleapis.com",
     "dataflow.googleapis.com",
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
     "autoscaling.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "serviceusage.googleapis.com"
+    "artifactregistry.googleapis.com"
   ]
 }
 
