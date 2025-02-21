@@ -19,6 +19,7 @@ locals {
   machine_type             = "e2-standard-8"
 }
 resource "google_project_service" "crm" {
+  depends_on                 = [google_project_service.su]
   project                    = var.project_id
   service                    = "cloudresourcemanager.googleapis.com"
   disable_dependent_services = true
