@@ -148,10 +148,9 @@ resource "google_spanner_database_iam_binding" "read_write_metadata" {
 
 // Service account
 module "dataflow_sa" {
-  source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v38.0.0"
-  project_id   = module.google_cloud_project.project_id
-  name         = local.dataflow_service_account
-  generate_key = false
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v38.0.0"
+  project_id = module.google_cloud_project.project_id
+  name       = local.dataflow_service_account
   iam_project_roles = {
     (module.google_cloud_project.project_id) = [
       "roles/storage.admin",
