@@ -37,7 +37,7 @@ module "google_cloud_project" {
   depends_on      = [google_project_service.crm]
   source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v38.0.0"
   billing_account = var.billing_account
-  project_create  = var.project_create
+  project_reuse   = var.project_create ? null : {}
   name            = var.project_id
   parent          = var.organization
   services = [
