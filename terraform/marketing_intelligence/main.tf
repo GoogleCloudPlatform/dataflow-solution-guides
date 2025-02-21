@@ -21,9 +21,22 @@ locals {
   bigtable_instance        = "bt-enrichment"
 }
 
+resource "google_project_service" "crm" {
+  depends_on                 = [google_project_service.su]
+  project                    = var.project_id
+  service                    = "cloudresourcemanager.googleapis.com"
+  disable_dependent_services = true
+}
+
+resource "google_project_service" "su" {
+  project                    = var.project_id
+  service                    = "serviceusage.googleapis.com"
+  disable_dependent_services = true
+}
 
 // Project
 module "google_cloud_project" {
+  depends_on      = [google_project_service.crm, google_project_service.su]
   source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v38.0.0"
   billing_account = var.billing_account
   project_reuse   = var.project_create ? null : {}
@@ -38,7 +51,7 @@ module "google_cloud_project" {
     "artifactregistry.googleapis.com",
     "bigtable.googleapis.com",
     "bigtableadmin.googleapis.com",
-    "bigquery.googleapis.com",
+    "bigquery.googleapis.com"
   ]
 }
 
@@ -129,7 +142,8 @@ module "dataflow_sa" {
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
       "roles/pubsub.editor",
-      "roles/aiplatform.user"
+      "roles/aiplatform.user",
+      "serviceusage.googleapis.com"
     ]
   }
 }
