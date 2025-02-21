@@ -33,6 +33,12 @@ resource "google_project_service" "crm" {
   disable_dependent_services = true
 }
 
+resource "google_project_service" "su" {
+  project                    = var.project_id
+  service                    = "serviceusage.googleapis.com"
+  disable_dependent_services = true
+}
+
 // Project
 module "google_cloud_project" {
   depends_on      = [google_project_service.crm]
