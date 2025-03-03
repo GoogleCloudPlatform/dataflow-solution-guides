@@ -59,7 +59,7 @@ dependencies {
   testImplementation "junit:junit:${junitVersion}"
   testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
   testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
-  implementation 'org.checkerframework:checker-qual:3.49.0'
+  implementation 'org.checkerframework:checker-qual:3.49.1'
   errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
 
   // Google Java format for Gradle
