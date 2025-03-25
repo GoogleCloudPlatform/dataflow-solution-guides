@@ -20,9 +20,22 @@ locals {
   bigquery_dataset         = "clickstream_analytics"
 }
 
+resource "google_project_service" "crm" {
+  depends_on                 = [google_project_service.su]
+  project                    = var.project_id
+  service                    = "cloudresourcemanager.googleapis.com"
+  disable_dependent_services = true
+}
+
+resource "google_project_service" "su" {
+  project                    = var.project_id
+  service                    = "serviceusage.googleapis.com"
+  disable_dependent_services = true
+}
 
 // Project
 module "google_cloud_project" {
+  depends_on      = [google_project_service.crm, google_project_service.su]
   source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v38.0.0"
   billing_account = var.billing_account
   project_reuse   = var.project_create ? null : {}

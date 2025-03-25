@@ -27,8 +27,15 @@ locals {
 }
 
 resource "google_project_service" "crm" {
+  depends_on                 = [google_project_service.su]
   project                    = var.project_id
   service                    = "cloudresourcemanager.googleapis.com"
+  disable_dependent_services = true
+}
+
+resource "google_project_service" "su" {
+  project                    = var.project_id
+  service                    = "serviceusage.googleapis.com"
   disable_dependent_services = true
 }
 
@@ -156,7 +163,8 @@ module "dataflow_sa" {
       "roles/storage.admin",
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
-      "roles/pubsub.editor"
+      "roles/pubsub.editor",
+      "serviceusage.googleapis.com"
     ]
   }
 }
