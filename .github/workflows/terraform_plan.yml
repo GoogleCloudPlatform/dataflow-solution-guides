@@ -35,10 +35,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Checkout PR
-        uses: dawidd6/action-checkout-pr@v1.2.0
         with:
-          pr: ${{ github.event.inputs.prnumber }}
+          ref: 'refs/pull/${{ github.event.inputs.prnumber }}/head'
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -70,5 +68,19 @@ jobs:
           echo 'project_id = "${{ secrets.TESTING_PROJECT }}"' >> terraform.tfvars
           echo 'region = "us-central-1"' >> terraform.tfvars
           terraform plan -input=false
+          cd ..
+          done
+      - name: Terraform Apply and destroy
+        working-directory: terraform
+        run: |-
+          ls -d */ | while read d
+          do
+          echo "Running tf plan in directory: $d"
+          cd $d
+          echo 'project_create = "false"' > terraform.tfvars
+          echo 'project_id = "${{ secrets.TESTING_PROJECT }}"' >> terraform.tfvars
+          echo 'region = "us-central-1"' >> terraform.tfvars
+          terraform apply -input=false -auto-approve
+          terraform destroy -input=false -auto-approve
           cd ..
           done

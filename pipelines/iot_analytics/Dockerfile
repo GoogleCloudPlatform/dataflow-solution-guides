@@ -20,8 +20,8 @@ RUN apt-get update -y && apt-get install -y \
 
 COPY requirements.txt requirements.txt
 COPY main.py main.py
-COPY cdp_pipeline cdp_pipeline
-COPY schema schema
+COPY iot_analytics_pipeline iot_analytics_pipeline
+COPY maintenance_model.pkl maintenance_model.pkl
 COPY MANIFEST.in MANIFEST.in
 COPY setup.py setup.py
 

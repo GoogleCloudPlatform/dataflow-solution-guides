@@ -11,9 +11,18 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""
+Setup file for the IoT Analytics pipeline.
+"""
 
-apache-beam[gcp]==2.63.0  # Example, use your actual versions
-## Below dependencies are required if you have to run script /cdp_pipeline/generate_transaction_data.py
-pandas
-fsspec
-gcsfs
+from setuptools import setup, find_packages
+
+with open("requirements.txt", encoding="utf-8") as f:
+  requirements = f.readlines()
+
+setup(
+    name="IoT Dataflow Anaytics Pipeline",
+    version="0.1",
+    packages=find_packages(),
+    install_requires=requirements,
+    package_data={"iot_analytics_pipeline": ["maintenance_model.pkl"]})

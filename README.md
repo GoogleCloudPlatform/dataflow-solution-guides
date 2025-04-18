@@ -1,6 +1,6 @@
 # Dataflow Solution Guides
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Build and validation](https://github.com/GoogleCloudPlatform/dataflow-solution-guides/actions/workflows/pull_request.yml/badge.svg)](https://github.com/GoogleCloudPlatform/dataflow-solution-guides/actions/workflows/pull_request.yml) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Welcome to the Dataflow Solution Guides!
 

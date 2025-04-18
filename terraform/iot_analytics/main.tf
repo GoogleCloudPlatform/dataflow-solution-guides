@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2024 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -13,10 +13,12 @@
 #  limitations under the License.
 
 locals {
-  dataflow_service_account = "my-dataflow-sa"
-  max_dataflow_workers     = 1
-  worker_disk_size_gb      = 200
-  machine_type             = "e2-standard-8"
+  dataflow_service_account = "dataflow-svc-account@learnings-421714.iam.gserviceaccount.com"
+  bigtable_instance        = "iot-analytics"
+  bigtable_zone            = "${var.region}-a"
+  bigtable_lookup_key      = "vehicle_id"
+  bigquery_dataset         = "iot"
+  bigquery_table           = "maintenance_analytics"
 }
 
 
@@ -28,40 +30,51 @@ module "google_cloud_project" {
   name            = var.project_id
   parent          = var.organization
   services = [
-    "cloudbuild.googleapis.com",
     "dataflow.googleapis.com",
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
     "autoscaling.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "bigquery.googleapis.com",
-    "sqladmin.googleapis.com",
+    "bigtableadmin.googleapis.com",
+    "bigquery.googleapis.com"
   ]
 }
 
-module "registry_docker" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v38.0.0"
-  project_id = module.google_cloud_project.project_id
-  location   = var.region
-  name       = "dataflow-containers"
-  format     = { docker = { standard = {} } }
-  iam = {
-    "roles/artifactregistry.admin" = [
-      "serviceAccount:${module.google_cloud_project.number}@cloudbuild.gserviceaccount.com"
-    ]
-    "roles/artifactregistry.reader" = [
-      module.dataflow_sa.iam_email
-    ]
+resource "google_bigtable_instance" "iot-analytics" {
+  name    = local.bigtable_instance
+  project = var.project_id
+  cluster {
+    cluster_id   = "${local.bigtable_instance}-c1"
+    num_nodes    = 1
+    storage_type = "HDD"
+    zone         = local.bigtable_zone
   }
-  cleanup_policy_dry_run = false
-  cleanup_policies = {
-    keep-3-versions = {
-      action = "KEEP"
-      most_recent_versions = {
-        keep_count = 3
-      }
-    }
-  }
+}
+
+# Create BigQuery dataset
+resource "google_bigquery_dataset" "iot_analytics" {
+  project     = var.project_id
+  dataset_id  = local.bigquery_dataset
+  description = "Dataset for storing clickstream analytics data"
+  location    = var.region
+}
+
+# Create BigQuery table
+resource "google_bigquery_table" "maintenance_analytics" {
+  project             = var.project_id
+  dataset_id          = google_bigquery_dataset.iot_analytics.dataset_id
+  table_id            = local.bigquery_table
+  deletion_protection = false
+
+  schema = jsonencode([
+    { "name" : "vehicle_id", "type" : "STRING" },
+    { "name" : "max_temperature", "type" : "INTEGER" },
+    { "name" : "max_vibration", "type" : "FLOAT" },
+    { "name" : "latest_timestamp", "type" : "TIMESTAMP" },
+    { "name" : "last_service_date", "type" : "STRING" },
+    { "name" : "maintenance_type", "type" : "STRING" },
+    { "name" : "model", "type" : "STRING" },
+    { "name" : "needs_maintenance", "type" : "INTEGER" }
+  ])
 }
 
 
@@ -75,31 +88,14 @@ module "buckets" {
   force_destroy = var.destroy_all_resources
 }
 
-module "transactions_topic" {
+module "input_topic" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v38.0.0"
   project_id = module.google_cloud_project.project_id
-  name       = "transactions"
+  name       = var.pubsub_topic
   subscriptions = {
-    transactions-sub = {}
+    messages-sub = {}
   }
 }
-
-module "coupon_redemption_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v38.0.0"
-  project_id = module.google_cloud_project.project_id
-  name       = "coupon_redemption"
-  subscriptions = {
-    coupon_redemption-sub = {}
-  }
-}
-
-//bigquery dataset
-module "output_dataset" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v38.0.0"
-  project_id = module.google_cloud_project.project_id
-  id         = var.bq_dataset
-}
-
 
 // Service account
 module "dataflow_sa" {
@@ -112,11 +108,11 @@ module "dataflow_sa" {
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
       "roles/pubsub.editor",
+      "roles/bigtable.reader",
       "roles/bigquery.dataEditor"
     ]
   }
 }
-
 
 // Network
 module "vpc_network" {
@@ -163,41 +159,29 @@ module "firewall_rules" {
     }
   }
 }
-module "regional_nat" {
-  // So we can get to Internet if necessary (from the Dataflow region)
-  source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v38.0.0"
-  project_id     = module.google_cloud_project.project_id
-  region         = var.region
-  name           = "${var.network_prefix}-nat"
-  router_network = module.vpc_network.self_link
-}
 
 resource "local_file" "variables_script" {
-  filename        = "${path.module}/../../pipelines/cdp/scripts/00_set_variables.sh"
+  filename        = "${path.module}/../../pipelines/iot_analytics_pipeline/scripts/00_set_environment.sh"
   file_permission = "0644"
   content         = <<FILE
 # This file is generated by the Terraform code of this Solution Guide.
 # We recommend that you modify this file only through the Terraform deployment.
-export PROJECT=${module.google_cloud_project.project_id}
+export PROJECT_ID=${module.google_cloud_project.project_id}
 export REGION=${var.region}
-export SUBNETWORK=regions/${var.region}/subnetworks/${var.network_prefix}-subnet
-export TEMP_LOCATION=gs://$PROJECT/tmp
+export CONTAINER_URI=gcr.io/$PROJECT_ID/iot-analytics:latest
+export BIGTABLE_INSTANCE_ID=${google_bigtable_instance.iot-analytics.id}
+export BIGTABLE_TABLE_ID=maintenance_data
+export VEHICLE_DATA_PATH=../pipelines/iot_analytics/scripts/vehicle_data.jsonl
+export MAINTENANCE_DATA_PATH=../pipelines/iot_analytics/scripts/maintenance_data.jsonl
+export PUBSUB_TOPIC_ID=${var.pubsub_topic}
+export MODEL_FILE_PATH=../pipelines/iot_analytics/maintenance_model.pkl
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
-
-export DOCKER_REPOSITORY=${module.registry_docker.name}
-export IMAGE_NAME=dataflow-solutions-cdp
-export DOCKER_TAG=0.1
-export DOCKER_IMAGE=$REGION-docker.pkg.dev/$PROJECT/$DOCKER_REPOSITORY/$IMAGE_NAME
-
-export CONTAINER_URI=$DOCKER_IMAGE:$DOCKER_TAG
-export TRANSACTIONS_TOPIC=${module.transactions_topic.id}
-export COUPON_REDEMPTION_TOPIC=${module.coupon_redemption_topic.id}
-export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
-export DISK_SIZE_GB=${local.worker_disk_size_gb}
-export MACHINE_TYPE=${local.machine_type}
-
-export BQ_DATASET=${var.bq_dataset}
-export BQ_UNIFIED_TABLE=${var.bq_table}
-export GCS_BUCKET=gs://$PROJECT/assets/dataflow-solution-guide-cdp
+export SUBNETWORK=regions/${var.region}/subnetworks/${var.network_prefix}-subnet
+export MAX_DATAFLOW_WORKERS=3
+export TEMP_LOCATION=gs://$PROJECT_ID/tmp
+export TOPIC_ID=projects/$PROJECT_ID/topics/$PUBSUB_TOPIC_ID
+export DATASET=${google_bigquery_dataset.iot_analytics.dataset_id}
+export TABLE=${google_bigquery_table.maintenance_analytics.table_id}
+export ROW_KEY=${local.bigtable_lookup_key}
 FILE
 }
