@@ -8,9 +8,9 @@
 plugins {
   id 'application'
   id "maven-publish"
-  id "com.diffplug.spotless" version "7.0.2"
-  id 'com.palantir.git-version' version '3.1.0'
-  id 'net.ltgt.errorprone' version "4.1.0"
+  id "com.diffplug.spotless" version "7.2.1"
+  id 'com.palantir.git-version' version '3.4.0'
+  id 'net.ltgt.errorprone' version "4.4.0"
 }
 ext {
   packageName = "clickstream-analytics-java"
@@ -59,7 +59,7 @@ dependencies {
   testImplementation "junit:junit:${junitVersion}"
   testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
   testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
-  implementation 'org.checkerframework:checker-qual:3.49.1'
+  implementation 'org.checkerframework:checker-qual:3.55.1'
   errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
 
   // Google Java format for Gradle
