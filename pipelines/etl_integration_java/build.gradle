@@ -31,7 +31,7 @@ ext {
 
   beamVersion = "2.63.0"
 
-  slf4jVersion = "2.0.16"
+  slf4jVersion = "2.0.17"
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
   autoValueVersion = '1.11.0'
@@ -97,7 +97,7 @@ dependencies {
   testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
   testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
 
-  implementation 'org.checkerframework:checker-qual:3.49.0'
+  implementation 'org.checkerframework:checker-qual:3.49.1'
   errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
 
   // Google Java format for Gradle
