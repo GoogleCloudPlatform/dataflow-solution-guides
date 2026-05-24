@@ -29,7 +29,7 @@ ext {
   appName = "ETLIntegration"
   appVersion = "${gitVersion()}-SNAPSHOT"
 
-  beamVersion = "2.63.0"
+  beamVersion = "2.73.0"
 
   slf4jVersion = "2.0.17"
   junitVersion = "4.13.2"
