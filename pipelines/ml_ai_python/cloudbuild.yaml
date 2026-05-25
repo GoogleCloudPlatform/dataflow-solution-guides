@@ -13,10 +13,10 @@
 #  limitations under the License.
 
 steps:
-  - name: 'gcr.io/cloud-builders/gsutil'
+  - name: 'gcr.io/cloud-builders/gcloud'
     script: |
       echo Copying Gemma model from $_GCS_GEMMA_PATH
-      gsutil -m -q cp -r $_GCS_GEMMA_PATH /workspace
+      gcloud storage cp --recursive $_GCS_GEMMA_PATH /workspace
       echo All files copied.
   - name: 'gcr.io/cloud-builders/docker'
     script: |
