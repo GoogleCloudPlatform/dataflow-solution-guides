@@ -13,6 +13,6 @@
 #  limitations under the License.
 
 apache-beam[gcp]==2.63.0
-keras_nlp==0.19.2
+keras_nlp==0.29.0
 keras==3.13.2
 protobuf==5.29.6
