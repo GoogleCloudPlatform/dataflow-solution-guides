@@ -112,7 +112,7 @@ jobs:
         with:
           filters: "Pipelines:\n  - 'pipelines/**'     \n"
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install pylint
@@ -152,7 +152,7 @@ jobs:
         with:
           filters: "Pipelines:\n  - 'pipelines/**'     \n"
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install pipenv
