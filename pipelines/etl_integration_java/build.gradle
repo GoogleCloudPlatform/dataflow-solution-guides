@@ -42,7 +42,7 @@ ext {
   hamcrestVersion = "3.0"
   autoValueVersion = '1.11.1'
   autoServiceVersion = '1.1.1'
-  errorProneCoreVersion = '2.50.0'
+  errorProneCoreVersion = '2.42.0'
 
   googleJavaFormat = '1.24.0'
   confluentRepoURL = "https://packages.confluent.io/maven"
