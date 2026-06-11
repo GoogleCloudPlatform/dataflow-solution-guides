@@ -12,6 +12,12 @@ plugins {
   id 'com.palantir.git-version' version '3.4.0'
   id 'net.ltgt.errorprone' version "4.4.0"
 }
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+  }
+}
+
 ext {
   packageName = "clickstream-analytics-java"
   javaPackagePath = "com.google.cloud.dataflow.solutions.clickstream_analytics"
