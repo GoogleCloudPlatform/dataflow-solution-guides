@@ -173,8 +173,8 @@ module "vpc_network" {
       region                = var.region
       enable_private_access = true
       secondary_ip_ranges = {
-        pods     = "10.16.0.0/14"
-        services = "10.20.0.0/24"
+        pods     = { ip_cidr_range = "10.16.0.0/14" }
+        services = { ip_cidr_range = "10.20.0.0/24" }
       }
     }
   ]

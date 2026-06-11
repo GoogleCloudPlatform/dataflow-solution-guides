@@ -105,16 +105,13 @@ module "splunk_token_secret" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/secret-manager?ref=v56.1.0"
   project_id = module.google_cloud_project.project_id
   secrets = {
-    splunk-token = {}
-  }
-  versions = {
     splunk-token = {
-      v1 = { enabled = true, data = var.splunk_token }
-    }
-  }
-  iam = {
-    splunk-token = {
-      "roles/secretmanager.secretAccessor" = [module.dataflow_sa.iam_email]
+      versions = {
+        v1 = { enabled = true, data = var.splunk_token }
+      }
+      iam = {
+        "roles/secretmanager.secretAccessor" = [module.dataflow_sa.iam_email]
+      }
     }
   }
 }
@@ -131,8 +128,8 @@ module "vpc_network" {
       region                = var.region
       enable_private_access = true
       secondary_ip_ranges = {
-        pods     = "10.16.0.0/14"
-        services = "10.20.0.0/24"
+        pods     = { ip_cidr_range = "10.16.0.0/14" }
+        services = { ip_cidr_range = "10.20.0.0/24" }
       }
     }
   ]
