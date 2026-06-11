@@ -22,7 +22,7 @@ locals {
 
 // Project
 module "google_cloud_project" {
-  source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v38.2.0"
+  source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v56.1.0"
   billing_account = var.billing_account
   project_reuse   = var.project_create ? null : {}
   name            = var.project_id
@@ -40,7 +40,7 @@ module "google_cloud_project" {
 
 // Buckets for staging data, scripts, etc, in the two regions
 module "buckets" {
-  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v38.2.0"
+  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v56.1.0"
   project_id    = module.google_cloud_project.project_id
   name          = module.google_cloud_project.project_id
   location      = var.region
@@ -51,7 +51,7 @@ module "buckets" {
 
 // Service accounts
 module "dataflow_sa" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v38.2.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v56.1.0"
   project_id = module.google_cloud_project.project_id
   name       = local.dataflow_service_account
   iam_project_roles = {
@@ -66,7 +66,7 @@ module "dataflow_sa" {
 
 // Pubsub topic to receive all logs
 module "logging_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v38.2.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v56.1.0"
   project_id = module.google_cloud_project.project_id
   name       = local.pubsub_logging_topic
   subscriptions = {
@@ -75,7 +75,7 @@ module "logging_topic" {
 }
 
 module "deadletter_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v38.2.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v56.1.0"
   project_id = module.google_cloud_project.project_id
   name       = local.pubsub_deadletter_topic
   subscriptions = {
@@ -102,26 +102,23 @@ resource "google_project_iam_binding" "pubsub_log_writer" {
 
 // Splunk token in Secret Manager
 module "splunk_token_secret" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/secret-manager?ref=v38.2.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/secret-manager?ref=v56.1.0"
   project_id = module.google_cloud_project.project_id
   secrets = {
-    splunk-token = {}
-  }
-  versions = {
     splunk-token = {
-      v1 = { enabled = true, data = var.splunk_token }
-    }
-  }
-  iam = {
-    splunk-token = {
-      "roles/secretmanager.secretAccessor" = [module.dataflow_sa.iam_email]
+      versions = {
+        v1 = { enabled = true, data = var.splunk_token }
+      }
+      iam = {
+        "roles/secretmanager.secretAccessor" = [module.dataflow_sa.iam_email]
+      }
     }
   }
 }
 
 // Network
 module "vpc_network" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v38.2.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v56.1.0"
   project_id = module.google_cloud_project.project_id
   name       = "${var.network_prefix}-net"
   subnets = [
@@ -131,8 +128,8 @@ module "vpc_network" {
       region                = var.region
       enable_private_access = true
       secondary_ip_ranges = {
-        pods     = "10.16.0.0/14"
-        services = "10.20.0.0/24"
+        pods     = { ip_cidr_range = "10.16.0.0/14" }
+        services = { ip_cidr_range = "10.20.0.0/24" }
       }
     }
   ]
@@ -140,7 +137,7 @@ module "vpc_network" {
 
 module "firewall_rules" {
   // Default rules for internal traffic + SSH access via IAP
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v38.2.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v56.1.0"
   project_id = module.google_cloud_project.project_id
   network    = module.vpc_network.name
   default_rules_config = {
@@ -168,7 +165,7 @@ module "firewall_rules" {
 // So we can get to Internet if necessary (from the Dataflow region)
 module "regional_nat" {
   count          = var.internet_access ? 1 : 0
-  source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v38.2.0"
+  source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v56.1.0"
   project_id     = module.google_cloud_project.project_id
   region         = var.region
   name           = "${var.network_prefix}-nat"
