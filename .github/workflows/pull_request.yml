@@ -33,7 +33,7 @@ jobs:
         with:
           filters: "Terraform:\n  - 'terraform/**'     \n"
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
       - name: Terraform Init
         working-directory: terraform
         run: |
