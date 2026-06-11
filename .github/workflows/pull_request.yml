@@ -193,7 +193,7 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Docker builds
         working-directory: pipelines
         run: |
