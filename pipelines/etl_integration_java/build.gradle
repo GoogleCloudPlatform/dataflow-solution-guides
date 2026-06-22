@@ -24,7 +24,7 @@ plugins {
 }
 java {
   toolchain {
-    languageVersion = JavaLanguageVersion.of(17)
+    languageVersion = JavaLanguageVersion.of(25)
   }
 }
 
@@ -42,9 +42,9 @@ ext {
   hamcrestVersion = "3.0"
   autoValueVersion = '1.11.1'
   autoServiceVersion = '1.1.1'
-  errorProneCoreVersion = '2.42.0'
+  errorProneCoreVersion = '2.50.0'
 
-  googleJavaFormat = '1.24.0'
+  googleJavaFormat = '1.35.0'
   confluentRepoURL = "https://packages.confluent.io/maven"
 }
 
@@ -140,10 +140,7 @@ spotless {
   }
 
   java {
-    target project.fileTree(project.rootDir) {
-      include '**/*.java'
-      exclude 'build/*'
-    }
+    target 'src/**/*.java'
 
     // apply a specific flavor of google-java-format
     googleJavaFormat("${googleJavaFormat}").aosp().reflowLongStrings()
