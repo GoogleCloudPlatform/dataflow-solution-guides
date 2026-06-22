@@ -14,7 +14,7 @@ plugins {
 }
 java {
   toolchain {
-    languageVersion = JavaLanguageVersion.of(17)
+    languageVersion = JavaLanguageVersion.of(25)
   }
 }
 
@@ -27,7 +27,7 @@ ext {
   slf4jVersion = "1.7.36"
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
-  googleJavaFormat = '1.24.0'
+  googleJavaFormat = '1.35.0'
   errorProneCoreVersion = '2.50.0'
 
 }
@@ -98,10 +98,7 @@ spotless {
     endWithNewline()
   }
   java {
-    target project.fileTree(project.rootDir) {
-      include '**/*.java'
-      exclude 'build/*'
-    }
+    target 'src/**/*.java'
     // apply a specific flavor of google-java-format
     googleJavaFormat("${googleJavaFormat}").aosp().reflowLongStrings()
     // fix formatting of type annotations
