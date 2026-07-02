@@ -103,7 +103,7 @@ dependencies {
   testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
   testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
 
-  implementation 'org.checkerframework:checker-qual:4.2.0'
+  implementation 'org.checkerframework:checker-qual:4.2.1'
   errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
 
   // Google Java format for Gradle
