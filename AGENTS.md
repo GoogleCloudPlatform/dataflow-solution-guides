@@ -24,7 +24,7 @@ dataflow-solution-guides/
 │
 ├── terraform/                # Infrastructure-as-Code using Google Cloud Foundation Fabric
 │   ├── ml_ai/                # GPU quotas, VPC, GCS bucket, Pub/Sub topics/subscriptions
-│   ├── etl_integration/      # Spanner instance/database/change stream, BigQuery, VPC
+│   ├── etl_integration/      # Spanner instance/database/change stream, BigQuery, Service Account
 │   ├── cdp/                  # Pub/Sub topics, BigQuery dataset/tables, VPC
 │   ├── anomaly_detection/    # Pub/Sub, BigQuery, Vertex AI endpoints, VPC
 │   ├── marketing_intelligence/ # Pub/Sub, BigQuery, Vertex AI endpoints, VPC

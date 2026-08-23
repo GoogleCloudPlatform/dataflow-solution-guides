@@ -1,3 +1,10 @@
+SUBNET_OPT=""
+if [ -n "$SUBNETWORK" ]; then
+  SUBNET_OPT="--subnetwork=$SUBNETWORK"
+elif [ -n "$NETWORK" ]; then
+  SUBNET_OPT="--subnetwork=$NETWORK"
+fi
+
 ./gradlew run -Pargs="
   --pipeline=PUBSUB_TO_SPANNER \
   --streaming \
@@ -8,9 +15,9 @@
   --tempLocation=$TEMP_LOCATION \
   --region=$REGION \
   --serviceAccount=$SERVICE_ACCOUNT \
-  --subnetwork=$NETWORK \
+  $SUBNET_OPT \
   --maxNumWorkers=$MAX_DATAFLOW_WORKERS \
-  --experiments=enable_data_sampling;use_network_tags=ssh;dataflow \
+  --experiments=enable_data_sampling \
   --usePublicIps=false \
   --pubsubTopic=$TOPIC \
   --spannerInstance=$SPANNER_INSTANCE \

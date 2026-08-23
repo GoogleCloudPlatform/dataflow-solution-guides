@@ -21,45 +21,35 @@ locals {
   spanner_configuration    = "regional-${var.region}"
   spanner_name             = "Spanner instance managed by TF"
   bigquery_dataset         = "replica"
-  dataflow_service_account = "my-dataflow-sa"
+  dataflow_service_account = var.service_account_name != null ? var.service_account_name : "spanner-cdc-dataflow-sa"
   worker_type              = "n2-standard-4"
   max_dataflow_workers     = 10
+  bucket_name              = var.bucket_name != null ? var.bucket_name : var.project_id
 }
 
-resource "google_project_service" "crm" {
-  project                    = var.project_id
-  service                    = "cloudresourcemanager.googleapis.com"
-  disable_dependent_services = true
-}
-
-// Project
-module "google_cloud_project" {
-  depends_on      = [google_project_service.crm]
-  source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v57.0.0"
-  billing_account = var.billing_account
-  project_reuse   = var.project_create ? null : {}
-  name            = var.project_id
-  parent          = var.organization
-  services = [
-    "iam.googleapis.com",
-    "dataflow.googleapis.com",
-    "monitoring.googleapis.com",
-    "pubsub.googleapis.com",
-    "autoscaling.googleapis.com",
-    "spanner.googleapis.com",
-    "bigquery.googleapis.com"
-  ]
-  service_config = {
-    disable_on_destroy         = true
-    disable_dependent_services = true
+// Service account for Dataflow workers
+module "dataflow_sa" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v57.0.0"
+  project_id = var.project_id
+  name       = local.dataflow_service_account
+  iam_project_roles = {
+    (var.project_id) = [
+      "roles/storage.objectAdmin",
+      "roles/dataflow.worker",
+      "roles/monitoring.metricWriter",
+      "roles/pubsub.editor",
+      "roles/bigquery.dataEditor",
+      "roles/bigquery.jobUser"
+    ]
   }
 }
 
-// Buckets for staging data, scripts, etc, in the two regions
+// Optional GCS Bucket for staging & temp location
 module "buckets" {
+  count         = var.create_bucket ? 1 : 0
   source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v57.0.0"
-  project_id    = module.google_cloud_project.project_id
-  name          = module.google_cloud_project.project_id
+  project_id    = var.project_id
+  name          = local.bucket_name
   location      = var.region
   storage_class = "STANDARD"
   force_destroy = var.destroy_all_resources
@@ -68,8 +58,9 @@ module "buckets" {
 // BigQuery dataset for final destination
 module "dataset" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
+  project_id = var.project_id
   id         = local.bigquery_dataset
+  location   = var.region
   access = {
     dataflow-writer = { role = "OWNER", type = "user" }
   }
@@ -78,7 +69,7 @@ module "dataset" {
   }
 
   options = {
-    delete_contents_on_destroy = true
+    delete_contents_on_destroy = var.destroy_all_resources
   }
 }
 
@@ -86,7 +77,7 @@ module "dataset" {
 resource "google_spanner_instance" "spanner_instance" {
   config           = local.spanner_configuration
   name             = local.spanner_instance
-  project          = module.google_cloud_project.project_id
+  project          = var.project_id
   display_name     = local.spanner_name
   processing_units = 1000
   force_destroy    = var.destroy_all_resources
@@ -94,7 +85,7 @@ resource "google_spanner_instance" "spanner_instance" {
 
 resource "google_spanner_database" "taxis" {
   instance = google_spanner_instance.spanner_instance.name
-  project  = module.google_cloud_project.project_id
+  project  = var.project_id
   name     = local.spanner_database
   ddl = [
     <<DDL1
@@ -120,7 +111,7 @@ DDL2
 }
 
 resource "google_spanner_database_iam_binding" "read_write_taxis" {
-  project  = module.google_cloud_project.project_id
+  project  = var.project_id
   instance = google_spanner_instance.spanner_instance.name
   database = google_spanner_database.taxis.name
   role     = "roles/spanner.databaseUser"
@@ -131,90 +122,19 @@ resource "google_spanner_database_iam_binding" "read_write_taxis" {
 
 resource "google_spanner_database" "metadata" {
   instance            = google_spanner_instance.spanner_instance.name
-  project             = module.google_cloud_project.project_id
+  project             = var.project_id
   name                = local.spanner_metadata_db
   deletion_protection = !var.destroy_all_resources
 }
 
 resource "google_spanner_database_iam_binding" "read_write_metadata" {
-  project  = module.google_cloud_project.project_id
+  project  = var.project_id
   instance = google_spanner_instance.spanner_instance.name
   database = google_spanner_database.metadata.name
   role     = "roles/spanner.databaseUser"
   members = [
     module.dataflow_sa.iam_email
   ]
-}
-
-// Service account
-module "dataflow_sa" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
-  name       = local.dataflow_service_account
-  iam_project_roles = {
-    (module.google_cloud_project.project_id) = [
-      "roles/storage.admin",
-      "roles/dataflow.worker",
-      "roles/monitoring.metricWriter",
-      "roles/pubsub.editor"
-    ]
-  }
-}
-
-// Network
-module "vpc_network" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
-  name       = "${var.network_prefix}-net"
-  subnets = [
-    {
-      ip_cidr_range         = "10.1.0.0/16"
-      name                  = "${var.network_prefix}-subnet"
-      region                = var.region
-      enable_private_access = true
-      secondary_ip_ranges = {
-        pods     = { ip_cidr_range = "10.16.0.0/14" }
-        services = { ip_cidr_range = "10.20.0.0/24" }
-      }
-    }
-  ]
-}
-
-module "firewall_rules" {
-  // Default rules for internal traffic + SSH access via IAP
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
-  network    = module.vpc_network.name
-  default_rules_config = {
-    admin_ranges = [
-      module.vpc_network.subnet_ips["${var.region}/${var.network_prefix}-subnet"],
-    ]
-  }
-  egress_rules = {
-    allow-egress-dataflow = {
-      deny        = false
-      description = "Dataflow firewall rule egress"
-      targets     = ["dataflow"]
-      rules       = [{ protocol = "tcp", ports = [12345, 12346] }]
-    }
-  }
-  ingress_rules = {
-    allow-ingress-dataflow = {
-      description = "Dataflow firewall rule ingress"
-      targets     = ["dataflow"]
-      rules       = [{ protocol = "tcp", ports = [12345, 12346] }]
-    }
-  }
-}
-
-// So we can get to Internet if necessary (from the Dataflow region)
-module "regional_nat" {
-  count          = var.internet_access ? 1 : 0
-  source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v57.0.0"
-  project_id     = module.google_cloud_project.project_id
-  region         = var.region
-  name           = "${var.network_prefix}-nat"
-  router_network = module.vpc_network.self_link
 }
 
 // Script with variables to launch the Dataflow jobs
@@ -224,10 +144,11 @@ resource "local_file" "variables_script" {
   content         = <<FILE
 # This file is generated by the Terraform code of this Solution Guide.
 # We recommend that you modify this file only through the Terraform deployment.
-export PROJECT=${module.google_cloud_project.project_id}
+export PROJECT=${var.project_id}
 export REGION=${var.region}
-export NETWORK=regions/${var.region}/subnetworks/${var.network_prefix}-subnet
-export TEMP_LOCATION=gs://$PROJECT/tmp
+export SUBNETWORK=${var.subnetwork != null ? var.subnetwork : ""}
+export NETWORK=$${SUBNETWORK}
+export TEMP_LOCATION=gs://${local.bucket_name}/tmp
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 
 export TOPIC=projects/pubsub-public-data/topics/taxirides-realtime
@@ -243,3 +164,4 @@ export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 export WORKER_TYPE=${local.worker_type}
 FILE
 }
+
