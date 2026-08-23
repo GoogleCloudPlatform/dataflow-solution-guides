@@ -18,7 +18,7 @@
 plugins {
   id 'application'
   id "maven-publish"
-  id "com.diffplug.spotless" version "8.7.0"
+  id "com.diffplug.spotless" version "8.10.0"
   id 'com.palantir.git-version' version '5.0.0'
   id 'net.ltgt.errorprone' version "5.1.0"
 }
@@ -35,7 +35,7 @@ ext {
   appName = "ETLIntegration"
   appVersion = "${gitVersion()}-SNAPSHOT"
 
-  beamVersion = "2.74.0"
+  beamVersion = "2.75.0"
 
   slf4jVersion = "2.0.18"
   junitVersion = "4.13.2"
@@ -44,7 +44,7 @@ ext {
   autoServiceVersion = '1.1.1'
   errorProneCoreVersion = '2.50.0'
 
-  googleJavaFormat = '1.35.0'
+  googleJavaFormat = '1.36.1'
   confluentRepoURL = "https://packages.confluent.io/maven"
 }
 
@@ -103,7 +103,7 @@ dependencies {
   testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
   testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
 
-  implementation 'org.checkerframework:checker-qual:4.2.0'
+  implementation 'org.checkerframework:checker-qual:4.2.2'
   errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
 
   // Google Java format for Gradle
