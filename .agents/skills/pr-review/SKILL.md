@@ -14,19 +14,24 @@ This skill guides the agent through inspecting, monitoring, validating, approvin
 
 ## 1. Core Principles & Golden Rules
 
-1. **Never Merge In-Progress or Failing Builds**:
+1. **Parallel Agent Isolation & Workspace Safety**:
+   - **Remote-First by Default**: Inspection, diff analysis, CI monitoring, review comments, and merging (`gh pr view`, `gh pr diff`, `gh pr checks`, `gh pr review`, `gh pr merge`) are strictly remote API operations that do not mutate the local working tree and can safely run concurrently across multiple agents.
+   - **No Shared Working Tree Mutex**: **Never run `gh pr checkout` in a shared workspace** (i.e. default `Workspace: 'inherit'`). Checking out branches concurrently will switch the working branch under other agents, causing file corruption and broken builds.
+   - **Mandatory Isolation for Local Builds**: If local compilation or testing is required (Section 4), agents **must** use isolated git worktrees (`git worktree add`) or subagents spawned with `Workspace: "branch"` or `Workspace: "share"`.
+   - **No Busy-Waiting**: Avoid tight polling loops against GitHub APIs. Use event-driven scheduling (the `schedule` tool) for periodic status checks.
+2. **Never Merge In-Progress or Failing Builds**:
    - Always wait until all required GitHub Actions jobs and CI checks complete with `success`.
    - Never merge if any check is `in_progress`, `failed`, or `cancelled`.
-2. **Strict Security Guardrails**:
+3. **Strict Security Guardrails**:
    - **Dataflow Worker Private IPs**: Verify workers have public IPs disabled (`--no_use_public_ip` in Python, `--usePublicIps=false` in Java).
    - **Dedicated Service Accounts**: Workers must run with custom least-privilege service accounts, never the Compute Engine default service account.
    - **VPC Subnets**: Must have `enable_private_access = true`.
    - **Worker Firewalls**: Ensure ingress and egress on TCP ports `12345` and `12346` for the `dataflow` target tag.
-3. **Consistent Code Formatting & Linting**:
+4. **Consistent Code Formatting & Linting**:
    - **Java**: Enforce Google Java Style via Spotless (`./gradlew spotlessApply`).
    - **Python**: Enforce Google style via Yapf (`yapf -i -r --style yapf .`) and shared PyLint (`pylint --rcfile ../pylintrc .`).
    - **Terraform**: Enforce `terraform fmt -check` and `terraform validate`.
-4. **Terraform to Pipeline Linkage**:
+5. **Terraform to Pipeline Linkage**:
    - Every Terraform module must define `resource "local_file" "variables_script"` to generate environment variables for pipelines.
    - Generated scripts must not be manually modified; changes must be made via Terraform.
 
@@ -76,20 +81,23 @@ Before approving or merging, identify the PR type and apply the corresponding ch
 
 ```mermaid
 flowchart TD
-    A["Phase 1: Inspect PR & Diff"] --> B["Phase 2: Monitor CI Status"]
+    A["Phase 1: Inspect PR & Diff (Remote)"] --> B["Phase 2: Monitor CI Status (Remote)"]
     B --> C{"CI Checks Passing?"}
-    C -- "No / In Progress" --> D["Wait or Inspect Failure Logs"]
+    C -- "No / In Progress" --> D["Wait (schedule) or Inspect Failure Logs"]
     D --> E["Post Actionable Comment / Request Changes"]
     C -- "Yes" --> F["Phase 3: Policy & Security Audit"]
     F --> G{"Compliant with Policies?"}
     G -- "No" --> E
     G -- "Yes" --> H["Phase 4: Submit Approving Review"]
     H --> I["Squash & Merge PR"]
-    I --> J["Phase 5: Verify & Report"]
+    I --> J{"Merge Successful?"}
+    J -- "Yes" --> K["Phase 5: Verify & Report"]
+    J -- "Base Branch Out of Date" --> L["Update PR Branch & Re-verify CI"]
+    L --> B
 ```
 
-### Phase 1: Inspect PR & Identify Scope
-Inspect the PR title, body, author, branch, and file changes:
+### Phase 1: Inspect PR & Identify Scope (Safe for Parallel Execution)
+Inspect the PR title, body, author, branch, and file changes via GitHub CLI without modifying local disk:
 ```bash
 # View PR summary and metadata
 gh pr view <PR_NUMBER> -R GoogleCloudPlatform/dataflow-solution-guides
@@ -101,7 +109,7 @@ gh pr diff <PR_NUMBER> -R GoogleCloudPlatform/dataflow-solution-guides
 gh pr view <PR_NUMBER> -R GoogleCloudPlatform/dataflow-solution-guides --json files
 ```
 
-### Phase 2: Monitor CI Status & Builds
+### Phase 2: Monitor CI Status & Builds (Safe for Parallel Execution)
 Check the status of GitHub Actions workflows:
 ```bash
 # Check rollup status of CI checks
@@ -138,6 +146,13 @@ Cross-reference the diff against:
    ```bash
    gh pr merge <PR_NUMBER> -R GoogleCloudPlatform/dataflow-solution-guides --squash --delete-branch
    ```
+3. **Handling Parallel Merge Races**:
+   If another PR was merged to `main` right before this merge, `gh pr merge` may report that the branch is out of date or needs re-testing:
+   ```bash
+   # Update/rebase the PR branch against latest main
+   gh pr update-branch <PR_NUMBER> -R GoogleCloudPlatform/dataflow-solution-guides
+   ```
+   After updating, wait for CI checks to re-verify `success` before re-issuing `gh pr merge`.
 
 #### Scenario B: Checks Fail or Violations Detected
 1. **Do NOT merge.**
@@ -152,18 +167,43 @@ Cross-reference the diff against:
    - **CI Log Snippet**: Exact error messages from the failed build/lint step.
    - **Actionable Remedy**: Step-by-step instructions or code snippets showing how to fix the issue.
 
-### Phase 5: Local Testing & Validation (Optional / Deep Verification)
-When needed to test locally or verify complex changes:
-```bash
-# Check out the PR branch locally
-gh pr checkout <PR_NUMBER>
+---
 
-# For Java pipeline changes:
+## 4. Concurrency-Safe Local Validation (Optional / Deep Verification)
+
+> [!CAUTION]
+> **Never run `gh pr checkout` in a shared workspace when running multiple review agents in parallel.**
+> Doing so modifies the shared working tree and corrupts parallel agent executions.
+
+When deep local verification (e.g. running gradle builds, custom container builds, or reproducer scripts) is required, follow one of the two concurrency-safe isolation patterns:
+
+### Pattern A: Subagent Workspace Isolation (Recommended for Agent Workflows)
+Spawn a dedicated subagent with isolated workspace branching:
+- Set `Workspace: "branch"` (full isolated clone/branch) or `Workspace: "share"` (shared underlying object database with isolated worktree).
+
+### Pattern B: Ephemeral Git Worktree
+Run validation inside an isolated git worktree:
+
+```bash
+# 1. Fetch the PR head branch into a dedicated local reference
+git fetch origin pull/<PR_NUMBER>/head:pr-<PR_NUMBER>
+
+# 2. Create an isolated worktree directory for this PR
+git worktree add .worktrees/pr-<PR_NUMBER> pr-<PR_NUMBER>
+cd .worktrees/pr-<PR_NUMBER>
+
+# 3. Execute local validation checks in isolation:
+# Java pipeline changes:
 cd pipelines/<use_case>_java && ./gradlew build && ./gradlew spotlessCheck
 
-# For Python pipeline changes:
+# Python pipeline changes:
 cd pipelines/<use_case> && pylint --rcfile ../pylintrc .
 
-# For Terraform changes:
+# Terraform changes:
 cd terraform/<use_case> && terraform init && terraform validate
+
+# 4. Clean up worktree after verification is complete
+cd /home/ihr/github/dataflow-solution-guides
+git worktree remove .worktrees/pr-<PR_NUMBER> --force
+git branch -D pr-<PR_NUMBER>
 ```
