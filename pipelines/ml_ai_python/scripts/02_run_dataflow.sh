@@ -19,6 +19,9 @@ elif [ -n "$NETWORK" ]; then
   SUBNET_OPT="--subnetwork=$NETWORK"
 fi
 
+MACHINE_TYPE="n1-highmem-8"
+ACCELERATOR_OPT="worker_accelerator=type:nvidia-tesla-t4;count:1;install-nvidia-driver:5xx"
+
 python main.py \
   --runner=DataflowRunner \
   --project=$PROJECT \
@@ -29,11 +32,12 @@ python main.py \
   --num_workers=1 \
   --disk_size_gb=$DISK_SIZE_GB \
   --max_num_workers=$MAX_DATAFLOW_WORKERS \
-  --no_use_public_ip \
+  --number_of_worker_harness_threads=1 \
+  --no_use_public_ips \
   --service_account_email=$SERVICE_ACCOUNT \
   $SUBNET_OPT \
   --sdk_container_image=$CONTAINER_URI \
-  --dataflow_service_options="worker_accelerator=type:nvidia-l4;count:1;install-nvidia-driver:5xx" \
+  --dataflow_service_options="$ACCELERATOR_OPT" \
   --messages_subscription=projects/$PROJECT/subscriptions/messages-sub \
   --responses_topic=projects/$PROJECT/topics/predictions \
   --model_path="gemma_2B"

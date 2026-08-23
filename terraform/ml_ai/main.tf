@@ -33,7 +33,8 @@ module "registry_docker" {
   format     = { docker = { standard = {} } }
   iam = {
     "roles/artifactregistry.admin" = [
-      "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
+      "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com",
+      "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
     ]
     "roles/artifactregistry.reader" = [
       module.dataflow_sa.iam_email

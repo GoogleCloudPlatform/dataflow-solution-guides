@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 gcloud builds submit \
+  --project=$PROJECT \
   --region=$REGION \
   --default-buckets-behavior=regional-user-owned-bucket \
   --substitutions _TAG=$CONTAINER_URI,_GCS_GEMMA_PATH=$GCS_GEMMA_PATH \

@@ -83,6 +83,18 @@ contain the Gemma model, and all the required dependencies:
 This will create a Cloud Build job that can take a few minutes to complete. Once it completes, you
 can trigger the pipeline with the following:
 
+> [!IMPORTANT]
+> **Python Version Matching:**
+> When submitting the pipeline using `DirectRunner` or `DataflowRunner`, ensure that the Python minor version in your local submission environment matches the Python version in the custom worker container image (**Python 3.11**). If a different version (such as Python 3.12 or 3.13) is used at submission time, Apache Beam's runtime descriptor verification and object deserialization on the worker will fail with a `RuntimeError: Pipeline construction environment and pipeline runtime environment are not compatible`.
+>
+> You can create a matching virtual environment using `uv` or `venv`:
+> ```sh
+> uv python install 3.11
+> uv venv .venv --python 3.11
+> source .venv/bin/activate
+> pip install -r requirements.txt -e .
+> ```
+
 ```sh
 ./scripts/02_run_dataflow.sh
 ```
