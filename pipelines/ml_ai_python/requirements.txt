@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-apache-beam[gcp]==2.74.0
+apache-beam[gcp]==2.75.0
 keras_nlp==0.29.1
 keras==3.15.0
 protobuf==5.29.6
