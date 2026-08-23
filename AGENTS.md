@@ -23,7 +23,7 @@ dataflow-solution-guides/
 │   └── Log_replication.md    # Real-time log replication into Splunk
 │
 ├── terraform/                # Infrastructure-as-Code using Google Cloud Foundation Fabric
-│   ├── ml_ai/                # GPU quotas, VPC, GCS bucket, Pub/Sub topics/subscriptions
+│   ├── ml_ai/                # Pub/Sub topics, Artifact Registry, GCS bucket, Service Account
 │   ├── etl_integration/      # Spanner instance/database/change stream, BigQuery, Service Account
 │   ├── cdp/                  # Pub/Sub topics, BigQuery dataset/tables, VPC
 │   ├── anomaly_detection/    # Pub/Sub, BigQuery, Vertex AI endpoints, VPC

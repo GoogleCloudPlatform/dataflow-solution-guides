@@ -301,7 +301,7 @@ pylint --rcfile ../pylintrc .
 | 4 | **`anomaly_detection/`** | Pub/Sub Topic, BigQuery Dataset, Vertex AI Endpoint | `anomaly-detection-sa` | `pipelines/anomaly_detection/` |
 | 5 | **`marketing_intelligence/`** | Pub/Sub Topic, BigQuery Dataset, Vertex AI Model/Endpoint | `marketing-intel-sa` | `pipelines/marketing_intelligence/` |
 | 6 | **`iot_analytics/`** | Cloud Bigtable, Pub/Sub Topics, GCS Bucket | `iot-analytics-sa` | `pipelines/iot_analytics/` |
-| 7 | **`ml_ai/`** | Pub/Sub Topics (`messages`, `predictions`), GCS Bucket, GPU Quotas | `ml-ai-dataflow-sa` | `pipelines/ml_ai_python/` |
+| 7 | **`ml_ai/`** *(Done)* | Pub/Sub Topics (`messages`, `predictions`), Artifact Registry, GCS Bucket | `ml-ai-dataflow-sa` | `pipelines/ml_ai_python/` |
 | 8 | **`log_replication_splunk/`** | Pub/Sub Topic, Secret Manager (Splunk HEC token) | `splunk-replication-sa` | `pipelines/log_replication_splunk/` |
 
 ---
