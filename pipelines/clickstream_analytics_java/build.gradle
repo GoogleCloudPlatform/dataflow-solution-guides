@@ -8,7 +8,7 @@
 plugins {
   id 'application'
   id "maven-publish"
-  id "com.diffplug.spotless" version "8.7.0"
+  id "com.diffplug.spotless" version "8.10.0"
   id 'com.palantir.git-version' version '5.0.0'
   id 'net.ltgt.errorprone' version "5.1.0"
 }
@@ -23,7 +23,7 @@ ext {
   javaPackagePath = "com.google.cloud.dataflow.solutions.clickstream_analytics"
   appName = "ClickStreamPubSubToBq"
   appVersion = "${gitVersion()}-SNAPSHOT"
-  beamVersion = "2.74.0"
+  beamVersion = "2.75.0"
   slf4jVersion = "1.7.36"
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
@@ -65,7 +65,7 @@ dependencies {
   testImplementation "junit:junit:${junitVersion}"
   testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
   testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
-  implementation 'org.checkerframework:checker-qual:4.2.0'
+  implementation 'org.checkerframework:checker-qual:4.2.2'
   errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
 
   // Google Java format for Gradle
