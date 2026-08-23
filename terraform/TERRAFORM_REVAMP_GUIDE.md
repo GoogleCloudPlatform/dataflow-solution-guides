@@ -122,7 +122,7 @@ variable "destroy_all_resources" {
    Change project references from `module.google_cloud_project.project_id` to `var.project_id`:
    ```hcl
    module "dataflow_sa" {
-     source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v56.2.0"
+     source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v57.0.0"
      project_id = var.project_id
      name       = local.dataflow_service_account
      iam_project_roles = {
@@ -141,7 +141,7 @@ variable "destroy_all_resources" {
    ```hcl
    module "buckets" {
      count         = var.create_bucket ? 1 : 0
-     source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v56.2.0"
+     source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v57.0.0"
      project_id    = var.project_id
      name          = local.bucket_name
      location      = var.region

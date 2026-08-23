@@ -29,7 +29,7 @@ locals {
 
 // Service account for Dataflow workers
 module "dataflow_sa" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v56.2.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v57.0.0"
   project_id = var.project_id
   name       = local.dataflow_service_account
   iam_project_roles = {
@@ -47,7 +47,7 @@ module "dataflow_sa" {
 // Optional GCS Bucket for staging & temp location
 module "buckets" {
   count         = var.create_bucket ? 1 : 0
-  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v56.2.0"
+  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v57.0.0"
   project_id    = var.project_id
   name          = local.bucket_name
   location      = var.region
@@ -57,7 +57,7 @@ module "buckets" {
 
 // BigQuery dataset for final destination
 module "dataset" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v56.2.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v57.0.0"
   project_id = var.project_id
   id         = local.bigquery_dataset
   location   = var.region
@@ -164,3 +164,4 @@ export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 export WORKER_TYPE=${local.worker_type}
 FILE
 }
+
