@@ -27,7 +27,7 @@ ext {
   slf4jVersion = "1.7.36"
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
-  googleJavaFormat = '1.35.0'
+  googleJavaFormat = '1.36.1'
   errorProneCoreVersion = '2.50.0'
 
 }
