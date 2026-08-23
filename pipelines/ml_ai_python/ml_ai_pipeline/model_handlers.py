@@ -19,7 +19,7 @@ from typing import Sequence, Optional, Any, Iterable
 
 import keras_nlp
 from apache_beam.ml.inference.base import ModelHandler, PredictionResult
-from keras_nlp.src.models import GemmaCausalLM
+from keras_nlp.models import GemmaCausalLM
 
 
 class GemmaModelHandler(ModelHandler[str, PredictionResult, GemmaCausalLM]):
