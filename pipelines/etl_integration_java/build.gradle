@@ -44,7 +44,7 @@ ext {
   autoServiceVersion = '1.1.1'
   errorProneCoreVersion = '2.50.0'
 
-  googleJavaFormat = '1.35.0'
+  googleJavaFormat = '1.36.1'
   confluentRepoURL = "https://packages.confluent.io/maven"
 }
 
