@@ -29,10 +29,11 @@ This guide outlines the standard architecture, step-by-step procedure, code temp
 
 ### Key Principles
 1. **Never create or mutate organizational foundations**: Do not manage projects, billing accounts, organizational folders, or VPC networks. Assume developers deploy into existing projects and networks (e.g. shared VPCs).
-2. **Dedicated Service Accounts with Least Privilege**: Always keep `module "dataflow_sa"` to ensure workers run with an isolated identity and least-privilege IAM roles.
-3. **Flexible Subnetwork Support**: Accept an optional `subnetwork` variable (e.g. `regions/REGION/subnetworks/SUBNET_NAME` or full URI) without assuming a local subnet exists.
+2. **Dedicated, Domain-Specific Service Accounts**: Always keep `module "dataflow_sa"` to ensure workers run with an isolated identity and least-privilege IAM roles. Never use generic placeholder names like `my-dataflow-sa` (which collide in shared environments); instead, use unique domain-specific defaults (e.g., `spanner-cdc-dataflow-sa`, `cdp-dataflow-sa`) and make the name configurable via `var.service_account_name`.
+3. **Flexible Subnetwork Support**: Accept an optional `subnetwork` variable (e.g. `regions/REGION/subnetworks/SUBNET_NAME` or full Shared VPC URI) without assuming a local subnet exists.
 4. **Decoupled GCS Bucket**: Support referencing an existing bucket (`var.bucket_name`), with an optional toggle (`var.create_bucket`) if provisioning a new bucket is desired.
 5. **Dynamic Pipeline Launch Scripts**: Ensure runner shell scripts dynamically pass `--subnetwork` only when configured, and remove legacy firewall experiment tags (`use_network_tags=...`).
+6. **Toolchain & Runtime Compatibility**: For Java pipelines, configure `build.gradle` with supported LTS toolchains (`JavaLanguageVersion.of(21)` or `17`).
 
 ---
 
@@ -72,9 +73,9 @@ variable "bucket_name" {
 }
 
 variable "service_account_name" {
-  description = "Optional name of the dedicated Dataflow worker service account to create."
+  description = "Name of the dedicated Dataflow worker service account to create."
   type        = string
-  default     = "<use-case>-dataflow-sa"
+  default     = "<use-case>-dataflow-sa" # e.g. spanner-cdc-dataflow-sa, cdp-dataflow-sa
 }
 
 variable "create_bucket" {
@@ -89,6 +90,11 @@ variable "destroy_all_resources" {
   default     = true
 }
 ```
+
+> [!IMPORTANT]
+> **Service Account Naming Rules**:
+> - GCP Service Account IDs must be **6 to 30 characters**, lowercase letters, numbers, and hyphens (`^[a-z]([a-z0-9-]*[a-z0-9])$`).
+> - Provide a specific domain default (e.g. `clickstream-dataflow-sa` instead of `my-dataflow-sa`) to prevent 409 `alreadyExists` conflicts when multiple pipelines or developers share the same GCP project.
 
 ---
 
@@ -106,8 +112,9 @@ variable "destroy_all_resources" {
 1. **Locals**:
    ```hcl
    locals {
-     bucket_name = var.bucket_name != null ? var.bucket_name : var.project_id
-     # use-case specific locals (dataset name, table name, SA name, machine type, etc.)
+     bucket_name              = var.bucket_name != null ? var.bucket_name : var.project_id
+     dataflow_service_account = var.service_account_name != null ? var.service_account_name : "<use-case>-dataflow-sa"
+     # use-case specific locals (dataset name, table name, machine type, etc.)
    }
    ```
 
@@ -286,13 +293,32 @@ pylint --rcfile ../pylintrc .
 
 ## 3. Matrix of Solution Guides to Refactor
 
-| # | Use Case / Directory | Key Application Resources to Keep | Target Pipeline |
-| :- | :--- | :--- | :--- |
-| 1 | **`etl_integration/`** *(Done)* | Spanner Instance/DBs/IAM, BigQuery Dataset, SA | `pipelines/etl_integration_java/` |
-| 2 | **`cdp/`** | Pub/Sub Topics (`transactions`, `coupon_redemption`), BigQuery Dataset, Artifact Registry, SA | `pipelines/cdp/` |
-| 3 | **`clickstream_analytics/`** | Cloud Bigtable (Instance & Table), Pub/Sub Topic, BigQuery Dataset & Tables, SA | `pipelines/clickstream_analytics_java/` |
-| 4 | **`anomaly_detection/`** | Pub/Sub Topic, BigQuery Dataset, Vertex AI Endpoint, SA | `pipelines/anomaly_detection/` |
-| 5 | **`marketing_intelligence/`** | Pub/Sub Topic, BigQuery Dataset, Vertex AI Model/Endpoint, SA | `pipelines/marketing_intelligence/` |
-| 6 | **`iot_analytics/`** | Cloud Bigtable, Pub/Sub Topics, GCS Bucket, SA | `pipelines/iot_analytics/` |
-| 7 | **`ml_ai/`** | Pub/Sub Topics (`messages`, `predictions`), GCS Bucket, GPU Quotas / SA | `pipelines/ml_ai_python/` |
-| 8 | **`log_replication_splunk/`** | Pub/Sub Topic, Secret Manager (Splunk HEC token), SA | `pipelines/log_replication_splunk/` |
+| # | Use Case / Directory | Key Application Resources to Keep | Recommended Default SA Name | Target Pipeline |
+| :- | :--- | :--- | :--- | :--- |
+| 1 | **`etl_integration/`** *(Done)* | Spanner Instance/DBs/IAM, BigQuery Dataset | `spanner-cdc-dataflow-sa` | `pipelines/etl_integration_java/` |
+| 2 | **`cdp/`** | Pub/Sub Topics (`transactions`, `coupon_redemption`), BigQuery Dataset, Artifact Registry | `cdp-dataflow-sa` | `pipelines/cdp/` |
+| 3 | **`clickstream_analytics/`** | Cloud Bigtable (Instance & Table), Pub/Sub Topic, BigQuery Dataset & Tables | `clickstream-dataflow-sa` | `pipelines/clickstream_analytics_java/` |
+| 4 | **`anomaly_detection/`** | Pub/Sub Topic, BigQuery Dataset, Vertex AI Endpoint | `anomaly-detection-sa` | `pipelines/anomaly_detection/` |
+| 5 | **`marketing_intelligence/`** | Pub/Sub Topic, BigQuery Dataset, Vertex AI Model/Endpoint | `marketing-intel-sa` | `pipelines/marketing_intelligence/` |
+| 6 | **`iot_analytics/`** | Cloud Bigtable, Pub/Sub Topics, GCS Bucket | `iot-analytics-sa` | `pipelines/iot_analytics/` |
+| 7 | **`ml_ai/`** | Pub/Sub Topics (`messages`, `predictions`), GCS Bucket, GPU Quotas | `ml-ai-dataflow-sa` | `pipelines/ml_ai_python/` |
+| 8 | **`log_replication_splunk/`** | Pub/Sub Topic, Secret Manager (Splunk HEC token) | `splunk-replication-sa` | `pipelines/log_replication_splunk/` |
+
+---
+
+## 4. Live Testing, Validation & Teardown Best Practices
+
+When validating revamped pipelines on live GCP projects:
+
+1. **Service Account Verification**:
+   - Before running `terraform apply`, ensure the target service account name does not collide with existing service accounts in the project (`gcloud iam service-accounts list`).
+   - If collision is possible, override `service_account_name = "<custom-name>"` in `terraform.tfvars`.
+
+2. **Subnetwork Verification**:
+   - If deploying into a Shared VPC, provide the full subnetwork URI (`https://www.googleapis.com/compute/v1/projects/HOST_PROJECT/regions/REGION/subnetworks/SUBNET_NAME`).
+   - Ensure the Dataflow worker service account has `roles/compute.networkUser` on the host project if workers are in a service project.
+
+3. **Safe Teardown Protocol**:
+   - **Always stop or cancel active Dataflow streaming jobs first** (`gcloud dataflow jobs cancel <JOB_ID> --region=<REGION>`).
+   - Wait until jobs transition to `Cancelled` or `Drained`.
+   - Run `terraform destroy -auto-approve` to safely remove Spanner instances, BigQuery datasets, and IAM bindings without locking active worker resources.
