@@ -18,7 +18,7 @@ For the full version of this solution guide, please refer to:
 
 ## Assets included in this repository
 
-* [Terraform code to deploy a project for ETL integration](../terraform/etl_integration/)
+* [Terraform code to deploy infrastructure for ETL integration](../terraform/etl_integration/)
 * [Sample pipelines in Java for ETL / Integration](../pipelines/etl_integration_java/)
 
 ## Technical benefits

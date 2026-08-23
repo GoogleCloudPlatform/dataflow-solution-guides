@@ -9,7 +9,7 @@ This directory contains Terraform infrastructure definitions for each solution g
 | Directory | Core Infrastructure Resources | Target Pipeline |
 | :--- | :--- | :--- |
 | `ml_ai/` | VPC, Subnet, NAT, GCS Bucket, Pub/Sub Topics (`messages`, `predictions`), Service Account | `pipelines/ml_ai_python/` |
-| `etl_integration/` | Cloud Spanner (taxis DB + Change Stream), BigQuery Dataset, VPC, Subnet, Service Account | `pipelines/etl_integration_java/` |
+| `etl_integration/` | Cloud Spanner (taxis DB + Change Stream), BigQuery Dataset, Service Account | `pipelines/etl_integration_java/` |
 | `cdp/` | Pub/Sub Topics (`transactions`, `coupon-redemption`), BigQuery Dataset, VPC, Subnet | `pipelines/cdp/` |
 | `anomaly_detection/` | Pub/Sub, BigQuery, Vertex AI Endpoint, VPC, Subnet | `pipelines/anomaly_detection/` |
 | `marketing_intelligence/` | Pub/Sub, BigQuery, Vertex AI AutoML Endpoint, VPC, Subnet | `pipelines/marketing_intelligence/` |
