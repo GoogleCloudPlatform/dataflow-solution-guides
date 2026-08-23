@@ -9,7 +9,7 @@ description: >-
 
 # Use Case Deployment Skill
 
-This skill provides step-by-step execution workflows for deploying, running, and verifying each of the 8 solution guides in this repository.
+This skill provides step-by-step execution workflows for deploying, running, verifying, and safely tearing down each of the 8 solution guides in this repository.
 
 ---
 
@@ -18,7 +18,7 @@ This skill provides step-by-step execution workflows for deploying, running, and
 | Guide Name | Terraform Directory | Pipeline Directory | Launch Command / Script | Input Generator / Test Data | Output Validation Target |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **GenAI & ML** | `terraform/ml_ai` | `pipelines/ml_ai_python` | `./scripts/02_run_dataflow.sh` | Pub/Sub `messages` topic | Pub/Sub `predictions-sub` subscription |
-| **ETL & Integration** | `terraform/etl_integration` | `pipelines/etl_integration_java` | `./scripts/02_run_publisher_dataflow.sh` & `./scripts/03_run_changestream_template.sh` | Pub/Sub Taxirides feed | Cloud Spanner `events` table & BigQuery `replica` dataset |
+| **ETL & Integration** | `terraform/etl_integration` | `pipelines/etl_integration_java` | `./scripts/02_run_publisher_dataflow.sh` & `./scripts/03_run_changestream_template.sh` | Pub/Sub Taxirides feed | Cloud Spanner `events` table & BigQuery `replica.events_changelog` |
 | **Customer Data Platform (CDP)** | `terraform/cdp` | `pipelines/cdp` | `./scripts/02_run_dataflow_job.sh` | `python cdp_pipeline/generate_transaction_data.py` | BigQuery `output_dataset.unified-table` |
 | **Anomaly Detection** | `terraform/anomaly_detection` | `pipelines/anomaly_detection` | `./scripts/02_run_dataflow.sh` | Pub/Sub `events` topic | BigQuery `anomalies` table |
 | **Marketing Intelligence** | `terraform/marketing_intelligence` | `pipelines/marketing_intelligence` | `./scripts/02_run_dataflow.sh` | Pub/Sub user activity stream | BigQuery marketing attribution tables |
@@ -28,7 +28,30 @@ This skill provides step-by-step execution workflows for deploying, running, and
 
 ---
 
-## 2. End-to-End Execution Workflows
+## 2. Pre-Flight Checks & Best Practices
+
+Before deploying infrastructure or submitting Dataflow jobs:
+
+1. **Service Account Collision Check**:
+   Check if the default service account name already exists in the project:
+   ```bash
+   gcloud iam service-accounts list --project=$PROJECT --filter="email:<sa-name>"
+   ```
+   If a collision exists, set a custom `service_account_name = "<custom-name>"` in `terraform.tfvars`.
+
+2. **Shared VPC / Subnetwork Verification**:
+   If running workers in a Shared VPC, verify that the full subnetwork URI is configured:
+   `https://www.googleapis.com/compute/v1/projects/HOST_PROJECT/regions/REGION/subnetworks/SUBNET_NAME`
+
+3. **GCS Staging Bucket**:
+   Ensure the staging bucket (`gs://BUCKET_NAME/tmp`) exists in the same region as the Dataflow workers or set `create_bucket = true` in `terraform.tfvars`.
+
+4. **Java Pipeline Toolchains**:
+   For Java pipelines (`etl_integration_java`, `clickstream_analytics_java`), ensure `build.gradle` specifies an LTS toolchain (`JavaLanguageVersion.of(21)` or `17`).
+
+---
+
+## 3. End-to-End Execution Workflows
 
 ### 1. GenAI & ML (Gemma LLM on GPU)
 ```bash
@@ -62,8 +85,9 @@ source scripts/01_set_variables.sh
 ./scripts/02_run_publisher_dataflow.sh
 ./scripts/03_run_changestream_template.sh
 
-# 3. Validate CDC output in BigQuery
-bq query --use_legacy_sql=false 'SELECT COUNT(*) FROM replica.events'
+# 3. Validate CDC output in Spanner & BigQuery
+gcloud spanner databases execute-sql taxis_database --instance=test-spanner-instance --sql='SELECT COUNT(*) FROM events'
+bq query --use_legacy_sql=false 'SELECT COUNT(*) FROM replica.events_changelog'
 ```
 
 ### 3. Customer Data Platform (CDP)
@@ -97,17 +121,94 @@ source scripts/00_set_variables.sh
 ./scripts/01_launch_pipeline.sh
 ```
 
+### 5. Anomaly Detection with Vertex AI
+```bash
+# 1. Terraform
+cd terraform/anomaly_detection
+terraform init && terraform apply -auto-approve
+
+# 2. Launch Pipeline
+cd ../../pipelines/anomaly_detection
+source scripts/00_set_environment.sh
+./scripts/02_run_dataflow.sh
+
+# 3. Validate Anomalies in BigQuery
+bq query --use_legacy_sql=false 'SELECT COUNT(*) FROM dataset_name.anomalies'
+```
+
+### 6. Marketing Intelligence
+```bash
+# 1. Terraform
+cd terraform/marketing_intelligence
+terraform init && terraform apply -auto-approve
+
+# 2. Launch Pipeline
+cd ../../pipelines/marketing_intelligence
+source scripts/00_set_environment.sh
+./scripts/02_run_dataflow.sh
+```
+
+### 7. IoT Analytics
+```bash
+# 1. Terraform
+cd terraform/iot_analytics
+terraform init && terraform apply -auto-approve
+
+# 2. Launch Pipeline & Simulator
+cd ../../pipelines/iot_analytics
+source scripts/00_set_environment.sh
+./scripts/02_submit_job.sh
+python scripts/publish_on_pubsub.py
+```
+
+### 8. Log Replication into Splunk
+```bash
+# 1. Terraform
+cd terraform/log_replication_splunk
+terraform init && terraform apply -auto-approve
+
+# 2. Launch Flex Template
+cd ../../pipelines/log_replication_splunk
+source scripts/00_set_environment.sh
+./scripts/01_launch_ps_to_splunk.sh
+```
+
 ---
 
-## 3. Post-Deployment Observability Checklist
+## 4. Post-Deployment Observability Checklist
 
 1. **Job Status Check**:
    ```bash
-   gcloud dataflow jobs list --status=active --region=$REGION
+   gcloud dataflow jobs list --project=$PROJECT --region=$REGION --status=active --limit=10 --format="table(id, name, type, state)"
    ```
 2. **Worker Log Inspection**:
    ```bash
-   gcloud logging read 'resource.type="dataflow_step" severity>=ERROR' --limit=20
+   gcloud logging read 'resource.labels.job_id="<JOB_ID>" severity>=ERROR' --project=$PROJECT --limit=20
    ```
 3. **Data Freshness / Backlog**:
    Check the `System Lag` and `Data Freshness` metrics in the Cloud Monitoring / Dataflow UI.
+
+---
+
+## 5. Safe Teardown & Resource Cleanup
+
+When cleaning up or concluding test deployments, always follow this order:
+
+1. **Stop / Cancel Active Dataflow Jobs**:
+   ```bash
+   gcloud dataflow jobs cancel <JOB_ID_1> <JOB_ID_2> --project=$PROJECT --region=$REGION
+   ```
+2. **Wait for Job Cancellation**:
+   Ensure jobs have reached `Cancelled` or `Drained` state before destroying infrastructure:
+   ```bash
+   gcloud dataflow jobs list --project=$PROJECT --region=$REGION --status=active
+   ```
+3. **Run Terraform Destroy**:
+   ```bash
+   cd terraform/<use_case>
+   terraform destroy -auto-approve
+   ```
+4. **Verify Clean Teardown**:
+   ```bash
+   terraform state list
+   ```
