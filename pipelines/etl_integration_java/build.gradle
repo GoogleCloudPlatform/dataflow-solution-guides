@@ -18,7 +18,7 @@
 plugins {
   id 'application'
   id "maven-publish"
-  id "com.diffplug.spotless" version "8.7.0"
+  id "com.diffplug.spotless" version "8.10.0"
   id 'com.palantir.git-version' version '5.0.0'
   id 'net.ltgt.errorprone' version "5.1.0"
 }
@@ -35,7 +35,7 @@ ext {
   appName = "ETLIntegration"
   appVersion = "${gitVersion()}-SNAPSHOT"
 
-  beamVersion = "2.74.0"
+  beamVersion = "2.75.0"
 
   slf4jVersion = "2.0.18"
   junitVersion = "4.13.2"
