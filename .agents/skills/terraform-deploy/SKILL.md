@@ -2,7 +2,7 @@
 name: terraform-deploy
 description: >-
   Manage, validate, plan, apply, and destroy Google Cloud Foundation Fabric Terraform infrastructure across all solution guides in this repository.
-  Use when setting up new GCP environments, modifying VPC or IAM configurations, managing Spanner/BigQuery/Bigtable resources,
+  Use when setting up new GCP environments, modifying IAM configurations, managing Spanner/BigQuery/Bigtable resources,
   validating Terraform syntax, or tearing down test infrastructure.
 ---
 
@@ -21,7 +21,10 @@ Before executing Terraform operations:
    gcloud config get-value project
    ```
 2. Ensure Terraform is installed (`terraform version >= 1.5.0`).
-3. Ensure the billing account ID and organization ID (or folder ID) are known if creating new projects.
+3. Check for service account name collisions in the target project before applying:
+   ```bash
+   gcloud iam service-accounts list --project=$PROJECT --filter="email:<sa-name>"
+   ```
 
 ---
 
@@ -46,9 +49,11 @@ Create or inspect `terraform.tfvars`:
 ```hcl
 project_id             = "my-gcp-project-id"
 region                 = "us-central1"
-project_create         = false   # Set to true if TF should create the project
-billing_account        = "XXXXXX-XXXXXX-XXXXXX"
-destroy_all_resources  = true    # Enables force_destroy on GCS & Spanner for demo environments
+subnetwork             = "https://www.googleapis.com/compute/v1/projects/HOST_PROJECT/regions/REGION/subnetworks/SUBNET_NAME" # optional
+service_account_name   = "<use-case>-dataflow-sa" # optional override
+bucket_name            = "my-gcp-project-id"      # optional
+create_bucket          = false                    # Set true if GCS bucket does not exist
+destroy_all_resources  = true                     # Enables force_destroy on GCS & Spanner for demo environments
 ```
 
 ### Step 3: Format & Validate
@@ -64,9 +69,9 @@ Review all planned resource additions, modifications, and deletions:
 terraform plan -out=tfplan
 ```
 Verify:
-- Subnetwork has `enable_private_access = true`.
-- Dataflow service account has minimal necessary roles.
-- Firewall rules include TCP ports `12345` and `12346` for `dataflow` target tag.
+- Dataflow service account has domain-specific name and minimal necessary roles.
+- Target datasets and instances use `var.region`.
+- No unneeded project/network foundation resources are being created.
 
 ### Step 5: Apply Configuration
 ```bash
@@ -85,8 +90,11 @@ ls -la ../../pipelines/<use_case>/scripts/*_set_variables.sh || ls -la ../../pip
 
 To safely destroy demo resources:
 ```bash
-# First drain or cancel any active Dataflow jobs in the project
-gcloud dataflow jobs list --status=active --region=<REGION>
-# Then run terraform destroy
+# 1. First cancel any active Dataflow jobs in the project
+gcloud dataflow jobs list --project=$PROJECT --region=$REGION --status=active
+gcloud dataflow jobs cancel <JOB_ID> --project=$PROJECT --region=$REGION
+
+# 2. Wait until jobs reach Cancelled or Drained state
+# 3. Then run terraform destroy
 terraform destroy -auto-approve
 ```
