@@ -30,3 +30,9 @@ class MyPipelineOptions(PipelineOptions):
     parser.add_argument("--location", type=str)
     parser.add_argument("--output_dataset", type=str)
     parser.add_argument("--output_table", type=str)
+    parser.add_argument(
+        "--output_schema_path",
+        type=str,
+        default=None,
+        help="Optional path to custom JSON schema file for BigQuery output table.",
+    )
