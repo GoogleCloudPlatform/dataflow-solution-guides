@@ -189,3 +189,5 @@ The repository includes specialized workspace skills located in `.agents/skills/
 - **`terraform-deploy`**: Procedures for provisioning, validating, planning, and managing Cloud Foundation Fabric Terraform modules.
 - **`use-case-deployment`**: Matrix and step-by-step guides for end-to-end execution of any of the 8 solution guides.
 - **`dataflow-troubleshooting`**: Diagnostic playbooks for resolving common Dataflow worker, IAM, quota, networking, and serialization errors.
+- **`pr-review`**: Procedures for reviewing Pull Requests, monitoring CI builds, verifying security guardrails and code style policies, approving, merging, or providing corrective feedback.
+
