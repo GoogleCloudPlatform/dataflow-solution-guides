@@ -40,6 +40,12 @@ variable "create_bucket" {
   default     = false
 }
 
+variable "service_account_name" {
+  description = "Name of the dedicated Dataflow worker service account to create."
+  type        = string
+  default     = "spanner-cdc-dataflow-sa"
+}
+
 variable "destroy_all_resources" {
   description = "Destroy all resources when calling tf destroy. Use false for production deployments. For test environments, set to true to remove all buckets and Spanner instances."
   type        = bool

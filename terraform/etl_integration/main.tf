@@ -21,7 +21,7 @@ locals {
   spanner_configuration    = "regional-${var.region}"
   spanner_name             = "Spanner instance managed by TF"
   bigquery_dataset         = "replica"
-  dataflow_service_account = "my-dataflow-sa"
+  dataflow_service_account = var.service_account_name != null ? var.service_account_name : "spanner-cdc-dataflow-sa"
   worker_type              = "n2-standard-4"
   max_dataflow_workers     = 10
   bucket_name              = var.bucket_name != null ? var.bucket_name : var.project_id

@@ -71,6 +71,12 @@ variable "bucket_name" {
   default     = null
 }
 
+variable "service_account_name" {
+  description = "Optional name of the dedicated Dataflow worker service account to create."
+  type        = string
+  default     = "<use-case>-dataflow-sa"
+}
+
 variable "create_bucket" {
   description = "Whether to create a new GCS bucket for temp/staging files. Set to false if using an existing bucket."
   type        = bool
