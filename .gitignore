@@ -308,3 +308,6 @@ cython_debug/
 **/Pipfile
 **/Pipfile.lock
 **/.venv
+
+# Git worktrees for parallel agent PR reviews
+.worktrees/
