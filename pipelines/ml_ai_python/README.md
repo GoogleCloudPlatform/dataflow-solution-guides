@@ -25,14 +25,14 @@ following stages:
 
 ## Gemma model
 
-The model needs to be uploaded to GCS in a directory named `gemma_2B` in the bucket created by
-Terraform (same name as project id).
+The model needs to be uploaded to GCS in a directory named `gemma_2B` in the bucket configured in
+Terraform (by default, `gs://<YOUR_BUCKET_OR_PROJECT_ID>/gemma_2B`).
 
 For that, please first [download the Gemma model from Kaggle](https://www.kaggle.com/models/google/gemma),
-uncompress it and then uploaded it with a command similar to this one:
+uncompress it and then upload it with a command similar to this one:
 
 ```sh
-gcloud storage cp -r LOCAL_DIRECTORY gs://<YOUR PROJECT ID>/gemma_2B
+gcloud storage cp -r LOCAL_DIRECTORY gs://<YOUR_BUCKET_NAME>/gemma_2B
 ```
 
 That command will do parallel composite uploads to speed up the uploading of the largest files in
@@ -48,7 +48,7 @@ that's not available in your preferred region, try with other machine types that
 in Cloud Build:
 * https://cloud.google.com/build/docs/api/reference/rest/v1/projects.builds#machinetype
 
-Moreover, the file `scripts/00_set_environment.sh` specifies a machine type for the Datalow workers.
+Moreover, the generated file `scripts/00_set_variables.sh` specifies a machine type for the Dataflow workers.
 The selected machine type, `g2-standard-4`, is the recommended one for inference with GPU. If that
 type is not available in your region, you can check what machines are available to use with the
 following command:
@@ -65,23 +65,16 @@ See more info about selecting the right type of machine in the following link:
 All the scripts are located in the `scripts` directory and prepared to be launched from the top 
 sources directory.
 
-In the script `scripts/00_set_environment.sh`, define the value of the project id and the region variable:
+The Terraform deployment automatically creates the environment script `scripts/00_set_variables.sh` with all the required resource names and configuration settings.
 
-```
-export PROJECT=<YOUR PROJECT ID>
-export REGION=<YOUR CLOUD REGION>
-```
-
-Leave the rest of variables untouched, although you can override them if you prefer.
-
-After you edit the script, load those variables into the environment
+Load those variables into the environment:
 
 ```sh
-source scripts/00_set_environment.sh
+source scripts/00_set_variables.sh
 ```
 
 And then run the script that builds and publishes the custom Dataflow container. This container will
-contain the Gemma model, and all the required dependencies.
+contain the Gemma model, and all the required dependencies:
 
 ```sh
 ./scripts/01_build_and_push_container.sh
@@ -89,6 +82,18 @@ contain the Gemma model, and all the required dependencies.
 
 This will create a Cloud Build job that can take a few minutes to complete. Once it completes, you
 can trigger the pipeline with the following:
+
+> [!IMPORTANT]
+> **Python Version Matching:**
+> When submitting the pipeline using `DirectRunner` or `DataflowRunner`, ensure that the Python minor version in your local submission environment matches the Python version in the custom worker container image (**Python 3.11**). If a different version (such as Python 3.12 or 3.13) is used at submission time, Apache Beam's runtime descriptor verification and object deserialization on the worker will fail with a `RuntimeError: Pipeline construction environment and pipeline runtime environment are not compatible`.
+>
+> You can create a matching virtual environment using `uv` or `venv`:
+> ```sh
+> uv python install 3.11
+> uv venv .venv --python 3.11
+> source .venv/bin/activate
+> pip install -r requirements.txt -e .
+> ```
 
 ```sh
 ./scripts/02_run_dataflow.sh
