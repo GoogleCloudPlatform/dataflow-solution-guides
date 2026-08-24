@@ -15,42 +15,98 @@
 Customer Data Platform analytics pipeline for the Dataflow Solution Guides.
 """
 
+import json
 import logging
+import os
+from typing import Any, Generator, Iterable, Optional, Union
+
 import apache_beam as beam
 from apache_beam import Pipeline, PCollection
 from apache_beam.io.gcp.bigquery import WriteToBigQuery
-import json
+from apache_beam.transforms.trigger import AccumulationMode, AfterProcessingTime, AfterWatermark
 from apache_beam.transforms.window import FixedWindows
-from apache_beam.transforms.trigger import AfterWatermark, AfterProcessingTime, AccumulationMode
 from cdp_pipeline.options import MyPipelineOptions
 
-# FIXME: This will not work in Dataflow, the schema should be passed as an option to the PTrasnform
-# Get the schema of bigquery output table
-with open("./schema/unified_table.json", encoding="utf-8") as schema_file:
-  output_schema = json.load(schema_file)
+DEFAULT_OUTPUT_SCHEMA: dict[str, Any] = {
+    "fields": [
+        {
+            "name": "transaction_id",
+            "type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "household_key",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "coupon_upc",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "product_id",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "coupon_discount",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        },
+    ]
+}
 
 
-def left_join(key_value_pair):
+def load_output_schema(
+    schema_path: Optional[str] = None) -> Union[dict[str, Any], str]:
+  """Loads the BigQuery output table schema from a specified path or default package location."""
+  if schema_path:
+    with open(schema_path, encoding="utf-8") as schema_file:
+      return json.load(schema_file)
+
+  # Check relative to the schema directory inside the cdp pipeline package
+  default_schema_file = os.path.join(
+      os.path.dirname(os.path.dirname(__file__)), "schema",
+      "unified_table.json")
+  if os.path.exists(default_schema_file):
+    with open(default_schema_file, encoding="utf-8") as schema_file:
+      return json.load(schema_file)
+
+  return DEFAULT_OUTPUT_SCHEMA
+
+
+def left_join(
+    key_value_pair: tuple[Any, tuple[Iterable[dict[str, Any]],
+                                     Iterable[Optional[dict[str, Any]]]]]
+) -> Generator[dict[str, Any], None, None]:
+  """Performs a left join between transaction and coupon redemption records."""
   _, values = key_value_pair
   trans_values, coupon_redempt_values = values
-  if not coupon_redempt_values:
-    coupon_redempt_values = [None]  # Fill missing values with None
+  coupon_list = list(coupon_redempt_values)
+  if not coupon_list:
+    coupon_list = [None]  # Fill missing values with None
   for trans_value in trans_values:
     if trans_value is not None:
-      for coupon_redempt_value in coupon_redempt_values:
-        coupon_redempt_value: dict
+      for coupon_redempt_value in coupon_list:
+        coupon_upc = None
+        if isinstance(coupon_redempt_value, dict):
+          raw_upc = coupon_redempt_value.get("coupon_upc")
+          if raw_upc is not None:
+            coupon_upc = str(raw_upc)
         unified_data = {
             "transaction_id":
-                trans_value["transaction_id"],
+                str(trans_value["transaction_id"]),
             "household_key":
-                trans_value["household_key"],
-            "coupon_upc":  # FIXME: Is this a dictionary?
-                coupon_redempt_value["coupon_upc"]
-                if coupon_redempt_value is not None else None,
+                str(trans_value["household_key"]),
+            "coupon_upc":
+                coupon_upc,
             "product_id":
-                trans_value["product_id"],
+                str(trans_value["product_id"]),
             "coupon_discount":
-                trans_value["coupon_disc"],
+                str(
+                    trans_value.get("coupon_disc",
+                                    trans_value.get("coupon_discount", "0"))),
         }
         yield unified_data
 
@@ -83,7 +139,8 @@ def _unify_data(pcolls: tuple[PCollection, PCollection]) -> PCollection[str]:
 
 @beam.ptransform_fn
 def _write_to_bq(unified_pcoll: PCollection, project_id: str,
-                 output_dataset: str, output_table: str, unified_schema: str):
+                 output_dataset: str, output_table: str,
+                 unified_schema: Union[dict[str, Any], str]):
   unified_pcoll | "Write to bigquery" >> \
   WriteToBigQuery(
           project=project_id,
@@ -95,8 +152,14 @@ def _write_to_bq(unified_pcoll: PCollection, project_id: str,
       )
 
 
-def create_and_run_pipeline(pipeline_options: MyPipelineOptions):
+def create_and_run_pipeline(pipeline_options: MyPipelineOptions,
+                            output_schema: Optional[Union[dict[str, Any],
+                                                          str]] = None):
   logging.info(pipeline_options)
+
+  if output_schema is None:
+    schema_path = getattr(pipeline_options, "output_schema_path", None)
+    output_schema = load_output_schema(schema_path)
 
   with Pipeline(options=pipeline_options) as p:
 
