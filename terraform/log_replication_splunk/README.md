@@ -94,11 +94,11 @@ terraform apply
 
 ### Step 3: Run the Pipeline
 
-Terraform generates `scripts/01_set_variables.sh` inside `pipelines/log_replication_splunk/`. Proceed to the [pipeline guide](../../pipelines/log_replication_splunk/README.md):
+Terraform generates `scripts/00_set_variables.sh` inside `pipelines/log_replication_splunk/`. Proceed to the [pipeline guide](../../pipelines/log_replication_splunk/README.md):
 
 ```bash
 cd ../../pipelines/log_replication_splunk
-source scripts/01_set_variables.sh
+source scripts/00_set_variables.sh
 ./scripts/01_launch_ps_to_splunk.sh
 ```
 

@@ -26,10 +26,10 @@ through [the accompanying Terraform scripts in this solution guide](../../terraf
 All the scripts are located in the `scripts` directory and prepared to be launched from the top
 sources directory.
 
-The Terraform code generates a configuration file with all the necessary variables at `scripts/01_set_variables.sh`. Run the following command to load that configuration:
+The Terraform code generates a configuration file with all the necessary variables at `scripts/00_set_variables.sh`. Run the following command to load that configuration:
 
 ```sh
-source scripts/01_set_variables.sh
+source scripts/00_set_variables.sh
 ```
 
 Now you can run the pipeline that reads logs from Pub/Sub and forwards them to Splunk via the HTTP Event Collector (HEC):
