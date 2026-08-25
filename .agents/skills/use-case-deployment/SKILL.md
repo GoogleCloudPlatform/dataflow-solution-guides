@@ -167,10 +167,17 @@ python scripts/publish_on_pubsub.py
 cd terraform/log_replication_splunk
 terraform init && terraform apply -auto-approve
 
-# 2. Launch Flex Template
+# 2. Launch Dataflow Pipeline
 cd ../../pipelines/log_replication_splunk
-source scripts/00_set_environment.sh
+source scripts/00_set_variables.sh
 ./scripts/01_launch_ps_to_splunk.sh
+
+# 3. Optional: Access Demo Splunk Web UI (Port 8501 via IAP Tunnel)
+# If deploy_demo_splunk = true:
+gcloud compute start-iap-tunnel $SPLUNK_DEMO_INSTANCE 8000 --local-host-port=localhost:8501 --zone=$ZONE --project=$PROJECT
+
+# 4. Ingest Test Log Event & Verify
+gcloud pubsub topics publish splunk-logs --message='{"message": "Test replication log", "severity": "INFO"}'
 ```
 
 ---
