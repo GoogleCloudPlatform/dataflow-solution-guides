@@ -59,7 +59,8 @@ python main.py \
 ```
 
 ### Step 6: Custom SDK Container Build (if required)
-For pipelines using GPU acceleration or custom C/Python libraries (e.g. `ml_ai_python`):
+For pipelines using GPU acceleration, custom C/Python libraries, or specialized base images (e.g. `ml_ai_python`, `anomaly_detection`, `cdp`, `iot_analytics`, `marketing_intelligence`):
+- **SDK Version Parity**: Verify that the `apache/beam_python3.11_sdk:<version>` tag in `Dockerfile` matches `requirements.txt` (`apache-beam[gcp]==<version>`).
 ```bash
 # Set required image tag
 export CONTAINER_URI="gcr.io/$PROJECT/dataflow-ml-custom:latest"
@@ -100,13 +101,15 @@ Run the pipeline locally:
 
 ## 3. Apache Beam Best Practices in this Repo
 
-1. **Option Classes**:
+1. **SDK & Custom Container Parity**:
+   The Apache Beam SDK version in the pipeline code (`requirements.txt`) and worker container (`Dockerfile`) must be identical. Version divergence leads to serialization failures, container harness mismatch, and worker initialization crashes on Dataflow.
+2. **Option Classes**:
    Define pipeline arguments by subclassing `PipelineOptions` (Python) or `PipelineOptions` interface (Java) in `options.py` / `options/`.
-2. **Worker Isolation**:
+3. **Worker Isolation**:
    Always enforce private IP communication:
    - Python: `--no_use_public_ip`
    - Java: `--usePublicIps=false`
-3. **Dead-Letter Queues (Side Outputs)**:
+4. **Dead-Letter Queues (Side Outputs)**:
    For unparseable or error records, route failed elements to a dead-letter output or BigQuery error table rather than crashing worker threads:
    ```python
    # Python side-output pattern
@@ -115,7 +118,7 @@ Run the pipeline locally:
        | 'ParseRecords' >> beam.ParDo(ParseDoFn()).with_outputs('errors', main='valid')
    )
    ```
-4. **Metrics Instrumentation**:
+5. **Metrics Instrumentation**:
    Use Beam metrics to track throughput and error counts:
    ```python
    self.processed_counter = Metrics.counter(self.__class__, 'processed_elements')

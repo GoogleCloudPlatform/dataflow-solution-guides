@@ -87,8 +87,12 @@ Java pipelines use Gradle with standard Google Cloud Dataflow plugins and spotle
 ## 4. Custom Containers & Cloud Build
 
 For pipelines leveraging custom dependencies or machine learning models on GPU workers (e.g. `ml_ai_python`):
-1. The `Dockerfile` builds on top of `apache/beam_python3.11_sdk`.
-2. Cloud Build builds and registers the container image in Google Artifact Registry / Google Container Registry:
+1. **SDK and Container Version Parity (Mandatory)**:
+   The `apache/beam_python3.11_sdk:<version>` tag in `Dockerfile` (both `FROM` and `COPY --from=...`) **must strictly match** the `apache-beam[gcp]==<version>` dependency pinned in `requirements.txt`.
+   - Never upgrade container image tags without verifying that the matching stable `apache-beam` release is available on PyPI and updating `requirements.txt` in tandem.
+   - A version mismatch between the pipeline submission environment and the worker container harness will cause serialization errors or worker startup failures.
+2. The `Dockerfile` builds on top of `apache/beam_python3.11_sdk`.
+3. Cloud Build builds and registers the container image in Google Artifact Registry / Google Container Registry:
    ```bash
    gcloud builds submit \
      --region=$REGION \
@@ -96,7 +100,7 @@ For pipelines leveraging custom dependencies or machine learning models on GPU w
      --substitutions _TAG=$CONTAINER_URI \
      .
    ```
-3. When submitting the pipeline to Dataflow, specify:
+4. When submitting the pipeline to Dataflow, specify:
    ```bash
    --sdk_container_image=$CONTAINER_URI
    ```

@@ -92,3 +92,16 @@ This skill provides diagnostic workflows and solutions for common failures encou
       --substitutions _TAG=$CONTAINER_URI \
       .
     ```
+
+---
+
+## 6. Custom Container & Beam SDK Version Mismatches
+
+### Symptom: Worker crashes on startup with `SDK harness failed to connect`, `Incompatible SDK version`, or serialization / unpickling errors
+* **Root Cause: Mismatch between pipeline submission environment and worker image**
+  * The pipeline graph was generated using an `apache-beam` version in the launching environment (e.g. `requirements.txt` = `2.75.0`), but the worker custom container used a different version in `Dockerfile` (e.g. `COPY --from=apache/beam_python3.11_sdk:2.76.0 /opt/apache/beam /opt/apache/beam`).
+  * **Fix**:
+    1. Check the Beam version in `requirements.txt` (`grep apache-beam requirements.txt`).
+    2. Check the container base and boot image tag in `Dockerfile` (`grep apache/beam Dockerfile`).
+    3. Ensure both specify the exact same version (e.g., both `2.75.0`).
+    4. Rebuild the custom container via Cloud Build and resubmit the Dataflow job.
