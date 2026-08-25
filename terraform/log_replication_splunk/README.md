@@ -139,3 +139,7 @@ To safely tear down resources without locking active workers:
    ```bash
    terraform destroy
    ```
+
+> [!NOTE]
+> **Expected Cloud Logging Notification During Teardown**:
+> During `terraform destroy`, project owners may receive an automated email notification from Google Cloud Logging stating *"Error in Cloud Logging sink configuration"* with error code `topic_not_found`. This is a normal transient notification caused when the destination Pub/Sub topic (`all-logs`) is deleted in parallel with the log sink (`pubsub-sink`) while background shutdown logs are emitted. It requires no action.
