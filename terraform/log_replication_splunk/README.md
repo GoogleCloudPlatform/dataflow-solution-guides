@@ -28,12 +28,12 @@ This module supports two deployment scenarios:
 
 | Resource | Default Name / ID | Description |
 | :--- | :--- | :--- |
-| **Pub/Sub Topic** | `all-logs` | Ingests project log messages routed from Cloud Logging. |
-| **Pub/Sub Subscription** | `all-logs-sub` | Ingestion subscription consumed by the Dataflow pipeline. |
-| **Pub/Sub Topic** | `deadletter-topic` | Receives log events rejected by Splunk due to non-transitory errors. |
-| **Pub/Sub Subscription** | `deadletter-sub` | Dead-letter subscription for inspection and alerting. |
-| **Cloud Logging Sink** | `pubsub-sink` | Project-level logging sink directing all logs to `all-logs`. |
-| **Secret Manager Secret** | `splunk-token` | Securely stores the Splunk HEC authentication token. |
+| **Pub/Sub Topic** | `splunk-logs` | Ingests project log messages routed from Cloud Logging for Splunk replication. |
+| **Pub/Sub Subscription** | `splunk-logs-sub` | Ingestion subscription consumed by the Dataflow pipeline. |
+| **Pub/Sub Topic** | `splunk-deadletter-topic` | Receives log events rejected by Splunk due to non-transitory errors. |
+| **Pub/Sub Subscription** | `splunk-deadletter-sub` | Dead-letter subscription for inspection and alerting. |
+| **Cloud Logging Sink** | `splunk-logging-sink` | Project-level logging sink directing all logs to `splunk-logs`. |
+| **Secret Manager Secret** | `splunk-hec-token` | Securely stores the Splunk HEC authentication token. |
 | **Dataflow Service Account** | `splunk-replication-sa` | Dedicated worker service account with least-privilege IAM roles. |
 | **GCS Bucket** *(Optional)* | `${var.bucket_name}` | Staging and temporary bucket for Dataflow execution (`create_bucket = true`). |
 | **Compute Engine VM** *(Optional)* | `splunk-demo` | Demo Splunk Enterprise instance on Container-Optimized OS (`deploy_demo_splunk = true`). |
@@ -142,4 +142,4 @@ To safely tear down resources without locking active workers:
 
 > [!NOTE]
 > **Expected Cloud Logging Notification During Teardown**:
-> During `terraform destroy`, project owners may receive an automated email notification from Google Cloud Logging stating *"Error in Cloud Logging sink configuration"* with error code `topic_not_found`. This is a normal transient notification caused when the destination Pub/Sub topic (`all-logs`) is deleted in parallel with the log sink (`pubsub-sink`) while background shutdown logs are emitted. It requires no action.
+> During `terraform destroy`, project owners may receive an automated email notification from Google Cloud Logging stating *"Error in Cloud Logging sink configuration"* with error code `topic_not_found`. This is a normal transient notification caused when the destination Pub/Sub topic (`splunk-logs`) is deleted in parallel with the log sink (`splunk-logging-sink`) while background shutdown logs are emitted. It requires no action.

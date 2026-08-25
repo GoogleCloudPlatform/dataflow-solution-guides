@@ -40,19 +40,19 @@ Now you can run the pipeline that reads logs from Pub/Sub and forwards them to S
 
 ## Input data
 
-All logs produced in the Google Cloud project are redirected to the Pub/Sub topic `all-logs` via the Cloud Logging sink. The pipeline consumes logs from the Pub/Sub subscription `all-logs-sub`, ensuring no logs are lost if the pipeline is temporarily stopped.
+All logs produced in the Google Cloud project are redirected to the Pub/Sub topic `splunk-logs` via the Cloud Logging sink (`splunk-logging-sink`). The pipeline consumes logs from the Pub/Sub subscription `splunk-logs-sub`, ensuring no logs are lost if the pipeline is temporarily stopped.
 
 You can also manually publish test log messages to the topic:
 
 ```sh
-gcloud pubsub topics publish all-logs --message='{"event": "test log event", "severity": "INFO", "source": "manual-test"}'
+gcloud pubsub topics publish splunk-logs --message='{"event": "test log event", "severity": "INFO", "source": "manual-test"}'
 ```
 
 ## Output data & verification
 
 There are two outputs in this pipeline:
 * **Splunk**: Log events successfully delivered to the Splunk HEC endpoint.
-* **Dead-letter queue (`deadletter-topic`)**: Log events that are rejected by Splunk due to non-transitory errors or permanent failures.
+* **Dead-letter queue (`splunk-deadletter-topic`)**: Log events that are rejected by Splunk due to non-transitory errors or permanent failures.
 
 ### Option A: Inspecting Logs in Splunk Web UI (Demo Mode)
 
@@ -78,8 +78,8 @@ gcloud compute start-iap-tunnel $SPLUNK_DEMO_INSTANCE 8000 \
 
 ### Option B: Monitoring the Dead-Letter Queue
 
-If messages cannot be delivered to Splunk, they are automatically routed to the dead-letter topic. You can monitor and inspect rejected events using the `deadletter-sub` subscription:
+If messages cannot be delivered to Splunk, they are automatically routed to the dead-letter topic. You can monitor and inspect rejected events using the `splunk-deadletter-sub` subscription:
 
 ```sh
-gcloud pubsub subscriptions pull deadletter-sub --auto-ack --limit=10
+gcloud pubsub subscriptions pull splunk-deadletter-sub --auto-ack --limit=10
 ```

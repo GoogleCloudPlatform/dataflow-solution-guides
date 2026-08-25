@@ -177,7 +177,7 @@ source scripts/01_set_variables.sh
 gcloud compute start-iap-tunnel $SPLUNK_DEMO_INSTANCE 8000 --local-host-port=localhost:8501 --zone=$ZONE --project=$PROJECT
 
 # 4. Ingest Test Log Event & Verify
-gcloud pubsub topics publish all-logs --message='{"message": "Test replication log", "severity": "INFO"}'
+gcloud pubsub topics publish splunk-logs --message='{"message": "Test replication log", "severity": "INFO"}'
 ```
 
 ---

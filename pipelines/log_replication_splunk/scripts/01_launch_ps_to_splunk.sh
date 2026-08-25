@@ -5,7 +5,7 @@ elif [ -n "$NETWORK" ]; then
   SUBNET_OPT="--subnetwork=$NETWORK"
 fi
 
-gcloud dataflow jobs run logs-to-splunk \
+gcloud dataflow jobs run splunk-log-replication \
   --gcs-location gs://dataflow-templates-$REGION/latest/Cloud_PubSub_to_Splunk \
   --region $REGION \
   --project $PROJECT \

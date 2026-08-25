@@ -15,9 +15,9 @@
 locals {
   bucket_name              = var.bucket_name != null ? var.bucket_name : var.project_id
   dataflow_service_account = var.service_account_name != null ? var.service_account_name : "splunk-replication-sa"
-  pubsub_logging_topic     = "all-logs"
-  pubsub_deadletter_topic  = "deadletter-topic"
-  pubsub_sink_name         = "pubsub-sink"
+  pubsub_logging_topic     = "splunk-logs"
+  pubsub_deadletter_topic  = "splunk-deadletter-topic"
+  pubsub_sink_name         = "splunk-logging-sink"
   max_dataflow_workers     = 10
   zone                     = var.zone != null ? var.zone : "${var.region}-a"
 
@@ -51,13 +51,13 @@ module "buckets" {
   force_destroy = var.destroy_all_resources
 }
 
-// Pub/Sub topic to receive all logs
+// Pub/Sub topic to receive all logs for Splunk replication
 module "logging_topic" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
   project_id = var.project_id
   name       = local.pubsub_logging_topic
   subscriptions = {
-    all-logs-sub = {}
+    splunk-logs-sub = {}
   }
 }
 
@@ -67,7 +67,7 @@ module "deadletter_topic" {
   project_id = var.project_id
   name       = local.pubsub_deadletter_topic
   subscriptions = {
-    deadletter-sub = {}
+    splunk-deadletter-sub = {}
   }
 }
 
@@ -86,12 +86,12 @@ resource "google_pubsub_topic_iam_member" "pubsub_log_writer" {
   member  = google_logging_project_sink.my_logging_sink.writer_identity
 }
 
-// Splunk token in Secret Manager
+// Splunk HEC token in Secret Manager
 module "splunk_token_secret" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/secret-manager?ref=v57.0.0"
   project_id = var.project_id
   secrets = {
-    splunk-token = {
+    splunk-hec-token = {
       versions = {
         v1 = { enabled = true, data = local.splunk_hec_token }
       }
@@ -194,9 +194,9 @@ export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 
-export INPUT_SUBSCRIPTION=${module.logging_topic.subscriptions["all-logs-sub"].id}
+export INPUT_SUBSCRIPTION=${module.logging_topic.subscriptions["splunk-logs-sub"].id}
 export DEADLETTER_TOPIC=${module.deadletter_topic.id}
-export TOKEN_SECRET_ID=${module.splunk_token_secret.version_ids["splunk-token/v1"]}
+export TOKEN_SECRET_ID=${module.splunk_token_secret.version_ids["splunk-hec-token/v1"]}
 export SPLUNK_HEC_URL=${local.splunk_hec_url}
 export SPLUNK_DEMO_INSTANCE=${var.deploy_demo_splunk ? google_compute_instance.splunk_demo[0].name : ""}
 FILE
