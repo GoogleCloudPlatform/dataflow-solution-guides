@@ -176,7 +176,7 @@ resource "google_compute_instance" "splunk_demo" {
 resource "google_compute_firewall" "allow_splunk_demo" {
   count       = var.deploy_demo_splunk ? 1 : 0
   name        = "allow-splunk-demo-internal"
-  project     = var.project_id
+  project     = length(regexall("projects/([^/]+)/", google_compute_instance.splunk_demo[0].network_interface[0].network)) > 0 ? regex("projects/([^/]+)/", google_compute_instance.splunk_demo[0].network_interface[0].network)[0] : var.project_id
   network     = google_compute_instance.splunk_demo[0].network_interface[0].network
   description = "Allow ingress traffic to Splunk HEC (8088) and Web UI (8000) for demo instance"
 
