@@ -15,9 +15,20 @@
 name: 'Build and validation'
 on:
   pull_request:
+    branches:
+      - main
   push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+  pull-requests: read
+
 jobs:
   terraform:
     name: 'Terraform'
@@ -31,10 +42,15 @@ jobs:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
-          filters: "Terraform:\n  - 'terraform/**'     \n"
+          filters: |
+            terraform:
+              - 'terraform/**'
+              - '.github/workflows/pull_request.yml'
       - name: Setup Terraform
+        if: steps.filter.outputs.terraform == 'true'
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
       - name: Terraform Init
+        if: steps.filter.outputs.terraform == 'true'
         working-directory: terraform
         run: |
           ls -d */ | while read d
@@ -43,6 +59,7 @@ jobs:
           cd $d && terraform init && cd ..
           done
       - name: Terraform Format
+        if: steps.filter.outputs.terraform == 'true'
         working-directory: terraform
         run: |
           ls -d */ | while read d
@@ -51,6 +68,7 @@ jobs:
           cd $d && terraform fmt -check && cd ..
           done
       - name: Terraform Validate
+        if: steps.filter.outputs.terraform == 'true'
         working-directory: terraform
         run: |
           ls -d */ | while read d
@@ -69,8 +87,16 @@ jobs:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
-          filters: "Pipelines:\n  - 'pipelines/**'     \n"
+          filters: |
+            java:
+              - 'pipelines/*_java/**'
+              - 'pipelines/**/*.java'
+              - 'pipelines/**/build.gradle'
+              - 'pipelines/**/gradle/**'
+              - 'pipelines/**/gradlew*'
+              - '.github/workflows/pull_request.yml'
       - name: Set up JDK 25
+        if: steps.filter.outputs.java == 'true'
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           java-version: '25'
@@ -78,12 +104,14 @@ jobs:
       # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
       # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
       - name: Setup Gradle
+        if: steps.filter.outputs.java == 'true'
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           build-scan-publish: true
           build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
           build-scan-terms-of-use-agree: "yes"
       - name: Build with Gradle Wrapper
+        if: steps.filter.outputs.java == 'true'
         working-directory: pipelines
         run: |
           for pipeline_dir in */
@@ -110,16 +138,25 @@ jobs:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
-          filters: "Pipelines:\n  - 'pipelines/**'     \n"
+          filters: |
+            pylint:
+              - 'pipelines/**/*.py'
+              - 'pipelines/pylintrc'
+              - 'pipelines/**/setup.py'
+              - 'pipelines/**/requirements*.txt'
+              - '.github/workflows/pull_request.yml'
       - name: Setup Python
+        if: steps.filter.outputs.pylint == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
       - name: Install pylint
+        if: steps.filter.outputs.pylint == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install pylint
       - name: Run pylint
+        if: steps.filter.outputs.pylint == 'true'
         working-directory: pipelines
         run: |
           for pipeline_dir in */
@@ -150,14 +187,23 @@ jobs:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
-          filters: "Pipelines:\n  - 'pipelines/**'     \n"
+          filters: |
+            python:
+              - 'pipelines/**/*.py'
+              - 'pipelines/**/setup.py'
+              - 'pipelines/**/requirements*.txt'
+              - 'pipelines/**/Pipfile*'
+              - '.github/workflows/pull_request.yml'
       - name: Setup Python
+        if: steps.filter.outputs.python == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
       - name: Install pipenv
+        if: steps.filter.outputs.python == 'true'
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
       - name: Python builds
+        if: steps.filter.outputs.python == 'true'
         working-directory: pipelines
         run: |
           export PIPENV_VENV_IN_PROJECT=1
@@ -186,15 +232,26 @@ jobs:
             fi
           done
   docker-build:
-    name: Docker images build
+    name: 'Docker images build'
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            docker:
+              - 'pipelines/**/Dockerfile'
+              - 'pipelines/**/*.py'
+              - 'pipelines/**/requirements*.txt'
+              - '.github/workflows/pull_request.yml'
       - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        if: steps.filter.outputs.docker == 'true'
       - name: Docker builds
+        if: steps.filter.outputs.docker == 'true'
         working-directory: pipelines
         run: |
           for pipeline_dir in */
@@ -215,3 +272,4 @@ jobs:
               echo Ignoring, no Dockerfile found
             fi
           done
+
