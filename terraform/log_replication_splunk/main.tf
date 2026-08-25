@@ -51,6 +51,10 @@ module "buckets" {
   force_destroy = var.destroy_all_resources
 }
 
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
 // Pub/Sub topic to receive all logs for Splunk replication
 module "logging_topic" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
@@ -71,19 +75,27 @@ module "deadletter_topic" {
   }
 }
 
+// IAM publisher permission for Cloud Logging Project Service Agent on the logs topic
+resource "google_pubsub_topic_iam_member" "pubsub_log_writer" {
+  project = var.project_id
+  topic   = module.logging_topic.id
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-logging.iam.gserviceaccount.com"
+}
+
 // Cloud Logging sink in Pub/Sub
+// Explicitly depends on the IAM permission and Pub/Sub topic so that:
+// 1. On creation: Topic and IAM publisher permission exist before the sink starts routing.
+// 2. On destruction: The sink is destroyed first, preventing 'topic_not_found' errors while deleting.
 resource "google_logging_project_sink" "my_logging_sink" {
   name                   = local.pubsub_sink_name
   project                = var.project_id
   destination            = "pubsub.googleapis.com/${module.logging_topic.id}"
   unique_writer_identity = true
-}
 
-resource "google_pubsub_topic_iam_member" "pubsub_log_writer" {
-  project = var.project_id
-  topic   = module.logging_topic.id
-  role    = "roles/pubsub.publisher"
-  member  = google_logging_project_sink.my_logging_sink.writer_identity
+  depends_on = [
+    google_pubsub_topic_iam_member.pubsub_log_writer
+  ]
 }
 
 // Splunk HEC token in Secret Manager
