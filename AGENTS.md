@@ -30,7 +30,7 @@ dataflow-solution-guides/
 │   ├── marketing_intelligence/ # Pub/Sub, BigQuery, Vertex AI endpoints, VPC
 │   ├── clickstream_analytics/  # Bigtable instance/table, Pub/Sub, BigQuery, VPC
 │   ├── iot_analytics/        # Bigtable, Pub/Sub, GCS, VPC
-│   └── log_replication_splunk/ # Pub/Sub, Splunk secrets, VPC
+│   └── log_replication_splunk/ # Pub/Sub, Secret Manager, Service Account, Optional Splunk VM
 │
 ├── pipelines/                # Apache Beam streaming pipeline implementations
 │   ├── ml_ai_python/         # Python: Beam RunInference with Gemma LLM on NVIDIA L4 GPU

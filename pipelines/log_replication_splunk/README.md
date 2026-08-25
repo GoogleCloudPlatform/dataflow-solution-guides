@@ -26,19 +26,13 @@ through [the accompanying Terraform scripts in this solution guide](../../terraf
 All the scripts are located in the `scripts` directory and prepared to be launched from the top
 sources directory.
 
-The Terraform code generates a file with all the necessary variables in the 
-location `./scripts/00_set_variables.sh`. Run the following command to 
-apply that configuration:
+The Terraform code generates a configuration file with all the necessary variables at `scripts/01_set_variables.sh`. Run the following command to load that configuration:
 
 ```sh
 source scripts/01_set_variables.sh
 ```
 
-Now you can run the pipeline that will take logs from Pub/Sub and will send 
-them to Splunk. You need to ensure that there is network connectivity to 
-access Splunk from Dataflow (e.g. Internet access, if necessary), and that 
-you have set the required credentials in the Terraform config, so Dataflow 
-has the required permissions to publish into Splunk:
+Now you can run the pipeline that reads logs from Pub/Sub and forwards them to Splunk via the HTTP Event Collector (HEC):
 
 ```sh
 ./scripts/01_launch_ps_to_splunk.sh
@@ -46,25 +40,40 @@ has the required permissions to publish into Splunk:
 
 ## Input data
 
-All the logs produced in the project are being redirected to the Pub/Sub 
-topic `all-logs`. The pipeline uses a Pub/Sub subscription, `all-logs-sub`, 
-so no logs are lost if the pipeline is stopped (during the retention period 
-of the subscription, which is 30 days by default).
+All logs produced in the Google Cloud project are redirected to the Pub/Sub topic `all-logs` via the Cloud Logging sink. The pipeline consumes logs from the Pub/Sub subscription `all-logs-sub`, ensuring no logs are lost if the pipeline is temporarily stopped.
 
-The regular operation of the project (e.g. launching Dataflow) should 
-already produce some logs as to observe some output in Splunk for testing 
-purposes.
+You can also manually publish test log messages to the topic:
 
-## Output data
+```sh
+gcloud pubsub topics publish all-logs --message='{"event": "test log event", "severity": "INFO", "source": "manual-test"}'
+```
+
+## Output data & verification
 
 There are two outputs in this pipeline:
-* Splunk, written to the HEC endpoint
-* Dead letter queue, the `deadletter-topic` Pub/Sub topic
+* **Splunk**: Log events successfully delivered to the Splunk HEC endpoint.
+* **Dead-letter queue (`deadletter-topic`)**: Log events that are rejected by Splunk due to non-transitory errors or permanent failures.
 
-When Splunk rejects messages for whatever reason, they are sent to the 
-`deadletter-topic`.
+### Option A: Inspecting Logs in Splunk Web UI (Demo Mode)
 
-If the Splunk endpoint rejects messages because it is overloaded, times out, 
-etc, Dataflow will retry publishing those messages in Splunk. Only the 
-messages that are rejected by Splunk due to non-transitory errors are sent 
-to the dead letter queue.
+If you deployed the demo Splunk instance (`deploy_demo_splunk = true` in Terraform), you can securely connect to the Splunk Web UI from your local browser without exposing public endpoints using Google Cloud Identity-Aware Proxy (IAP):
+
+```sh
+# Start IAP tunnel forwarding local port 8501 to remote port 8000
+gcloud compute start-iap-tunnel $SPLUNK_DEMO_INSTANCE 8000 \
+    --local-host-port=localhost:8501 \
+    --zone=$ZONE \
+    --project=$PROJECT
+```
+
+1. Open `http://localhost:8501` in your browser.
+2. Log in with username `admin` and the password configured in `terraform.tfvars` (default: `SplunkDemoPass123!`).
+3. Navigate to **Apps > Search & Reporting** and run a search (e.g. `index=*` or `sourcetype=*`) to view your Google Cloud logs in real time.
+
+### Option B: Monitoring the Dead-Letter Queue
+
+If messages cannot be delivered to Splunk, they are automatically routed to the dead-letter topic. You can monitor and inspect rejected events using the `deadletter-sub` subscription:
+
+```sh
+gcloud pubsub subscriptions pull deadletter-sub --auto-ack --limit=10
+```

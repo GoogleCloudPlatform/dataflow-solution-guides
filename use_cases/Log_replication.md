@@ -15,8 +15,8 @@ with minimal delay (in the order of single digit seconds).
 
 ## Assets included in this repository
 
-- [Terraform code to deploy a project for log replication into Splunk](../terraform/log_replication_splunk/)
-- [Use Google-provide templates to run a job to replicate to Splunk](../pipelines/log_replication_splunk/)
+- [Terraform code to deploy infrastructure for log replication into Splunk](../terraform/log_replication_splunk/)
+- [Use Google-provided templates to run a job to replicate to Splunk](../pipelines/log_replication_splunk/)
 
 ## Technical benefits
 
@@ -29,7 +29,7 @@ with minimal delay (in the order of single digit seconds).
 - **Easy operations**: Dataflow offers several features that helps
   organizations ensure the uptime of their pipelines. Snapshots preserve the
   state of your pipeline for high availability / disaster recovery scenarios,
-  while in-place streaming update can seamlessly migate your pipeline to a
+  while in-place streaming update can seamlessly migrate your pipeline to a
   new version without any data loss or downtime.
 - **Google-provided Templates**: Google provides Dataflow templates make
   deployment as easy as filling out a web form. Send logs to Splunk,
@@ -41,3 +41,4 @@ with minimal delay (in the order of single digit seconds).
   integrated error reporting and smart insights help you optimize the
   performance of your pipeline, and can catch any stuckness or slowness
   issues before they turn into outages.
+
