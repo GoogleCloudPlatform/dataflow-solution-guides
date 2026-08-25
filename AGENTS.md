@@ -143,6 +143,9 @@ When authoring or modifying code in this repository, strictly adhere to the foll
    - Always run Dataflow jobs with a dedicated custom service account (`--service_account_email` / `--serviceAccount`).
    - Grant least-privilege roles (e.g., `roles/dataflow.worker`, `roles/storage.objectAdmin`, `roles/pubsub.editor`, `roles/bigquery.dataEditor`, `roles/spanner.databaseUser`).
    - Never use the default Compute Engine service account.
+5. **Beam SDK & Custom Container Version Parity**:
+   - The Apache Beam SDK version pinned in `requirements.txt` (`apache-beam[gcp]==<version>`) and the base/boot image tag in `Dockerfile` (`apache/beam_python3.11_sdk:<version>`) **must strictly match**.
+   - Do not upgrade container tags unless the matching stable SDK package is published to PyPI and `requirements.txt` is updated in the same change.
 
 ---
 
