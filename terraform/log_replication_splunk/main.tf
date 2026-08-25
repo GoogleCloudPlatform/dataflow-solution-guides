@@ -160,6 +160,23 @@ resource "google_compute_instance" "splunk_demo" {
   }
 }
 
+// Firewall rule for demo Splunk VM (HEC on 8088 from Dataflow workers & Web UI on 8000 for IAP)
+resource "google_compute_firewall" "allow_splunk_demo" {
+  count       = var.deploy_demo_splunk ? 1 : 0
+  name        = "allow-splunk-demo-internal"
+  project     = var.project_id
+  network     = google_compute_instance.splunk_demo[0].network_interface[0].network
+  description = "Allow ingress traffic to Splunk HEC (8088) and Web UI (8000) for demo instance"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["8088", "8000"]
+  }
+
+  target_tags   = ["splunk-demo"]
+  source_ranges = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "35.235.240.0/20"]
+}
+
 // Script with variables to launch the Dataflow jobs
 resource "local_file" "variables_script" {
   filename        = "${path.module}/../../pipelines/log_replication_splunk/scripts/01_set_variables.sh"

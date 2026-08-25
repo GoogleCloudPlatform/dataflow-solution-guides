@@ -37,6 +37,7 @@ This module supports two deployment scenarios:
 | **Dataflow Service Account** | `splunk-replication-sa` | Dedicated worker service account with least-privilege IAM roles. |
 | **GCS Bucket** *(Optional)* | `${var.bucket_name}` | Staging and temporary bucket for Dataflow execution (`create_bucket = true`). |
 | **Compute Engine VM** *(Optional)* | `splunk-demo` | Demo Splunk Enterprise instance on Container-Optimized OS (`deploy_demo_splunk = true`). |
+| **Firewall Rule** *(Optional)* | `allow-splunk-demo-internal` | Allows ingress TCP on ports 8088 (HEC) and 8000 (Web UI) for demo VM (`deploy_demo_splunk = true`). |
 
 ---
 
