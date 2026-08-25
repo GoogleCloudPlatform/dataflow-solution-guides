@@ -59,7 +59,13 @@ There are two outputs in this pipeline:
 If you deployed the demo Splunk instance (`deploy_demo_splunk = true` in Terraform), you can securely connect to the Splunk Web UI from your local browser without exposing public endpoints using Google Cloud Identity-Aware Proxy (IAP):
 
 ```sh
-# Start IAP tunnel forwarding local port 8501 to remote port 8000
+# Method 1: SSH Port Forwarding over IAP (Recommended)
+gcloud compute ssh $SPLUNK_DEMO_INSTANCE \
+    --zone=$ZONE \
+    --project=$PROJECT \
+    -- -N -L 8501:localhost:8000
+
+# Method 2: Direct IAP TCP Forwarding
 gcloud compute start-iap-tunnel $SPLUNK_DEMO_INSTANCE 8000 \
     --local-host-port=localhost:8501 \
     --zone=$ZONE \

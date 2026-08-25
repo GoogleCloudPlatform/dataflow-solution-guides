@@ -32,7 +32,7 @@ module "dataflow_sa" {
   name       = local.dataflow_service_account
   iam_project_roles = {
     (var.project_id) = [
-      "roles/storage.objectAdmin",
+      "roles/storage.admin",
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
       "roles/pubsub.editor"
@@ -139,10 +139,12 @@ resource "google_compute_instance" "splunk_demo" {
         --restart=always \
         -p 8000:8000 \
         -p 8088:8088 \
+        -e "SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com" \
         -e "SPLUNK_START_ARGS=--accept-license" \
         -e "SPLUNK_PASSWORD=${var.splunk_admin_password}" \
         -e "SPLUNK_HEC_TOKEN=${local.splunk_hec_token}" \
         -e "SPLUNK_HEC_SSL=false" \
+        -e "SPLUNK_HEC_ENABLE=true" \
         splunk/splunk:latest
     EOT
   }

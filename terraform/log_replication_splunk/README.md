@@ -108,6 +108,13 @@ source scripts/01_set_variables.sh
 When using `deploy_demo_splunk = true`, the demo VM does not require a public IP. Use Google Cloud Identity-Aware Proxy (IAP) to tunnel the Splunk Web UI to your local workstation:
 
 ```bash
+# Method 1: SSH Port Forwarding over IAP (Recommended)
+gcloud compute ssh splunk-demo \
+    --zone=YOUR_ZONE \
+    --project=YOUR_PROJECT_ID \
+    -- -N -L 8501:localhost:8000
+
+# Method 2: Direct IAP TCP Forwarding
 gcloud compute start-iap-tunnel splunk-demo 8000 \
     --local-host-port=localhost:8501 \
     --zone=YOUR_ZONE \
