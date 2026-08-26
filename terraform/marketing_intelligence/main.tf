@@ -13,7 +13,8 @@
 #  limitations under the License.
 
 locals {
-  dataflow_service_account = "my-dataflow-sa"
+  bucket_name              = var.bucket_name != null ? var.bucket_name : var.project_id
+  dataflow_service_account = var.service_account_name != null ? var.service_account_name : "marketing-intel-sa"
   max_dataflow_workers     = 1
   worker_disk_size_gb      = 200
   machine_type             = "n2-standard-4"
@@ -22,35 +23,21 @@ locals {
   firestore_collection     = "customer_profiles"
 }
 
-
-// Project
-module "google_cloud_project" {
-  source          = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v57.0.0"
-  billing_account = var.billing_account
-  project_reuse   = var.project_create ? null : {}
-  name            = var.project_id
-  parent          = var.organization
-  services = [
-    "cloudbuild.googleapis.com",
-    "dataflow.googleapis.com",
-    "monitoring.googleapis.com",
-    "pubsub.googleapis.com",
-    "autoscaling.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "firestore.googleapis.com",
-    "bigquery.googleapis.com",
-  ]
+data "google_project" "project" {
+  project_id = var.project_id
 }
 
+// Artifact Registry repository for custom Dataflow worker containers
 module "registry_docker" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
+  project_id = var.project_id
   location   = var.region
   name       = "dataflow-containers"
   format     = { docker = { standard = {} } }
   iam = {
     "roles/artifactregistry.admin" = [
-      "serviceAccount:${module.google_cloud_project.number}@cloudbuild.gserviceaccount.com"
+      "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com",
+      "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
     ]
     "roles/artifactregistry.reader" = [
       module.dataflow_sa.iam_email
@@ -67,57 +54,71 @@ module "registry_docker" {
   }
 }
 
-// Buckets for staging data, scripts, etc, in the two regions
+// Optional GCS Bucket for staging data and scripts
 module "buckets" {
+  count         = var.create_bucket ? 1 : 0
   source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v57.0.0"
-  project_id    = module.google_cloud_project.project_id
-  name          = module.google_cloud_project.project_id
+  project_id    = var.project_id
+  name          = local.bucket_name
   location      = var.region
   storage_class = "STANDARD"
   force_destroy = var.destroy_all_resources
 }
 
+// Pub/Sub input topic and subscription
 module "input_topic" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
+  project_id = var.project_id
   name       = "dataflow-solutions-guide-market-intelligence-input"
   subscriptions = {
     dataflow-solutions-guide-market-intelligence-input-sub = {}
   }
 }
 
+// Pub/Sub output topic and subscription for real-time coupon/discount activations
 module "output_topic" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
+  project_id = var.project_id
   name       = "dataflow-solutions-guide-market-intelligence-output"
   subscriptions = {
     dataflow-solutions-guide-market-intelligence-output-sub = {}
   }
 }
 
-// Cloud Firestore (Native Mode)
+// Cloud Firestore (Native Mode) for real-time customer profile lookups
 resource "google_firestore_database" "database" {
-  project     = module.google_cloud_project.project_id
-  name        = "(default)"
-  location_id = var.region
-  type        = "FIRESTORE_NATIVE"
+  project         = var.project_id
+  name            = "(default)"
+  location_id     = var.region
+  type            = "FIRESTORE_NATIVE"
+  deletion_policy = var.destroy_all_resources ? "DELETE" : "ABANDON"
 }
 
-// BigQuery dataset
+// BigQuery dataset for prediction persistence
 module "output_dataset" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
+  project_id = var.project_id
   id         = local.bigquery_dataset
+  location   = var.region
+  access = {
+    dataflow-writer = { role = "OWNER", type = "user" }
+  }
+  access_identities = {
+    dataflow-writer = module.dataflow_sa.email
+  }
+  options = {
+    delete_contents_on_destroy = var.destroy_all_resources
+  }
 }
 
-// Service account
+// Dedicated Dataflow Worker Service Account
 module "dataflow_sa" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
+  project_id = var.project_id
   name       = local.dataflow_service_account
   iam_project_roles = {
-    (module.google_cloud_project.project_id) = [
-      "roles/storage.admin",
+    (var.project_id) = [
+      "roles/storage.objectAdmin",
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
       "roles/pubsub.editor",
@@ -127,71 +128,18 @@ module "dataflow_sa" {
   }
 }
 
-
-// Network
-module "vpc_network" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
-  name       = "${var.network_prefix}-net"
-  subnets = [
-    {
-      ip_cidr_range         = "10.1.0.0/16"
-      name                  = "${var.network_prefix}-subnet"
-      region                = var.region
-      enable_private_access = true
-      secondary_ip_ranges = {
-        pods     = { ip_cidr_range = "10.16.0.0/14" }
-        services = { ip_cidr_range = "10.20.0.0/24" }
-      }
-    }
-  ]
-}
-
-module "firewall_rules" {
-  // Default rules for internal traffic + SSH access via IAP
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v57.0.0"
-  project_id = module.google_cloud_project.project_id
-  network    = module.vpc_network.name
-  default_rules_config = {
-    admin_ranges = [
-      module.vpc_network.subnet_ips["${var.region}/${var.network_prefix}-subnet"],
-    ]
-  }
-  egress_rules = {
-    allow-egress-dataflow = {
-      deny        = false
-      description = "Dataflow firewall rule egress"
-      targets     = ["dataflow"]
-      rules       = [{ protocol = "tcp", ports = [12345, 12346] }]
-    }
-  }
-  ingress_rules = {
-    allow-ingress-dataflow = {
-      description = "Dataflow firewall rule ingress"
-      targets     = ["dataflow"]
-      rules       = [{ protocol = "tcp", ports = [12345, 12346] }]
-    }
-  }
-}
-module "regional_nat" {
-  // So we can get to Internet if necessary (from the Dataflow region)
-  source         = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v57.0.0"
-  project_id     = module.google_cloud_project.project_id
-  region         = var.region
-  name           = "${var.network_prefix}-nat"
-  router_network = module.vpc_network.self_link
-}
-
+// Script with variables to launch the Dataflow jobs
 resource "local_file" "variables_script" {
   filename        = "${path.module}/../../pipelines/marketing_intelligence/scripts/00_set_variables.sh"
   file_permission = "0644"
   content         = <<FILE
 # This file is generated by the Terraform code of this Solution Guide.
 # We recommend that you modify this file only through the Terraform deployment.
-export PROJECT=${module.google_cloud_project.project_id}
+export PROJECT=${var.project_id}
 export REGION=${var.region}
-export SUBNETWORK=regions/${var.region}/subnetworks/${var.network_prefix}-subnet
-export TEMP_LOCATION=gs://$PROJECT/tmp
+export SUBNETWORK=${var.subnetwork != null ? var.subnetwork : ""}
+export NETWORK=$${SUBNETWORK}
+export TEMP_LOCATION=gs://${local.bucket_name}/tmp
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 
 export DOCKER_REPOSITORY=${module.registry_docker.name}
@@ -208,9 +156,9 @@ export MACHINE_TYPE=${local.machine_type}
 export FIRESTORE_COLLECTION=${local.firestore_collection}
 export BQ_DATASET=${module.output_dataset.dataset_id}
 export BQ_TABLE=${local.bigquery_table}
-export INPUT_TOPIC=projects/${module.google_cloud_project.project_id}/topics/dataflow-solutions-guide-market-intelligence-input
-export INPUT_SUBSCRIPTION=projects/${module.google_cloud_project.project_id}/subscriptions/dataflow-solutions-guide-market-intelligence-input-sub
-export OUTPUT_TOPIC=projects/${module.google_cloud_project.project_id}/topics/dataflow-solutions-guide-market-intelligence-output
-export OUTPUT_SUBSCRIPTION=projects/${module.google_cloud_project.project_id}/subscriptions/dataflow-solutions-guide-market-intelligence-output-sub
+export INPUT_TOPIC=projects/${var.project_id}/topics/dataflow-solutions-guide-market-intelligence-input
+export INPUT_SUBSCRIPTION=projects/${var.project_id}/subscriptions/dataflow-solutions-guide-market-intelligence-input-sub
+export OUTPUT_TOPIC=projects/${var.project_id}/topics/dataflow-solutions-guide-market-intelligence-output
+export OUTPUT_SUBSCRIPTION=projects/${var.project_id}/subscriptions/dataflow-solutions-guide-market-intelligence-output-sub
 FILE
 }

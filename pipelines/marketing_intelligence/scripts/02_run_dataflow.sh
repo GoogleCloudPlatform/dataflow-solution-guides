@@ -12,10 +12,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+SUBNET_OPT=""
+if [ -n "$SUBNETWORK" ]; then
+  SUBNET_OPT="--subnetwork=$SUBNETWORK"
+elif [ -n "$NETWORK" ]; then
+  SUBNET_OPT="--subnetwork=$NETWORK"
+fi
+
 python main.py \
   --runner=DataflowRunner \
   --project=$PROJECT \
-  --temp_location=gs://$PROJECT/tmp \
+  --temp_location=${TEMP_LOCATION:-gs://$PROJECT/tmp} \
   --region=$REGION \
   --save_main_session \
   --machine_type=$MACHINE_TYPE \
@@ -24,10 +31,10 @@ python main.py \
   --max_num_workers=$MAX_DATAFLOW_WORKERS \
   --no_use_public_ip \
   --service_account_email=$SERVICE_ACCOUNT \
-  --subnetwork=$SUBNETWORK \
+  $SUBNET_OPT \
   --sdk_container_image=$CONTAINER_URI \
-  --messages_subscription=projects/$PROJECT/subscriptions/dataflow-solutions-guide-market-intelligence-input-sub \
-  --responses_topic=projects/$PROJECT/topics/dataflow-solutions-guide-market-intelligence-output \
+  --messages_subscription=${INPUT_SUBSCRIPTION:-projects/$PROJECT/subscriptions/dataflow-solutions-guide-market-intelligence-input-sub} \
+  --responses_topic=${OUTPUT_TOPIC:-projects/$PROJECT/topics/dataflow-solutions-guide-market-intelligence-output} \
   --project_id=$PROJECT \
   --firestore_collection=${FIRESTORE_COLLECTION:-customer_profiles} \
   --bq_dataset=${BQ_DATASET:-output_dataset} \

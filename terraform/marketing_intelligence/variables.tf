@@ -12,53 +12,42 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-variable "billing_account" {
-  description = "Billing account for the projects/resources"
-  type        = string
-  default     = null
-}
-
-variable "destroy_all_resources" {
-  description = "Destroy all resources when calling tf destroy. Use false for production deployments. For test environments, set to true to remove all buckets and database resources."
-  type        = bool
-  default     = true
-}
-
-variable "internet_access" {
-  description = "Set to true to create a NAT for Dataflow workers to access Internet."
-  type        = bool
-  default     = false
-}
-
-variable "network_prefix" {
-  description = "Prefix to be used for networks and subnetworks"
-  type        = string
-  default     = "dataflow"
-}
-
-variable "organization" {
-  description = "Organization for the project/resources"
-  type        = string
-  default     = null
-}
-
-variable "project_create" {
-  description = "True if you want to create a new project. False to reuse an existing project."
-  type        = bool
-}
-
 variable "project_id" {
-  description = "Project ID for the project/resources"
+  description = "Project ID of the existing GCP project where resources will be provisioned."
   type        = string
 }
 
 variable "region" {
-  description = "The region for resources and networking"
+  description = "The GCP region for application resources and Dataflow jobs."
   type        = string
 }
 
-variable "zone" {
-  description = "The compute zone. Default is a."
+variable "subnetwork" {
+  description = "Optional subnetwork URL or path for Dataflow workers (e.g. regions/europe-southwest1/subnetworks/dev-default or full Shared VPC URI). If omitted, the default network is used."
   type        = string
-  default     = "a"
+  default     = null
+}
+
+variable "bucket_name" {
+  description = "Optional GCS bucket name for Dataflow temp/staging files. Defaults to project_id if not specified."
+  type        = string
+  default     = null
+}
+
+variable "service_account_name" {
+  description = "Name of the dedicated Dataflow worker service account to create."
+  type        = string
+  default     = "marketing-intel-sa"
+}
+
+variable "create_bucket" {
+  description = "Whether to create a new GCS bucket for temp/staging files. Set to false if using an existing bucket."
+  type        = bool
+  default     = false
+}
+
+variable "destroy_all_resources" {
+  description = "Destroy all resources when calling tf destroy. Use false for production deployments. For test environments, set to true to remove all resources."
+  type        = bool
+  default     = true
 }
