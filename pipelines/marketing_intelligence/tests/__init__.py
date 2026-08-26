@@ -11,16 +11,3 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
-steps:
-  - name: 'gcr.io/cloud-builders/docker'
-    script: |
-      docker build -t ${_TAG} .
-substitutions:
-  _TAG: unset
-options:
-  substitutionOption: 'ALLOW_LOOSE'
-  automapSubstitutions: true
-  machineType: E2_HIGHCPU_8
-images:
-  - ${_TAG}

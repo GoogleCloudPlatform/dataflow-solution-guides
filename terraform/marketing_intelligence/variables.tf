@@ -19,7 +19,7 @@ variable "billing_account" {
 }
 
 variable "destroy_all_resources" {
-  description = "Destroy all resources when calling tf destroy. Use false for production deployments. For test environments, set to true to remove all buckets and bigtable instances."
+  description = "Destroy all resources when calling tf destroy. Use false for production deployments. For test environments, set to true to remove all buckets and database resources."
   type        = bool
   default     = true
 }
@@ -58,7 +58,7 @@ variable "region" {
 }
 
 variable "zone" {
-  description = "The zone for Bigtable. Just a single lower case letter for the zone. Default is a."
+  description = "The compute zone. Default is a."
   type        = string
   default     = "a"
 }
