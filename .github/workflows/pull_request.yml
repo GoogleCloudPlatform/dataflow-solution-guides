@@ -42,39 +42,75 @@ jobs:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
+          list-files: json
           filters: |
+            workflow:
+              - '.github/workflows/pull_request.yml'
             terraform:
               - 'terraform/**'
-              - '.github/workflows/pull_request.yml'
+      - name: Detect target Terraform modules
+        if: steps.filter.outputs.terraform == 'true' || steps.filter.outputs.workflow == 'true'
+        id: targets
+        working-directory: terraform
+        env:
+          IS_WORKFLOW: ${{ steps.filter.outputs.workflow }}
+          FILES_JSON: ${{ steps.filter.outputs.terraform_files }}
+        run: |
+          if [ "$IS_WORKFLOW" = "true" ]; then
+            DIRS=""
+            for d in */; do
+              if [ -d "$d" ]; then
+                DIRS="$DIRS ${d%/}"
+              fi
+            done
+            DIRS="${DIRS# }"
+          else
+            DIRS=$(echo "$FILES_JSON" | jq -r '.[] | select(startswith("terraform/")) | split("/") | select(length > 2) | .[1]' | sort -u | tr '\n' ' ')
+            DIRS="${DIRS% }"
+          fi
+          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
+          echo "Target Terraform modules: $DIRS"
       - name: Setup Terraform
-        if: steps.filter.outputs.terraform == 'true'
+        if: (steps.filter.outputs.terraform == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
       - name: Terraform Init
-        if: steps.filter.outputs.terraform == 'true'
+        if: (steps.filter.outputs.terraform == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         working-directory: terraform
+        env:
+          TARGET_DIRS: ${{ steps.targets.outputs.dirs }}
         run: |
-          ls -d */ | while read d
+          for d in $TARGET_DIRS
           do
-          echo "Running tf init in directory: $d"
-          cd $d && terraform init && cd ..
+            if [ -d "$d" ]; then
+              echo "Running tf init in directory: $d"
+              cd "$d" && terraform init && cd ..
+            fi
           done
       - name: Terraform Format
-        if: steps.filter.outputs.terraform == 'true'
+        if: (steps.filter.outputs.terraform == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         working-directory: terraform
+        env:
+          TARGET_DIRS: ${{ steps.targets.outputs.dirs }}
         run: |
-          ls -d */ | while read d
+          for d in $TARGET_DIRS
           do
-          echo "Running tf format check in directory: $d"
-          cd $d && terraform fmt -check && cd ..
+            if [ -d "$d" ]; then
+              echo "Running tf format check in directory: $d"
+              cd "$d" && terraform fmt -check && cd ..
+            fi
           done
       - name: Terraform Validate
-        if: steps.filter.outputs.terraform == 'true'
+        if: (steps.filter.outputs.terraform == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         working-directory: terraform
+        env:
+          TARGET_DIRS: ${{ steps.targets.outputs.dirs }}
         run: |
-          ls -d */ | while read d
+          for d in $TARGET_DIRS
           do
-          echo "Running tf validate in directory: $d"
-          cd $d && terraform validate && cd ..
+            if [ -d "$d" ]; then
+              echo "Running tf validate in directory: $d"
+              cd "$d" && terraform validate && cd ..
+            fi
           done
   java-build:
     name: 'Java pipelines build'
@@ -87,16 +123,40 @@ jobs:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
+          list-files: json
           filters: |
+            workflow:
+              - '.github/workflows/pull_request.yml'
             java:
               - 'pipelines/*_java/**'
               - 'pipelines/**/*.java'
               - 'pipelines/**/build.gradle'
               - 'pipelines/**/gradle/**'
               - 'pipelines/**/gradlew*'
-              - '.github/workflows/pull_request.yml'
+      - name: Detect target Java pipelines
+        if: steps.filter.outputs.java == 'true' || steps.filter.outputs.workflow == 'true'
+        id: targets
+        working-directory: pipelines
+        env:
+          IS_WORKFLOW: ${{ steps.filter.outputs.workflow }}
+          FILES_JSON: ${{ steps.filter.outputs.java_files }}
+        run: |
+          if [ "$IS_WORKFLOW" = "true" ]; then
+            DIRS=""
+            for d in */; do
+              if [ -f "$d/gradlew" ]; then
+                DIRS="$DIRS ${d%/}"
+              fi
+            done
+            DIRS="${DIRS# }"
+          else
+            DIRS=$(echo "$FILES_JSON" | jq -r '.[] | select(startswith("pipelines/")) | split("/") | select(length > 2) | .[1]' | sort -u | tr '\n' ' ')
+            DIRS="${DIRS% }"
+          fi
+          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
+          echo "Target Java pipelines: $DIRS"
       - name: Set up JDK 25
-        if: steps.filter.outputs.java == 'true'
+        if: (steps.filter.outputs.java == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           java-version: '25'
@@ -104,23 +164,25 @@ jobs:
       # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
       # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
       - name: Setup Gradle
-        if: steps.filter.outputs.java == 'true'
+        if: (steps.filter.outputs.java == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           build-scan-publish: true
           build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
           build-scan-terms-of-use-agree: "yes"
       - name: Build with Gradle Wrapper
-        if: steps.filter.outputs.java == 'true'
+        if: (steps.filter.outputs.java == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         working-directory: pipelines
+        env:
+          TARGET_DIRS: ${{ steps.targets.outputs.dirs }}
         run: |
-          for pipeline_dir in */
+          for pipeline_dir in $TARGET_DIRS
           do
             echo "Checking pipelines/$pipeline_dir"
             if [ -f "$pipeline_dir/gradlew" ]
             then
               echo Gradle build found
-              cd $pipeline_dir
+              cd "$pipeline_dir"
               ./gradlew build
               cd ..
             else
@@ -138,38 +200,64 @@ jobs:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
+          list-files: json
           filters: |
+            shared:
+              - 'pipelines/pylintrc'
+              - '.github/workflows/pull_request.yml'
             pylint:
               - 'pipelines/**/*.py'
-              - 'pipelines/pylintrc'
               - 'pipelines/**/setup.py'
               - 'pipelines/**/requirements*.txt'
-              - '.github/workflows/pull_request.yml'
+      - name: Detect target Python pipelines for PyLint
+        if: steps.filter.outputs.pylint == 'true' || steps.filter.outputs.shared == 'true'
+        id: targets
+        working-directory: pipelines
+        env:
+          IS_SHARED: ${{ steps.filter.outputs.shared }}
+          FILES_JSON: ${{ steps.filter.outputs.pylint_files }}
+        run: |
+          if [ "$IS_SHARED" = "true" ]; then
+            DIRS=""
+            for d in */; do
+              if [ -f "$d/setup.py" ]; then
+                DIRS="$DIRS ${d%/}"
+              fi
+            done
+            DIRS="${DIRS# }"
+          else
+            DIRS=$(echo "$FILES_JSON" | jq -r '.[] | select(startswith("pipelines/")) | split("/") | select(length > 2) | .[1]' | sort -u | tr '\n' ' ')
+            DIRS="${DIRS% }"
+          fi
+          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
+          echo "Target PyLint pipelines: $DIRS"
       - name: Setup Python
-        if: steps.filter.outputs.pylint == 'true'
+        if: (steps.filter.outputs.pylint == 'true' || steps.filter.outputs.shared == 'true') && steps.targets.outputs.dirs != ''
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
       - name: Install pylint
-        if: steps.filter.outputs.pylint == 'true'
+        if: (steps.filter.outputs.pylint == 'true' || steps.filter.outputs.shared == 'true') && steps.targets.outputs.dirs != ''
         run: |
           python -m pip install --upgrade pip
           pip install pylint
       - name: Run pylint
-        if: steps.filter.outputs.pylint == 'true'
+        if: (steps.filter.outputs.pylint == 'true' || steps.filter.outputs.shared == 'true') && steps.targets.outputs.dirs != ''
         working-directory: pipelines
+        env:
+          TARGET_DIRS: ${{ steps.targets.outputs.dirs }}
         run: |
-          for pipeline_dir in */
+          for pipeline_dir in $TARGET_DIRS
           do
             echo "Checking pipelines/$pipeline_dir"
             if [ -f "$pipeline_dir/setup.py" ]
             then
               echo
               echo -------------------------------------
-              echo Checking format $pipeline_dir
+              echo Checking format "$pipeline_dir"
               echo -------------------------------------
               echo
-              cd $pipeline_dir
+              cd "$pipeline_dir"
               pylint --rcfile ../pylintrc .
               cd ..
             else
@@ -187,42 +275,68 @@ jobs:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
+          list-files: json
           filters: |
+            workflow:
+              - '.github/workflows/pull_request.yml'
             python:
               - 'pipelines/**/*.py'
               - 'pipelines/**/setup.py'
               - 'pipelines/**/requirements*.txt'
               - 'pipelines/**/Pipfile*'
-              - '.github/workflows/pull_request.yml'
+      - name: Detect target Python pipelines
+        if: steps.filter.outputs.python == 'true' || steps.filter.outputs.workflow == 'true'
+        id: targets
+        working-directory: pipelines
+        env:
+          IS_WORKFLOW: ${{ steps.filter.outputs.workflow }}
+          FILES_JSON: ${{ steps.filter.outputs.python_files }}
+        run: |
+          if [ "$IS_WORKFLOW" = "true" ]; then
+            DIRS=""
+            for d in */; do
+              if [ -f "$d/setup.py" ]; then
+                DIRS="$DIRS ${d%/}"
+              fi
+            done
+            DIRS="${DIRS# }"
+          else
+            DIRS=$(echo "$FILES_JSON" | jq -r '.[] | select(startswith("pipelines/")) | split("/") | select(length > 2) | .[1]' | sort -u | tr '\n' ' ')
+            DIRS="${DIRS% }"
+          fi
+          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
+          echo "Target Python pipelines: $DIRS"
       - name: Setup Python
-        if: steps.filter.outputs.python == 'true'
+        if: (steps.filter.outputs.python == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
       - name: Install pipenv
-        if: steps.filter.outputs.python == 'true'
+        if: (steps.filter.outputs.python == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
       - name: Python builds
-        if: steps.filter.outputs.python == 'true'
+        if: (steps.filter.outputs.python == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         working-directory: pipelines
+        env:
+          TARGET_DIRS: ${{ steps.targets.outputs.dirs }}
         run: |
           export PIPENV_VENV_IN_PROJECT=1
-          for pipeline_dir in */
+          for pipeline_dir in $TARGET_DIRS
           do
             echo "Checking pipelines/$pipeline_dir"
             if [ -f "$pipeline_dir/setup.py" ]
             then
               echo
               echo -------------------------------------
-              echo Building $pipeline_dir
+              echo Building "$pipeline_dir"
               echo -------------------------------------
               echo
-              cd $pipeline_dir
+              cd "$pipeline_dir"
               pipenv install
               for req_txt in requirements*.txt
               do
-                echo ----- Installing dependencies in $req_txt -----
-                pipenv install -r $req_txt
+                echo ----- Installing dependencies in "$req_txt" -----
+                pipenv install -r "$req_txt"
               done
               echo ----- Building package -----
               pipenv run python setup.py sdist
@@ -246,30 +360,56 @@ jobs:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
+          list-files: json
           filters: |
+            workflow:
+              - '.github/workflows/pull_request.yml'
             docker:
               - 'pipelines/**/Dockerfile'
               - 'pipelines/**/*.py'
               - 'pipelines/**/requirements*.txt'
-              - '.github/workflows/pull_request.yml'
-      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-        if: steps.filter.outputs.docker == 'true'
-      - name: Docker builds
-        if: steps.filter.outputs.docker == 'true'
+      - name: Detect target Docker containers
+        if: steps.filter.outputs.docker == 'true' || steps.filter.outputs.workflow == 'true'
+        id: targets
         working-directory: pipelines
+        env:
+          IS_WORKFLOW: ${{ steps.filter.outputs.workflow }}
+          FILES_JSON: ${{ steps.filter.outputs.docker_files }}
         run: |
-          for pipeline_dir in */
+          if [ "$IS_WORKFLOW" = "true" ]; then
+            DIRS=""
+            for d in */; do
+              if [ -f "$d/Dockerfile" ]; then
+                DIRS="$DIRS ${d%/}"
+              fi
+            done
+            DIRS="${DIRS# }"
+          else
+            DIRS=$(echo "$FILES_JSON" | jq -r '.[] | select(startswith("pipelines/")) | split("/") | select(length > 2) | .[1]' | sort -u | tr '\n' ' ')
+            DIRS="${DIRS% }"
+          fi
+          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
+          echo "Target Docker containers: $DIRS"
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        if: (steps.filter.outputs.docker == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
+      - name: Docker builds
+        if: (steps.filter.outputs.docker == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
+        working-directory: pipelines
+        env:
+          TARGET_DIRS: ${{ steps.targets.outputs.dirs }}
+        run: |
+          for pipeline_dir in $TARGET_DIRS
           do
             echo "Checking pipelines/$pipeline_dir"
             if [ -f "$pipeline_dir/Dockerfile" ]
             then
               echo
               echo -------------------------------------
-              echo Building Docker $pipeline_dir
+              echo Building Docker "$pipeline_dir"
               echo -------------------------------------
               echo
-              cd $pipeline_dir
-              mkdir gemma_2B && touch gemma_2B/DUMMY
+              cd "$pipeline_dir"
+              mkdir -p gemma_2B && touch gemma_2B/DUMMY
               docker build -t github-actions .
               cd ..
             else
