@@ -1,104 +1,170 @@
-# Market Intelligence sample pipeline (Python)
+# Market Intelligence Solution Pipeline (Python)
 
-This sample pipeline demonstrates how to use Dataflow to process data, and calculate predictions
-using Vertex AI Endpoint, by training a model using AutoML and deploying it on Vertex AI Endpoint.
-This pipeline is written in Python.
+This sample streaming pipeline demonstrates how to implement real-time **Marketing Intelligence & Next-Best-Offer Personalization** using **Apache Beam** and **Google Cloud Dataflow**.
 
-This pipeline is part of the [Dataflow Gen AI & ML solution guide](../../use_cases/Market_Intelligence.md).
+The pipeline ingests streaming e-commerce customer interaction events, enriches them with historical customer profiles stored in **Cloud Firestore (Native Mode)** using in-memory worker-side LRU caching, executes an on-worker **Scikit-Learn purchase propensity model** via Apache Beam's `RunInference`, persists all enriched records to **BigQuery** via the Storage Write API, and publishes real-time high-propensity discount and coupon activation triggers to **Pub/Sub**.
 
-## Architecture
+This pipeline is part of the [Dataflow Marketing Intelligence Solution Guide](../../use_cases/Marketing_Intelligence.md).
 
-The generic architecture for an inference pipeline is shown below:
+---
 
-![Architecture](../imgs/market_intel.png)
+## 1. Architecture Overview
 
-In this directory, you will find a specific implementation of the above architecture, with the
-following stages:
+```mermaid
+flowchart TD
+    subgraph Ingestion & Mock Data
+        TG["01_train_model.py\n(Synthetic Journey Data)"] -->|"Train & Export"| MODEL[("marketing_model.pkl\n(Random Forest Classifier)")]
+        FG["02_populate_firestore.py\n(Historical Profiles)"] -->|"Batch Insert"| FS[("Cloud Firestore (Native Mode)\nCollection: customer_profiles\nDoc ID: user_id")]
+        PG["03_publish_events.py\n(Streaming User Actions)"] -->|"Publish JSON"| PS_IN["Pub/Sub Topic\n(Input Events)"]
+    end
 
-1. **Data ingestion:** Reads data from a Pub/Sub topic.
-For more information about Pub/Sub [ Cloud Pub/Sub Overview]( https://cloud.google.com/pubsub/docs/overview).
-2. **Data preprocessing:** While this sample pipeline doesn't perform any transformations, you can easily add a preprocessing step using the
-   [the Enrichment transform](https://cloud.google.com/dataflow/docs/guides/enrichment) for feature engineering before invoking the model.
+    subgraph Containerization & Cloud Build
+        MODEL -->|"Copy Artifact"| DOCKER["Dockerfile\n(Pre-baked Model + Dependencies)"]
+        DOCKER -->|"Cloud Build"| AR[("Artifact Registry\ndataflow-containers/\nmarket-intelligence:0.1")]
+    end
 
-3. **Inference:** Uses the RunInference transform with VertexAIModelHandlerJSON, which in turn sends online prediction request to an Auto-ML generated model. The pipeline uses a GPU with the Dataflow worker, to speed up the inference. For more information about Vertex AI [Vertex AI Overview](https://cloud.google.com/vertex-ai/docs/overview).
+    subgraph Dataflow Streaming Pipeline (Hermetic Container)
+        AR -.->|"Worker Boot Image"| WORKERS["Dataflow Workers\n(python:3.11-slim)"]
+        PS_IN -->|"beam.io.ReadFromPubSub"| EXTRACT["Extract & Parse JSON\n(user_id, item_id, category, duration)"]
+        EXTRACT -->|"FirestoreEnrichmentDoFn\n(with LRU In-Memory Cache)"| ENRICH["Enrich with Firestore\n(past_spend, loyalty_tier, days_inactive)"]
+        FS -.->|"Lookup user_id"| ENRICH
+        ENRICH -->|"Feature Vector Mapping"| FEAT["Keyed Feature Vector (Dict, Array)"]
+        FEAT -->|"RunInference (KeyedModelHandler)"| INF["Local Model Inference\n(Propensity Score & Category)"]
+        WORKERS -.->|"Loaded from /workspace/marketing_model.pkl"| INF
+    end
 
-4. **Predictions:** The predictions are sent to another Pub/Sub topic as output.
-
-## Auto-ML model
-
-The model can be deployed on a Vertex AI endpoint to serve various purposes.
-To demonstrate the process, we followed these steps to create, train, and deploy the model:
-
-1. Create a [Vertex-AI Dataset](https://cloud.google.com/vertex-ai/docs/tutorials/tabular-bq-prediction/create-dataset) using an existing Bigquery table.
-2. Train a [Text-Classification Model](https://cloud.google.com/vertex-ai/docs/beginner/beginners-guide#train_model) using AutoML.
-3. Once the model is ready, it can be [deployed and tested](https://cloud.google.com/vertex-ai/docs/tutorials/image-classification-automl/deploy-predict#deploy_your_model_to_an_endpoint) on Vertex-AI endpoint.
-4. Take a note of the end-point ID.
-
-## Getting Started
-
-## Choosing Your Cloud Region
-
-It's important to choose your cloud region carefully, as not all Google Cloud services and features are available in every region.
-
-Tip: The default settings in this directory have been tested and work well in the us-central1 region. If you choose a different region, you may need to adjust some settings.
-
-## Choosing Your Machine Type:
-
-The cloudbuild.yaml file currently uses the E2_HIGHCPU_8 machine type. If this type isn't available in your chosen region, you'll need to edit the file and select a different machine type that is supported.
-[Machine types](https://cloud.google.com/compute/docs/machine-types)
-
-
-## Choosing Your Dataflow Worker Machine Type
-
-The `scripts/00_set_environment.sh` file also specifies the machine type for your Dataflow workers. We recommend `g2-standard-4` for optimal GPU inference performance.
-
-If `g2-standard-4` isn't available in your region, you can list suitable machine types using this command (replace <ZONE A>, <ZONE B>, etc. with your desired zones):
-
-```sh
-gcloud compute machine-types list --zones=<ZONE A>,<ZONE B>,.
+    subgraph Storage & Activation Sinks
+        INF -->|"beam.io.WriteToBigQuery\n(Storage Write API)"| BQ[("BigQuery: output_dataset.predictions\n(Analytics & Looker BI)")]
+        INF -->|"Filter: Propensity >= 0.80"| ACT["High-Propensity Filter"]
+        ACT -->|"pubsub.WriteStringsToPubSub"| PS_OUT["Pub/Sub Topic\n(Instant Coupon / Offer Trigger)"]
+    end
 ```
 
-See more info about selecting the right type of machine Type in the [Machine Types](https://cloud.google.com/compute/docs/machine-types)
+### Key Architectural Strengths
+- **$0 Idle Infrastructure Cost**: Serverless Cloud Firestore (Native Mode) replaces expensive standing database clusters while delivering single-digit millisecond document lookups.
+- **Hermetic Custom Container**: Dependencies, pipeline code, and the serialized model (`marketing_model.pkl`) are pre-baked into a lightweight `python:3.11-slim` container, eliminating runtime PyPI downloads and startup lag.
+- **Worker-Side LRU Caching**: In-memory caching (`cachetools.TTLCache`) eliminates repetitive Firestore read operations on active users.
+- **Dual Destination Sinks**: Dual output for analytical BI reporting in **BigQuery** and real-time coupon/discount dispatching via **Pub/Sub**.
 
+---
 
-## Next Steps
-
-## Launch the pipeline
-
-All scripts are in the scripts directory and designed to run from the project's root directory.
-
-In the script `scripts/00_set_environment.sh`, define the value of the project id and the region variable:
+## 2. Directory Structure
 
 ```
-export PROJECT=<YOUR PROJECT ID>
-export REGION=<YOUR CLOUD REGION>
+pipelines/marketing_intelligence/
+├── Dockerfile                                     # Hermetic container definition (Python 3.11-slim + Beam 2.75.0)
+├── cloudbuild.yaml                                # Cloud Build recipe for Artifact Registry container build
+├── main.py                                        # Pipeline launch entrypoint
+├── requirements.txt                               # Pipeline runtime dependencies
+├── setup.py                                       # Package definitions
+├── marketing_model.pkl                            # Serialized Scikit-Learn propensity model artifact
+├── marketing_intelligence_pipeline/
+│   ├── __init__.py
+│   ├── options.py                                 # Pipeline CLI options
+│   └── pipeline.py                                # Beam pipeline DAG (Firestore, RunInference, BQ, Pub/Sub)
+├── scripts/
+│   ├── 00_set_variables.sh                        # Generated by Terraform (environment configuration)
+│   ├── 01_train_model.py                          # Synthetic data generation & model training script
+│   ├── 02_populate_firestore.py                   # Firestore customer profile batch seeder
+│   ├── 03_publish_events.py                       # Streaming Pub/Sub event generator
+│   ├── 01_build_and_push_container.sh             # Triggers Cloud Build container build
+│   ├── 02_run_dataflow.sh                         # Submits streaming pipeline to Dataflow
+│   └── 02_run_local.sh                            # Local DirectRunner test execution script
+└── tests/
+    ├── __init__.py
+    ├── test_firestore_enrichment.py               # Unit tests for Firestore lookup and caching
+    ├── test_feature_extraction.py                 # Unit tests for feature vectors and offer assignment
+    └── test_pipeline.py                           # End-to-end Beam TestPipeline tests
 ```
 
-You can leave the remaining variables at their default values, but feel free to override them if you have specific preferences or requirements.
+---
 
-Once you've finished editing the script, make sure to source it again to load the updated variables into your current environment by running the following command.
+## 3. End-to-End Deployment Guide
 
-```sh
-source scripts/00_set_environment.sh
+### Step 1: Infrastructure Provisioning
+Navigate to `terraform/marketing_intelligence/` and deploy the cloud infrastructure:
+```bash
+cd ../../terraform/marketing_intelligence
+terraform init
+terraform apply
+```
+This generates `pipelines/marketing_intelligence/scripts/00_set_variables.sh` with all environment variables.
+
+### Step 2: Environment Setup
+Navigate back to the pipeline directory and source the environment variables:
+```bash
+cd ../../pipelines/marketing_intelligence
+source scripts/00_set_variables.sh
 ```
 
-Next, run the script to build and publish the custom Dataflow container. This container will include the necessary dependencies for the worker.
+### Step 3: Train the Propensity Model
+Generate synthetic customer journey training data and train the Scikit-Learn classification model:
+```bash
+python scripts/01_train_model.py
+```
+This evaluates the model (ROC-AUC > 0.85), exports `marketing_model.pkl`, and creates `training_data.csv`.
 
-```sh
+### Step 4: Seed Cloud Firestore Customer Profiles
+Seed 1,000 mock customer profiles (`user_1001` through `user_2000`) into Firestore:
+```bash
+python scripts/02_populate_firestore.py
+```
+
+### Step 5: Build and Push Custom Worker Container
+Build the hermetic container image with pre-baked model and dependencies using Google Cloud Build:
+```bash
 ./scripts/01_build_and_push_container.sh
 ```
 
-This will create a Cloud Build job that can take a few minutes to complete. Once it completes, you
-can trigger the pipeline with the following:
-
-```sh
+### Step 6: Launch the Dataflow Pipeline
+Submit the streaming pipeline job to Google Cloud Dataflow:
+```bash
 ./scripts/02_run_dataflow.sh
 ```
 
-## Input data
+*(Optional: For local development and testing without Dataflow, run `./scripts/02_run_local.sh`)*
 
-To feed data into the pipeline, publish messages to the Pub/Sub topic `dataflow-solutions-guide-market-intelligence-input` These messages are sent directly to the endpoint without modification.
+### Step 7: Stream Simulated Interaction Events
+Stream realistic customer interaction events into the Pub/Sub input topic:
+```bash
+python scripts/03_publish_events.py --rate=5.0 --count=200
+```
 
-## Output data
+---
 
-Predictions are published to the Pub/Sub topic `dataflow-solutions-guide-market-intelligence-output topic and can be viewed using the Pub/Sub console.dataflow-solutions-guide-market-intelligence-output-sub subscription.
+## 4. Verification & Validation
+
+### A. BigQuery Storage Write API Verification
+Query the predicted and enriched customer events in BigQuery:
+```sql
+SELECT
+  user_id,
+  loyalty_tier,
+  item_category,
+  cart_value,
+  propensity_score,
+  predicted_purchase,
+  recommended_offer,
+  processed_timestamp
+FROM `output_dataset.predictions`
+ORDER BY processed_timestamp DESC
+LIMIT 20;
+```
+
+### B. High-Propensity Activation Verification (Pub/Sub)
+Verify instant coupon/discount activation payloads emitted for high-propensity events ($\ge 0.80$):
+```bash
+gcloud pubsub subscriptions pull \
+  projects/$PROJECT/subscriptions/dataflow-solutions-guide-market-intelligence-output-sub \
+  --auto-ack \
+  --limit=5
+```
+
+---
+
+## 5. Automated Tests
+
+Execute unit and pipeline tests with `pytest`:
+```bash
+pytest tests/ -v
+```
