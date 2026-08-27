@@ -17,7 +17,7 @@ This skill guides the agent through developing, modifying, testing, linting, pac
 Python pipelines are located in `pipelines/<use_case>/`.
 
 ### Step 1: Environment & Dependencies
-Ensure Python 3.11+ is used. In the pipeline directory:
+Ensure Python 3.13+ is used. In the pipeline directory:
 ```bash
 # Create and activate virtual environment
 python3 -m venv .venv
@@ -60,7 +60,7 @@ python main.py \
 
 ### Step 6: Custom SDK Container Build (if required)
 For pipelines using GPU acceleration, custom C/Python libraries, or specialized base images (e.g. `ml_ai_python`, `anomaly_detection`, `cdp`, `iot_analytics`, `marketing_intelligence`):
-- **SDK Version Parity**: Verify that the `apache/beam_python3.11_sdk:<version>` tag in `Dockerfile` matches `requirements.txt` (`apache-beam[gcp]==<version>`).
+- **SDK Version Parity**: Verify that the `apache/beam_python3.13_sdk:<version>` tag in `Dockerfile` matches `requirements.txt` (`apache-beam[gcp]==<version>`).
 ```bash
 # Set required image tag
 export CONTAINER_URI="gcr.io/$PROJECT/dataflow-ml-custom:latest"

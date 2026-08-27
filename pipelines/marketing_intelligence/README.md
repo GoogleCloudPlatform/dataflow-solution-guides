@@ -24,7 +24,7 @@ flowchart TD
     end
 
     subgraph Dataflow Streaming Pipeline (Hermetic Container)
-        AR -.->|"Worker Boot Image"| WORKERS["Dataflow Workers\n(python:3.11-slim)"]
+        AR -.->|"Worker Boot Image"| WORKERS["Dataflow Workers\n(python:3.13-slim)"]
         PS_IN -->|"beam.io.ReadFromPubSub"| EXTRACT["Extract & Parse JSON\n(user_id, item_id, category, duration)"]
         EXTRACT -->|"FirestoreEnrichmentDoFn\n(with LRU In-Memory Cache)"| ENRICH["Enrich with Firestore\n(past_spend, loyalty_tier, days_inactive)"]
         FS -.->|"Lookup user_id"| ENRICH
@@ -42,7 +42,7 @@ flowchart TD
 
 ### Key Architectural Strengths
 - **$0 Idle Infrastructure Cost**: Serverless Cloud Firestore (Native Mode) replaces expensive standing database clusters while delivering single-digit millisecond document lookups.
-- **Hermetic Custom Container**: Dependencies, pipeline code, and the serialized model (`marketing_model.pkl`) are pre-baked into a lightweight `python:3.11-slim` container, eliminating runtime PyPI downloads and startup lag.
+- **Hermetic Custom Container**: Dependencies, pipeline code, and the serialized model (`marketing_model.pkl`) are pre-baked into a lightweight `python:3.13-slim` container, eliminating runtime PyPI downloads and startup lag.
 - **Worker-Side LRU Caching**: In-memory caching (`cachetools.TTLCache`) eliminates repetitive Firestore read operations on active users.
 - **Dual Destination Sinks**: Dual output for analytical BI reporting in **BigQuery** and real-time coupon/discount dispatching via **Pub/Sub**.
 
@@ -52,7 +52,7 @@ flowchart TD
 
 ```
 pipelines/marketing_intelligence/
-├── Dockerfile                                     # Hermetic container definition (Python 3.11-slim + Beam 2.75.0)
+├── Dockerfile                                     # Hermetic container definition (Python 3.13-slim + Beam 2.75.0)
 ├── cloudbuild.yaml                                # Cloud Build recipe for Artifact Registry container build
 ├── main.py                                        # Pipeline launch entrypoint
 ├── requirements.txt                               # Pipeline runtime dependencies
