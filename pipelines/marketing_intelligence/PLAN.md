@@ -114,14 +114,14 @@ CREATE TABLE `output_dataset.predictions` (
 The custom container ensures the pipeline is **100% self-contained**, eliminating all external runtime package downloads and guaranteeing fast, predictable worker startup during autoscaling.
 
 ### A. Dockerfile Specifications ([`Dockerfile`](file:///usr/local/google/home/ihr/projects/dataflow-solution-guides/pipelines/marketing_intelligence/Dockerfile))
-* **Base Image**: `python:3.11-slim` (streamlined CPU base, avoiding heavy GPU/CUDA overhead).
+* **Base Image**: `python:3.13-slim` (streamlined CPU base, avoiding heavy GPU/CUDA overhead).
 * **Pre-Baked Model**: Bundles `marketing_model.pkl` directly into `/workspace/marketing_model.pkl`.
 * **Pre-Installed Dependencies**: Installs all required packages at build time (`apache-beam[gcp]==2.75.0`, `google-cloud-firestore`, `scikit-learn`, `pandas`, `numpy`, `cachetools`).
-* **Beam Boot Loader**: Copies the official Apache Beam SDK boot launcher from `apache/beam_python3.11_sdk:2.75.0` to `/opt/apache/beam/boot`.
+* **Beam Boot Loader**: Copies the official Apache Beam SDK boot launcher from `apache/beam_python3.13_sdk:2.75.0` to `/opt/apache/beam/boot`.
 * **Entrypoint**: Sets `ENTRYPOINT ["/opt/apache/beam/boot"]`.
 
 ```dockerfile
-FROM python:3.11-slim
+FROM python:3.13-slim
 WORKDIR /workspace
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
@@ -140,7 +140,7 @@ RUN pip install --upgrade --no-cache-dir pip \
     && pip install --no-cache-dir -e .
 
 # Copy Apache Beam boot entrypoint binaries
-COPY --from=apache/beam_python3.11_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.13_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 
 ENTRYPOINT ["/opt/apache/beam/boot"]
 ```
@@ -221,7 +221,7 @@ ENTRYPOINT ["/opt/apache/beam/boot"]
     cachetools>=5.3.0
     ```
 - [ ] **Update [`Dockerfile`](file:///usr/local/google/home/ihr/projects/dataflow-solution-guides/pipelines/marketing_intelligence/Dockerfile)**:
-  - Streamline to CPU base (`python:3.11-slim`).
+  - Streamline to CPU base (`python:3.13-slim`).
   - Bundle `marketing_model.pkl` and package dependencies.
   - Ensure strict version parity with Beam SDK `2.75.0`.
 - [ ] **Clean Up [`cloudbuild.yaml`](file:///usr/local/google/home/ihr/projects/dataflow-solution-guides/pipelines/marketing_intelligence/cloudbuild.yaml)**:

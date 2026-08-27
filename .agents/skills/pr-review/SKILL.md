@@ -45,7 +45,7 @@ Before approving or merging, identify the PR type and apply the corresponding ch
 * [ ] **Builds Pass**: Confirm `Build and validation` workflow passes all jobs (Java, Python, Terraform, Docker).
 * [ ] **Compatibility**: Ensure upgraded versions (e.g. Gradle plugins, Python libraries, Cloud Foundation Fabric modules) maintain backward compatibility.
 * [ ] **Beam SDK & Container Parity**:
-  - If `apache/beam_python3.11_sdk` Docker tag is updated, verify `requirements.txt` (`apache-beam[gcp]==<version>`) is updated concurrently.
+  - If `apache/beam_python3.13_sdk` Docker tag is updated, verify `requirements.txt` (`apache-beam[gcp]==<version>`) is updated concurrently.
   - Verify that the target `apache-beam` release is published and generally available on PyPI (not just release candidates).
   - Do NOT merge isolated Dockerfile upgrades if the corresponding PyPI package is missing or `requirements.txt` is not kept in sync.
 * [ ] **Sync Across Pipelines**: If a shared plugin/dependency is updated, check if other pipelines should also be kept in sync.
@@ -62,7 +62,7 @@ Before approving or merging, identify the PR type and apply the corresponding ch
 * [ ] **Formatting**: Formatted with `yapf -i -r --style yapf .`.
 * [ ] **Linting**: 0 errors from `pylint --rcfile ../pylintrc .`.
 * [ ] **Package Build**: `python setup.py sdist` builds source distribution without missing files.
-* [ ] **SDK & Container Parity**: `Dockerfile` (`apache/beam_python3.11_sdk:<version>`) and `requirements.txt` (`apache-beam[gcp]==<version>`) use the exact same version.
+* [ ] **SDK & Container Parity**: `Dockerfile` (`apache/beam_python3.13_sdk:<version>`) and `requirements.txt` (`apache-beam[gcp]==<version>`) use the exact same version.
 * [ ] **Pipeline Options**: Private IPs enforced (`--no_use_public_ip`), dedicated service account specified.
 * [ ] **DoFn Serialization**: Heavy/network objects initialized in `setup()`, not `__init__()`.
 * [ ] **Custom Container / Cloud Build**: If custom SDK container is used, `Dockerfile` and `cloudbuild.yaml` follow repo standards.
