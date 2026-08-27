@@ -29,7 +29,7 @@ python main.py \
   --num_workers=1 \
   --disk_size_gb=$DISK_SIZE_GB \
   --max_num_workers=$MAX_DATAFLOW_WORKERS \
-  --no_use_public_ip \
+  --no_use_public_ips \
   --service_account_email=$SERVICE_ACCOUNT \
   $SUBNET_OPT \
   --sdk_container_image=$CONTAINER_URI \

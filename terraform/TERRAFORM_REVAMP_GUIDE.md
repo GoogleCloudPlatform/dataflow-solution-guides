@@ -35,6 +35,7 @@ This guide outlines the standard architecture, step-by-step procedure, code temp
 5. **Dynamic Pipeline Launch Scripts**: Ensure runner shell scripts dynamically pass `--subnetwork` only when configured, and remove legacy firewall experiment tags (`use_network_tags=...`).
 6. **Toolchain & Runtime Compatibility**: For Java pipelines, configure `build.gradle` with supported LTS toolchains (`JavaLanguageVersion.of(21)` or `17`).
 7. **Declarative API & Service Enablement**: All Google Cloud APIs/services required by the application resources (e.g. `firestore.googleapis.com`, `spanner.googleapis.com`, `bigtable.googleapis.com`, `aiplatform.googleapis.com`, `secretmanager.googleapis.com`) must be enabled natively in Terraform via `resource "google_project_service"` (with `disable_on_destroy = false`), and dependent resources should specify `depends_on = [google_project_service.<name>]`. Do not rely on manual `gcloud services enable` commands.
+8. **Automated Subnetwork IAM for Dataflow Workers (Shared VPC & Local Subnets)**: When `var.subnetwork` is configured, automatically grant `roles/compute.networkUser` on the subnet to the worker service account using an additive `resource "google_compute_subnetwork_iam_member"`. Dynamically resolve the host project, region, and subnet name so that Shared VPC and local subnet deployments require zero manual `gcloud` IAM commands and clean up automatically on `terraform destroy`.
 
 ---
 
@@ -162,12 +163,24 @@ variable "destroy_all_resources" {
    ```
    Add `depends_on = [google_project_service.<name>]` to resources requiring the API.
 
-5. **Application Resources (Spanner, BigQuery, Bigtable, Pub/Sub, Vertex AI, Firestore)**:
+5. **Subnetwork IAM for Dataflow Workers (Shared VPC & Local Subnets)**:
+   ```hcl
+   resource "google_compute_subnetwork_iam_member" "dataflow_network_user" {
+     count      = var.subnetwork != null ? 1 : 0
+     project    = length(regexall("projects/([^/]+)/", var.subnetwork)) > 0 ? regex("projects/([^/]+)/", var.subnetwork)[0] : var.project_id
+     region     = length(regexall("regions/([^/]+)/", var.subnetwork)) > 0 ? regex("regions/([^/]+)/", var.subnetwork)[0] : var.region
+     subnetwork = length(regexall("subnetworks/([^/]+)", var.subnetwork)) > 0 ? regex("subnetworks/([^/]+)", var.subnetwork)[0] : var.subnetwork
+     role       = "roles/compute.networkUser"
+     member     = module.dataflow_sa.iam_email
+   }
+   ```
+
+6. **Application Resources (Spanner, BigQuery, Bigtable, Pub/Sub, Vertex AI, Firestore)**:
    - Replace all `module.google_cloud_project.project_id` with `var.project_id`.
    - Ensure datasets/tables/instances specify `location = var.region`.
    - Ensure lifecycle/deletion protection honors `var.destroy_all_resources` (e.g. `deletion_protection = !var.destroy_all_resources`).
 
-6. **Environment Configuration Generator (`local_file.variables_script`)**:
+7. **Environment Configuration Generator (`local_file.variables_script`)**:
    ```hcl
    resource "local_file" "variables_script" {
      filename        = "${path.module}/../../pipelines/<use_case>/scripts/01_set_variables.sh"

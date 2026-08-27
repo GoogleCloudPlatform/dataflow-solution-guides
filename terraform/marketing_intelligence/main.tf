@@ -139,6 +139,16 @@ module "dataflow_sa" {
   }
 }
 
+// Grant networkUser role on the subnetwork to the Dataflow worker service account (supports Shared VPC and local subnets)
+resource "google_compute_subnetwork_iam_member" "dataflow_network_user" {
+  count      = var.subnetwork != null ? 1 : 0
+  project    = length(regexall("projects/([^/]+)/", var.subnetwork)) > 0 ? regex("projects/([^/]+)/", var.subnetwork)[0] : var.project_id
+  region     = length(regexall("regions/([^/]+)/", var.subnetwork)) > 0 ? regex("regions/([^/]+)/", var.subnetwork)[0] : var.region
+  subnetwork = length(regexall("subnetworks/([^/]+)", var.subnetwork)) > 0 ? regex("subnetworks/([^/]+)", var.subnetwork)[0] : var.subnetwork
+  role       = "roles/compute.networkUser"
+  member     = module.dataflow_sa.iam_email
+}
+
 // Script with variables to launch the Dataflow jobs
 resource "local_file" "variables_script" {
   filename        = "${path.module}/../../pipelines/marketing_intelligence/scripts/00_set_variables.sh"

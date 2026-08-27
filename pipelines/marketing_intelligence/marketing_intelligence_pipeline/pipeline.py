@@ -22,10 +22,10 @@ from typing import Any, Dict, Iterator, Optional, Tuple
 
 import apache_beam as beam
 from apache_beam import Pipeline
-from apache_beam.io.gcp import pubsub
 from apache_beam.io.gcp.bigquery import BigQueryDisposition, WriteToBigQuery
 from apache_beam.ml.inference.base import KeyedModelHandler, PredictionResult
 from apache_beam.ml.inference.sklearn_inference import ModelFileType, SklearnModelHandlerNumpy
+from apache_beam.utils.timestamp import Timestamp
 import cachetools
 import numpy as np
 
@@ -288,7 +288,20 @@ class FormatPredictionDoFn(beam.DoFn):
     else:
       recommended_offer = "Standard Catalog Recommendation"
 
-    now_iso = datetime.now(timezone.utc).isoformat()
+    ts_val = enriched.get("timestamp")
+    if isinstance(ts_val, (int, float)):
+      event_timestamp = Timestamp(ts_val)
+    elif isinstance(ts_val, str) and ts_val:
+      try:
+        event_timestamp = Timestamp.from_rfc3339(ts_val.replace("Z", "+00:00"))
+      except (ValueError, TypeError):
+        event_timestamp = Timestamp.now()
+    elif isinstance(ts_val, Timestamp):
+      event_timestamp = ts_val
+    else:
+      event_timestamp = Timestamp.now()
+
+    processed_timestamp = Timestamp.now()
 
     record = {
         "event_id":
@@ -296,7 +309,7 @@ class FormatPredictionDoFn(beam.DoFn):
         "user_id":
             str(enriched.get("user_id", "")),
         "event_timestamp":
-            enriched.get("timestamp"),
+            event_timestamp,
         "event_type":
             str(enriched.get("event_type", "")),
         "item_id":
@@ -324,7 +337,7 @@ class FormatPredictionDoFn(beam.DoFn):
         "recommended_offer":
             recommended_offer,
         "processed_timestamp":
-            now_iso,
+            processed_timestamp,
     }
     yield record
 
@@ -409,8 +422,9 @@ def create_pipeline(options: MyPipelineOptions) -> Pipeline:
         formatted_records
         | "Filter High Propensity" >> beam.Filter(
             lambda r: r.get("propensity_score", 0.0) >= options.threshold)
-        | "Format Activation Payload" >> beam.Map(_format_activation_payload))
-    high_propensity | "Publish Activation" >> pubsub.WriteStringsToPubSub(
+        | "Format Activation Payload" >> beam.Map(_format_activation_payload)
+        | "Encode Payload" >> beam.Map(lambda s: s.encode("utf-8")))
+    high_propensity | "Publish Activation" >> beam.io.WriteToPubSub(
         topic=options.responses_topic)
 
   return pipeline
