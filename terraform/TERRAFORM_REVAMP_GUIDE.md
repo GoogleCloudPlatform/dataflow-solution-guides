@@ -34,6 +34,7 @@ This guide outlines the standard architecture, step-by-step procedure, code temp
 4. **Decoupled GCS Bucket**: Support referencing an existing bucket (`var.bucket_name`), with an optional toggle (`var.create_bucket`) if provisioning a new bucket is desired.
 5. **Dynamic Pipeline Launch Scripts**: Ensure runner shell scripts dynamically pass `--subnetwork` only when configured, and remove legacy firewall experiment tags (`use_network_tags=...`).
 6. **Toolchain & Runtime Compatibility**: For Java pipelines, configure `build.gradle` with supported LTS toolchains (`JavaLanguageVersion.of(21)` or `17`).
+7. **Declarative API & Service Enablement**: All Google Cloud APIs/services required by the application resources (e.g. `firestore.googleapis.com`, `spanner.googleapis.com`, `bigtable.googleapis.com`, `aiplatform.googleapis.com`, `secretmanager.googleapis.com`) must be enabled natively in Terraform via `resource "google_project_service"` (with `disable_on_destroy = false`), and dependent resources should specify `depends_on = [google_project_service.<name>]`. Do not rely on manual `gcloud services enable` commands.
 
 ---
 
@@ -150,12 +151,23 @@ variable "destroy_all_resources" {
    }
    ```
 
-4. **Application Resources (Spanner, BigQuery, Bigtable, Pub/Sub, Vertex AI)**:
+4. **Declarative API Enablement (`google_project_service`)**:
+   Enable domain-specific APIs required by the resources natively:
+   ```hcl
+   resource "google_project_service" "firestore" {
+     project            = var.project_id
+     service            = "firestore.googleapis.com"
+     disable_on_destroy = false
+   }
+   ```
+   Add `depends_on = [google_project_service.<name>]` to resources requiring the API.
+
+5. **Application Resources (Spanner, BigQuery, Bigtable, Pub/Sub, Vertex AI, Firestore)**:
    - Replace all `module.google_cloud_project.project_id` with `var.project_id`.
    - Ensure datasets/tables/instances specify `location = var.region`.
    - Ensure lifecycle/deletion protection honors `var.destroy_all_resources` (e.g. `deletion_protection = !var.destroy_all_resources`).
 
-5. **Environment Configuration Generator (`local_file.variables_script`)**:
+6. **Environment Configuration Generator (`local_file.variables_script`)**:
    ```hcl
    resource "local_file" "variables_script" {
      filename        = "${path.module}/../../pipelines/<use_case>/scripts/01_set_variables.sh"

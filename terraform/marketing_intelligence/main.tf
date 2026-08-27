@@ -85,6 +85,13 @@ module "output_topic" {
   }
 }
 
+// Enable Cloud Firestore API
+resource "google_project_service" "firestore" {
+  project            = var.project_id
+  service            = "firestore.googleapis.com"
+  disable_on_destroy = false
+}
+
 // Cloud Firestore (Native Mode) for real-time customer profile lookups
 resource "google_firestore_database" "database" {
   project         = var.project_id
@@ -92,6 +99,10 @@ resource "google_firestore_database" "database" {
   location_id     = var.region
   type            = "FIRESTORE_NATIVE"
   deletion_policy = var.destroy_all_resources ? "DELETE" : "ABANDON"
+
+  depends_on = [
+    google_project_service.firestore
+  ]
 }
 
 // BigQuery dataset for prediction persistence
