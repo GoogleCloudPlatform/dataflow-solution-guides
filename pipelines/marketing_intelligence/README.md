@@ -12,18 +12,18 @@ This pipeline is part of the [Dataflow Marketing Intelligence Solution Guide](..
 
 ```mermaid
 flowchart TD
-    subgraph Ingestion & Mock Data
+    subgraph INGESTION["Ingestion & Mock Data"]
         TG["01_train_model.py\n(Synthetic Journey Data)"] -->|"Train & Export"| MODEL[("marketing_model.pkl\n(Random Forest Classifier)")]
         FG["02_populate_firestore.py\n(Historical Profiles)"] -->|"Batch Insert"| FS[("Cloud Firestore (Native Mode)\nCollection: customer_profiles\nDoc ID: user_id")]
         PG["03_publish_events.py\n(Streaming User Actions)"] -->|"Publish JSON"| PS_IN["Pub/Sub Topic\n(Input Events)"]
     end
 
-    subgraph Containerization & Cloud Build
+    subgraph CONTAINERIZATION["Containerization & Cloud Build"]
         MODEL -->|"Copy Artifact"| DOCKER["Dockerfile\n(Pre-baked Model + Dependencies)"]
         DOCKER -->|"Cloud Build"| AR[("Artifact Registry\ndataflow-containers/\nmarket-intelligence:0.1")]
     end
 
-    subgraph Dataflow Streaming Pipeline (Hermetic Container)
+    subgraph PIPELINE["Dataflow Streaming Pipeline (Hermetic Container)"]
         AR -.->|"Worker Boot Image"| WORKERS["Dataflow Workers\n(python:3.13-slim)"]
         PS_IN -->|"beam.io.ReadFromPubSub"| EXTRACT["Extract & Parse JSON\n(user_id, item_id, category, duration)"]
         EXTRACT -->|"FirestoreEnrichmentDoFn\n(with LRU In-Memory Cache)"| ENRICH["Enrich with Firestore\n(past_spend, loyalty_tier, days_inactive)"]
@@ -33,7 +33,7 @@ flowchart TD
         WORKERS -.->|"Loaded from /workspace/marketing_model.pkl"| INF
     end
 
-    subgraph Storage & Activation Sinks
+    subgraph SINKS["Storage & Activation Sinks"]
         INF -->|"beam.io.WriteToBigQuery\n(Storage Write API)"| BQ[("BigQuery: output_dataset.predictions\n(Analytics & Looker BI)")]
         INF -->|"Filter: Propensity >= 0.80"| ACT["High-Propensity Filter"]
         ACT -->|"pubsub.WriteStringsToPubSub"| PS_OUT["Pub/Sub Topic\n(Instant Coupon / Offer Trigger)"]
