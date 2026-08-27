@@ -249,6 +249,7 @@ class SklearnModelHandlerNumpyProb(SklearnModelHandlerNumpy):
     super().__init__(model_uri=model_uri, model_file_type=ModelFileType.PICKLE)
 
   def run_inference(self, batch, model, inference_args=None):
+    del inference_args  # pylint: disable=unused-argument
     stacked = np.stack(batch)
     if hasattr(model, "predict_proba"):
       probabilities = model.predict_proba(stacked)[:, 1]
