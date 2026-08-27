@@ -226,6 +226,10 @@ jobs:
               done
               echo ----- Building package -----
               pipenv run python setup.py sdist
+              if [ -d "tests" ]; then
+                echo ----- Running unit tests -----
+                pipenv run python -m unittest discover tests
+              fi
               cd ..
             else
               echo Ignoring, no Python pipeline found

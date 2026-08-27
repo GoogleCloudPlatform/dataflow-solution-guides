@@ -27,7 +27,7 @@ dataflow-solution-guides/
 │   ├── etl_integration/      # Spanner instance/database/change stream, BigQuery, Service Account
 │   ├── cdp/                  # Pub/Sub topics, BigQuery dataset/tables, VPC
 │   ├── anomaly_detection/    # Pub/Sub, BigQuery, Vertex AI endpoints, VPC
-│   ├── marketing_intelligence/ # Pub/Sub, BigQuery, Vertex AI endpoints, VPC
+│   ├── marketing_intelligence/ # Pub/Sub topics, Firestore, BigQuery dataset, Artifact Registry, Service Account
 │   ├── clickstream_analytics/  # Bigtable instance/table, Pub/Sub, BigQuery, VPC
 │   ├── iot_analytics/        # Bigtable, Pub/Sub, GCS, VPC
 │   └── log_replication_splunk/ # Pub/Sub, Secret Manager, Service Account, Optional Splunk VM
