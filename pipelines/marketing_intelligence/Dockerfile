@@ -31,6 +31,6 @@ RUN pip install --upgrade --no-cache-dir pip \
     && pip install --no-cache-dir -e .
 
 # Copy Apache Beam boot entrypoint binaries
-COPY --from=apache/beam_python3.13_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.13_sdk:2.76.0 /opt/apache/beam /opt/apache/beam
 
 ENTRYPOINT ["/opt/apache/beam/boot"]
