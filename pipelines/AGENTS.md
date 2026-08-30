@@ -12,7 +12,7 @@ This directory contains Apache Beam streaming pipeline implementations in **Pyth
 | `etl_integration_java/` | Java | Cloud Spanner Change Streams, BigQueryIO, Deadletter rows | [ETL_integration.md](../use_cases/ETL_integration.md) |
 | `cdp/` | Python | Multi-topic Pub/Sub streaming join, BigQuery streaming insert | [CDP.md](../use_cases/CDP.md) |
 | `anomaly_detection/` | Python | Vertex AI Endpoint prediction, Pub/Sub, BigQuery | [Anomaly_Detection.md](../use_cases/Anomaly_Detection.md) |
-| `marketing_intelligence/` | Python | Vertex AI AutoML tabular inference, Pub/Sub | [Marketing_Intelligence.md](../use_cases/Marketing_Intelligence.md) |
+| `marketing_intelligence/` | Python | Firestore enrichment, Scikit-Learn RunInference, BigQuery, Pub/Sub | [Marketing_Intelligence.md](../use_cases/Marketing_Intelligence.md) |
 | `clickstream_analytics_java/` | Java | Cloud Bigtable enrichment / hydration lookup, BigQueryIO | [Clickstream_Analytics.md](../use_cases/Clickstream_Analytics.md) |
 | `iot_analytics/` | Python | Sensor telemetry aggregation, Bigtable hydration, Vertex AI | [IoT_Analytics.md](../use_cases/IoT_Analytics.md) |
 | `log_replication_splunk/` | Flex Template | Pub/Sub to Splunk HTTP Event Collector (HEC) | [Log_replication.md](../use_cases/Log_replication.md) |

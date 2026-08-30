@@ -17,7 +17,7 @@ dataflow-solution-guides/
 │   ├── ETL_integration.md    # Change Data Capture (CDC) from Cloud Spanner to BigQuery
 │   ├── CDP.md                # Real-time Customer Data Platform (multi-topic streaming joins)
 │   ├── Anomaly_Detection.md  # Real-time anomaly detection with Vertex AI
-│   ├── Marketing_Intelligence.md # Real-time marketing intelligence with Vertex AutoML
+│   ├── Marketing_Intelligence.md # Real-time marketing intelligence with Firestore & Scikit-Learn RunInference
 │   ├── Clickstream_Analytics.md  # Real-time clickstream analytics with Bigtable enrichment
 │   ├── IoT_Analytics.md      # Real-time IoT analytics with Bigtable & Vertex AI
 │   └── Log_replication.md    # Real-time log replication into Splunk
@@ -37,7 +37,7 @@ dataflow-solution-guides/
 │   ├── etl_integration_java/ # Java: Spanner change stream CDC publisher & template
 │   ├── cdp/                  # Python: Multi-stream customer data unification to BigQuery
 │   ├── anomaly_detection/    # Python: Vertex AI prediction pipeline
-│   ├── marketing_intelligence/ # Python: Vertex AI AutoML feature inference
+│   ├── marketing_intelligence/ # Python: Firestore enrichment & Scikit-Learn RunInference
 │   ├── clickstream_analytics_java/ # Java: Bigtable lookup enrichment + BigQuery deadletter
 │   ├── iot_analytics/        # Python: IoT sensor aggregation + Bigtable/Vertex AI
 │   ├── log_replication_splunk/ # Dataflow Flex Template: Pub/Sub to Splunk HEC

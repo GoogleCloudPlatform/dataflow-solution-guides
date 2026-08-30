@@ -23,7 +23,7 @@ This the list of solution guides available at this moment:
 |  [GenAI & Machine Learning Inference](./use_cases/GenAI_ML.md)  |                        Real-time inference with local GenAI models, using a GPU                        | Ready :white_check_mark:  |
 |       [ETL / Integration](./use_cases/ETL_integration.md)       | Real-time change data capture from a Spanner database to BigQuery                                      | Ready :white_check_mark:  |
 |  [Log Replication & Analytics](./use_cases/Log_replication.md)  |                                Real-time log replication into Splunk                                   | Ready :white_check_mark:  |
-| [Marketing Intelligence](./use_cases/Marketing_Intelligence.md) |               Real-time marketing intelligence, using an AutoML model deployed in Vertex               | Ready :white_check_mark:  |
+| [Marketing Intelligence](./use_cases/Marketing_Intelligence.md) | Real-time marketing intelligence with Firestore enrichment & Scikit-Learn RunInference | Ready :white_check_mark:  |
 |  [Clickstream Analytics](./use_cases/Clickstream_Analytics.md)  |               Real-time clickstream analytics with Bigtable enrichment / data hydration                | Work in progress :hammer: |
 | [IoT Analytics](./use_cases/IoT_Analytics.md)                   |  Real-time Internet of Things (IoT) analytics with Bigtable enrichment & models deployed in Vertex AI  | Work in progress :hammer: |
 |      [Anomaly Detection](./use_cases/Anomaly_Detection.md)      |Real-time detection of anomalies in a stream of data leveraging GenAI with models deployed in Vertex AI |      Beta :factory:       |
