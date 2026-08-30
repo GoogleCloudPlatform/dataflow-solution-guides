@@ -59,7 +59,7 @@ Every Terraform module in `terraform/<use_case>/` contains a `resource "local_fi
 | :--- | :--- | :--- |
 | **Dataflow / Beam** | Stream processing runtime | Apache Beam Python SDK 2.50+, Apache Beam Java SDK 2.50+ |
 | **Python** | Pipeline development | Python 3.13+, `yapf`, `pylint`, `pipenv` / `venv` |
-| **Java** | Pipeline development | OpenJDK 17 / 25, Gradle Wrapper (`./gradlew`), Spotless |
+| **Java** | Pipeline development | OpenJDK 25, Gradle Wrapper (`./gradlew`), Spotless |
 | **Terraform** | Infrastructure as Code | Terraform >= 1.5, Google Cloud Foundation Fabric v56.2.0 |
 | **Containers & CI** | Worker environment & CI | Docker, Google Cloud Build (`cloudbuild.yaml`), GitHub Actions |
 | **Google Cloud** | Managed platform | Dataflow, Pub/Sub, Cloud Storage, BigQuery, Spanner, Bigtable, Vertex AI |

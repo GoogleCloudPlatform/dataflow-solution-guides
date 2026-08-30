@@ -47,7 +47,7 @@ Before deploying infrastructure or submitting Dataflow jobs:
    Ensure the staging bucket (`gs://BUCKET_NAME/tmp`) exists in the same region as the Dataflow workers or set `create_bucket = true` in `terraform.tfvars`.
 
 4. **Java Pipeline Toolchains**:
-   For Java pipelines (`etl_integration_java`, `clickstream_analytics_java`), ensure `build.gradle` specifies an LTS toolchain (`JavaLanguageVersion.of(21)` or `17`).
+   For Java pipelines (`etl_integration_java`, `clickstream_analytics_java`), ensure `build.gradle` specifies `JavaLanguageVersion.of(25)`.
 
 ---
 
