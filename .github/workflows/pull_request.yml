@@ -422,7 +422,6 @@ jobs:
               echo
               cd "$pipeline_dir"
               mkdir -p gemma_2B && touch gemma_2B/DUMMY
-              touch -a marketing_model.pkl maintenance_model.pkl
               docker build -t github-actions .
               cd ..
             else

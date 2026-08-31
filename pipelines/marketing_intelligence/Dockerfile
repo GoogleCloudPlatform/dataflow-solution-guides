@@ -23,12 +23,13 @@ COPY requirements.txt requirements.txt
 COPY setup.py setup.py
 COPY MANIFEST.in MANIFEST.in
 COPY main.py main.py
-COPY marketing_model.pkl marketing_model.pkl
+COPY scripts scripts
 COPY marketing_intelligence_pipeline marketing_intelligence_pipeline
 
 RUN pip install --upgrade --no-cache-dir pip \
     && pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir -e .
+    && pip install --no-cache-dir -e . \
+    && python scripts/01_train_model.py
 
 # Copy Apache Beam boot entrypoint binaries
 COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
