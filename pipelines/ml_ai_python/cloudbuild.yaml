@@ -35,7 +35,7 @@ steps:
       docker push ${_TAG}
 substitutions:
     _GCS_GEMMA_PATH: ''
-    _MODEL_PRESET: 'gemma4_instruct_2b'
+    _MODEL_PRESET: 'google/gemma-4-2b-it'
     _KAGGLE_USERNAME: ''
     _KAGGLE_KEY: ''
     _HF_TOKEN: ''

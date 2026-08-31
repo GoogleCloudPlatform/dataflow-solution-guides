@@ -14,32 +14,52 @@
 """Pre-downloads and bakes the Gemma model weights into the container image."""
 
 import os
+import shutil
 import sys
-
-# Set JAX backend
-os.environ.setdefault("KERAS_BACKEND", "jax")
-
-import keras_hub
 
 
 def download_and_save_model(model_name: str, output_dir: str) -> None:
   """Downloads the model preset and saves it locally for offline container usage."""
   print(f"Downloading model preset '{model_name}' to '{output_dir}'...")
-  model_name_lower = model_name.lower()
-  if hasattr(keras_hub.models, "Gemma4CausalLM") and "gemma4" in model_name_lower:
-    model = keras_hub.models.Gemma4CausalLM.from_preset(model_name)
-  elif hasattr(keras_hub.models, "Gemma3CausalLM") and "gemma3" in model_name_lower:
-    model = keras_hub.models.Gemma3CausalLM.from_preset(model_name)
-  else:
-    model = keras_hub.models.GemmaCausalLM.from_preset(model_name)
-
   os.makedirs(output_dir, exist_ok=True)
-  model.save_to_preset(output_dir)
-  print(f"Successfully baked model weights into {output_dir}")
+  hf_token = os.environ.get("HF_TOKEN") or None
+
+  try:
+    from huggingface_hub import snapshot_download
+
+    snapshot_download(
+        repo_id=model_name,
+        local_dir=output_dir,
+        token=hf_token,
+    )
+    print(f"Successfully baked HuggingFace model weights into {output_dir}")
+    return
+  except Exception as e:
+    print(f"HuggingFace snapshot_download failed: {e}")
+
+  try:
+    import kagglehub
+
+    download_path = kagglehub.model_download(model_name)
+    if os.path.exists(download_path):
+      for item in os.listdir(download_path):
+        s = os.path.join(download_path, item)
+        d = os.path.join(output_dir, item)
+        if os.path.isdir(s):
+          shutil.copytree(s, d, dirs_exist_ok=True)
+        else:
+          shutil.copy2(s, d)
+      print(f"Successfully baked Kaggle model weights into {output_dir}")
+      return
+  except Exception as e:
+    print(f"Kagglehub model_download failed: {e}")
+
+  raise RuntimeError(
+      f"Failed to download model '{model_name}' from HuggingFace and Kaggle.")
 
 
 def main():
-  preset = os.environ.get("MODEL_PRESET", "gemma4_instruct_2b")
+  preset = os.environ.get("MODEL_PRESET", "google/gemma-4-2b-it")
   target_dir = sys.argv[1] if len(sys.argv) > 1 else f"/opt/models/{preset}"
   download_and_save_model(preset, target_dir)
 

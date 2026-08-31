@@ -29,10 +29,9 @@ COPY setup.py setup.py
 
 RUN pip install --upgrade --no-cache-dir pip \
   && pip install --no-cache-dir -r requirements.txt \
-  && pip install --no-cache-dir --no-deps git+https://github.com/keras-team/keras-hub.git \
   && pip install --no-cache-dir -e .
 
-ARG MODEL_PRESET="gemma4_instruct_2b"
+ARG MODEL_PRESET="google/gemma-4-2b-it"
 ARG KAGGLE_USERNAME=""
 ARG KAGGLE_KEY=""
 ARG HF_TOKEN=""
@@ -44,7 +43,7 @@ ENV MODEL_DIR="/opt/models/${MODEL_PRESET}"
 COPY gemma/ /opt/models/gemma/
 
 # Pre-download and bake model weights into container image during build
-RUN if [ -f "/opt/models/gemma/config.json" ]; then \
+RUN if [ -d "/opt/models/gemma" ] && [ "$(ls -A /opt/models/gemma 2>/dev/null)" ]; then \
       echo "Model weights found in build context."; \
     elif [ -n "${KAGGLE_USERNAME}" ] || [ -n "${HF_TOKEN}" ]; then \
       echo "Downloading and baking model preset ${MODEL_PRESET} into ${MODEL_DIR}..."; \
@@ -58,10 +57,7 @@ RUN if [ -f "/opt/models/gemma/config.json" ]; then \
 # Copy files from official SDK image, including script/dependencies.
 COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 
-ENV KERAS_BACKEND="jax"
-ENV XLA_PYTHON_CLIENT_PREALLOCATE="false"
-ENV XLA_PYTHON_CLIENT_ALLOCATOR="platform"
-ENV TF_GPU_ALLOCATOR="cuda_malloc_async"
+ENV VLLM_WORKER_MULTIPROC_METHOD="spawn"
 ENV LD_LIBRARY_PATH="/usr/local/nvidia/lib64:/usr/local/nvidia/lib:${LD_LIBRARY_PATH}"
 ENV PATH="/usr/local/nvidia/bin:${PATH}"
 ENV NVIDIA_VISIBLE_DEVICES="all"

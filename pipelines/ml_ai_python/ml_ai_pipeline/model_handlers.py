@@ -16,117 +16,82 @@
 import os
 from typing import Any, Iterable, Optional, Sequence
 
-# Set JAX as the Keras backend before importing Keras/KerasHub
-os.environ.setdefault("KERAS_BACKEND", "jax")
-os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
-os.environ.setdefault("XLA_PYTHON_CLIENT_ALLOCATOR", "platform")
-
 from apache_beam.ml.inference.base import ModelHandler, PredictionResult
-import jax
-import keras
-import keras_hub
 
-# Set bfloat16 dtype policy to load weights natively without float32 conversion overhead
 try:
-  keras.config.set_dtype_policy("bfloat16")
-except Exception:
-  pass
+  os.environ["VLLM_CONFIGURE_LOGGING"] = "0"
+  import vllm
+  from vllm import LLM, SamplingParams
+except ModuleNotFoundError:
+  vllm = None
+  LLM = None
+  SamplingParams = None
 
 
 class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
-  """A RunInference model handler for Gemma models using Keras 3 with JAX backend."""
+  """A RunInference model handler for Gemma models using vLLM."""
 
   def __init__(self,
-               model_name: str = "gemma4_instruct_2b",
-               max_length: int = 128):
-    """Implementation of the ModelHandler interface for Gemma using text as input.
-
-    Example Usage::
-
-      pcoll | RunInference(GemmaModelHandler())
+               model_name: str = "google/gemma-4-2b-it",
+               max_length: int = 128,
+               gpu_memory_utilization: float = 0.85):
+    """Implementation of the ModelHandler interface for Gemma using vLLM.
 
     Args:
-      model_name: The Gemma model preset or path. Default is gemma4_instruct_2b.
-      max_length: The maximum sequence length to generate. Default is 128.
+      model_name: The Gemma model repo or local path. Default is google/gemma-4-2b-it.
+      max_length: The maximum tokens to generate. Default is 128.
+      gpu_memory_utilization: The fraction of GPU memory to reserve for vLLM.
     """
     super().__init__()
     self._model_name = model_name
     self._max_length = max_length
+    self._gpu_memory_utilization = gpu_memory_utilization
     self._env_vars = {}
 
   def share_model_across_processes(self) -> bool:
     """Indicates if the model should be loaded once-per-VM rather than
 
-    once-per-worker-process on a VM. Because Gemma is a large language model,
-    this will always return True to optimize GPU memory usage.
+    once-per-worker-process on a VM.
     """
     return True
 
   def load_model(self) -> Any:
-    """Loads and initializes the Gemma model using KerasHub with JAX backend."""
-    # Check if the model is baked into local container path /opt/models/...
+    """Loads and initializes the Gemma model using vLLM."""
     target_path = self._model_name
     baked_candidate = f"/opt/models/{self._model_name}"
     env_preset = os.environ.get("MODEL_PRESET", "")
     env_candidate = f"/opt/models/{env_preset}" if env_preset else None
 
-    def is_valid_preset_dir(path: Optional[str]) -> bool:
+    def is_valid_model_dir(path: Optional[str]) -> bool:
       if not path or not os.path.isdir(path):
         return False
-      return os.path.isfile(os.path.join(path, "config.json")) or os.path.isfile(os.path.join(path, "model.weights.h5"))
+      return (os.path.isfile(os.path.join(path, "config.json")) or
+              os.path.isfile(os.path.join(path, "model.safetensors")) or
+              os.path.isfile(os.path.join(path, "model.weights.h5")))
 
-    if is_valid_preset_dir(self._model_name):
+    if is_valid_model_dir(self._model_name):
       target_path = self._model_name
-    elif is_valid_preset_dir(baked_candidate):
+    elif is_valid_model_dir(baked_candidate):
       target_path = baked_candidate
-    elif is_valid_preset_dir(env_candidate):
+    elif is_valid_model_dir(env_candidate):
       target_path = env_candidate
-    elif is_valid_preset_dir("/opt/models/gemma"):
+    elif is_valid_model_dir("/opt/models/gemma"):
       target_path = "/opt/models/gemma"
 
-    print(f"Loading Gemma model from: {target_path}")
-    model_name_lower = self._model_name.lower()
-    cpu_device = jax.devices("cpu")[0] if jax.devices("cpu") else None
-    
-    if hasattr(keras_hub.models, "Gemma4CausalLM") and "gemma4" in model_name_lower:
-      try:
-        if cpu_device:
-          with jax.default_device(cpu_device):
-            model = keras_hub.models.Gemma4CausalLM.from_preset(
-                target_path, dtype="bfloat16")
-        else:
-          model = keras_hub.models.Gemma4CausalLM.from_preset(
-              target_path, dtype="bfloat16")
-        return (model, None)
-      except Exception as e:
-        print(f"Loading Gemma 4 with standalone tokenizer: {e}")
-        if cpu_device:
-          with jax.default_device(cpu_device):
-            model = keras_hub.models.Gemma4CausalLM.from_preset(
-                target_path, preprocessor=None, dtype="bfloat16")
-            tokenizer = keras_hub.models.Gemma4Tokenizer.from_preset(target_path)
-        else:
-          model = keras_hub.models.Gemma4CausalLM.from_preset(
-              target_path, preprocessor=None, dtype="bfloat16")
-          tokenizer = keras_hub.models.Gemma4Tokenizer.from_preset(target_path)
-        return (model, tokenizer)
-    if hasattr(keras_hub.models, "Gemma3CausalLM") and "gemma3" in model_name_lower:
-      if cpu_device:
-        with jax.default_device(cpu_device):
-          model = keras_hub.models.Gemma3CausalLM.from_preset(
-              target_path, dtype="bfloat16")
-      else:
-        model = keras_hub.models.Gemma3CausalLM.from_preset(
-            target_path, dtype="bfloat16")
-      return (model, None)
-    if cpu_device:
-      with jax.default_device(cpu_device):
-        model = keras_hub.models.GemmaCausalLM.from_preset(
-            target_path, dtype="bfloat16")
-    else:
-      model = keras_hub.models.GemmaCausalLM.from_preset(
-          target_path, dtype="bfloat16")
-    return (model, None)
+    print(f"Loading Gemma vLLM model from: {target_path}")
+    sampling_params = SamplingParams(
+        max_tokens=self._max_length,
+        temperature=0.7,
+        top_p=0.95,
+    )
+    llm = LLM(
+        model=target_path,
+        gpu_memory_utilization=self._gpu_memory_utilization,
+        trust_remote_code=True,
+        dtype="bfloat16",
+        enforce_eager=False,
+    )
+    return (llm, sampling_params)
 
   def run_inference(
       self,
@@ -136,34 +101,17 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
     """Runs inferences on a batch of text strings.
 
     Args:
-      batch: A sequence of examples as text strings.
-      model_obj: The Gemma model (or model and tokenizer pair).
+      batch: A sequence of prompt strings.
+      model_obj: A tuple of (LLM, SamplingParams).
       unused: Optional additional arguments for interface compatibility.
 
     Returns:
       An Iterable of type PredictionResult.
     """
-    _ = unused  # for interface compatibility with Model Handler
-    model, tokenizer = (
-        model_obj if isinstance(model_obj, tuple) else (model_obj, None))
-    for one_text in batch:
-      if tokenizer is not None:
-        stop_token_ids = (tokenizer.end_token_id,)
-        tokens = tokenizer(one_text)
-        output = model.generate(
-            tokens, max_length=self._max_length, stop_token_ids=stop_token_ids)
-        if isinstance(output, dict) and "token_ids" in output:
-          result = tokenizer.detokenize(output["token_ids"])
-        else:
-          result = tokenizer.detokenize(output)
-        if hasattr(result, "numpy"):
-          result = result.numpy()
-        if isinstance(result, bytes):
-          result = result.decode("utf-8", errors="replace")
-        elif isinstance(result, (list, tuple)):
-          result = " ".join(str(r) for r in result)
-        else:
-          result = str(result)
-      else:
-        result = model.generate(one_text, max_length=self._max_length)
-      yield PredictionResult(one_text, str(result), self._model_name)
+    _ = unused
+    llm, sampling_params = model_obj
+    prompts = list(batch)
+    outputs = llm.generate(prompts, sampling_params)
+    for prompt, output in zip(prompts, outputs):
+      generated_text = output.outputs[0].text if output.outputs else ""
+      yield PredictionResult(prompt, generated_text, self._model_name)
