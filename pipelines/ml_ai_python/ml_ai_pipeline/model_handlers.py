@@ -19,8 +19,8 @@ from typing import Any, Iterable, Optional, Sequence
 from apache_beam.ml.inference.base import ModelHandler, PredictionResult
 
 os.environ.setdefault("VLLM_CONFIGURE_LOGGING", "0")
-os.environ.setdefault("VLLM_USE_DEEP_GEMM", "0")
-os.environ.setdefault("VLLM_ATTENTION_BACKEND", "TRITON")
+os.environ.setdefault("VLLM_USE_V1", "0")
+os.environ.setdefault("FLASHINFER_ENABLE_JIT", "0")
 try:
   import vllm
   from vllm import LLM, SamplingParams
