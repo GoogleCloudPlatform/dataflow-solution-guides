@@ -1,6 +1,6 @@
 # GenAI & Machine Learning inference sample pipeline (Python)
 
-This sample pipeline demonstrates how to use Dataflow to process streaming data and calculate real-time predictions using GenAI, specifically the [Google open source Gemma 4 model](https://ai.google.dev/gemma) (e.g. **Gemma 4 E4B**) powered by **Keras 3 with the JAX backend (`KERAS_BACKEND="jax"`)** on **Python 3.14**.
+This sample pipeline demonstrates how to use Dataflow to process streaming data and calculate real-time predictions using GenAI, specifically the [Google open source Gemma 4 model](https://ai.google.dev/gemma) (e.g. `google/gemma-4-E2B-it`) powered by **vLLM** on **Python 3.14**.
 
 This pipeline is part of the [Dataflow Gen AI & ML solution guide](../../use_cases/GenAI_ML.md).
 
@@ -14,23 +14,18 @@ In this directory, you will find a specific implementation of the above architec
 
 1. **Data ingestion:** Reads incoming prompt requests from a Pub/Sub topic.
 2. **Data preprocessing:** The sample pipeline decodes messages, but it is trivial to add a preprocessing step leveraging [the Enrichment transform](https://cloud.google.com/dataflow/docs/guides/enrichment) to perform feature lookup and prompt engineering before calling the model.
-3. **Inference:** Uses Apache Beam's `RunInference` transform with a custom `GemmaModelHandler` powered by **Keras 3 and JAX/XLA**. The model is compiled using XLA on NVIDIA L4 GPUs (`g2-standard-4`), providing fast Multi-Token Prediction (MTP) and low streaming latency.
+3. **Inference:** Uses Apache Beam's `RunInference` transform with a custom `GemmaModelHandler` powered by **vLLM**. Model weights are baked directly into the container image at `/opt/models/gemma`, ensuring zero runtime downloads and low latency streaming inference on NVIDIA L4 GPUs (`g2-standard-4`).
 4. **Predictions:** The generated text responses are published to another Pub/Sub topic as output.
 
-## Gemma 4 E4B model
+## Gemma 4 model & Baked Container Weights
 
-By default, the pipeline uses the instruction-tuned **Gemma 4 E4B** preset (`gemma4_instruct_4b_en`), which requires ~5.5 GB VRAM in FP16/BF16 and fits comfortably on the **24 GB NVIDIA L4 GPU** (`g2-standard-4`) provisioned by Terraform.
+By default, the pipeline uses **Gemma 4** (`google/gemma-4-E2B-it`), which fits comfortably on the **24 GB NVIDIA L4 GPU** (`g2-standard-4`) provisioned by Terraform.
 
-You can also use other KerasHub model presets (such as `gemma4_instruct_2b_en` or `gemma3_instruct_1b_en`) or point to custom fine-tuned weights saved in Cloud Storage:
-
-```sh
-# Optional: To use custom weights from Cloud Storage:
-gcloud storage cp -r LOCAL_DIRECTORY gs://<YOUR_BUCKET_NAME>/gemma_4_e4b
-```
+Model weights are baked into the container image during the Cloud Build step (`01_build_and_push_container.sh`) into `/opt/models/gemma`, allowing Dataflow workers to boot and perform offline streaming inference immediately without contacting external repositories.
 
 ## Selecting the cloud region and worker hardware
 
-The Terraform deployment configures **`g2-standard-4`** workers equipped with an **NVIDIA L4 GPU** and 16 GB system memory, which is the recommended configuration for modern LLM inference with JAX on Dataflow.
+The Terraform deployment configures **`g2-standard-4`** workers equipped with an **NVIDIA L4 GPU** and 16 GB system memory, which is the recommended configuration for modern LLM inference on Dataflow.
 
 You can verify available GPU accelerator machine types in your region with:
 
@@ -53,7 +48,7 @@ The Terraform deployment automatically creates the environment script `scripts/0
    ```
 
 2. **Build and publish the custom Dataflow worker container**:
-   Build the custom container packaging Python 3.14, JAX with CUDA 12 support, KerasHub, and Apache Beam 2.75.0:
+   Build the custom container packaging Python 3.14, vLLM, PyTorch with CUDA 12 support, baked Gemma 4 weights, and Apache Beam 2.75.0:
    ```sh
    ./scripts/01_build_and_push_container.sh
    ```
