@@ -20,7 +20,14 @@ from typing import Any, Iterable, Optional, Sequence
 os.environ.setdefault("KERAS_BACKEND", "jax")
 
 from apache_beam.ml.inference.base import ModelHandler, PredictionResult
+import keras
 import keras_hub
+
+# Set bfloat16 dtype policy to load weights natively without float32 conversion overhead
+try:
+  keras.config.set_dtype_policy("bfloat16")
+except Exception:
+  pass
 
 
 class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
