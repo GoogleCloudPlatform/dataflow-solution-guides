@@ -44,7 +44,7 @@ ENV MODEL_DIR="/opt/models/${MODEL_PRESET}"
 COPY gemma/ /opt/models/gemma/
 
 # Pre-download and bake model weights into container image during build
-RUN if [ -d "/opt/models/gemma" ] && [ -n "$(ls -A /opt/models/gemma 2>/dev/null)" ]; then \
+RUN if [ -f "/opt/models/gemma/config.json" ]; then \
       echo "Model weights found in build context."; \
     elif [ -n "${KAGGLE_USERNAME}" ] || [ -n "${HF_TOKEN}" ]; then \
       echo "Downloading and baking model preset ${MODEL_PRESET} into ${MODEL_DIR}..."; \

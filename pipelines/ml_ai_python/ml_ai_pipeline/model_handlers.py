@@ -60,13 +60,18 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
     env_preset = os.environ.get("MODEL_PRESET", "")
     env_candidate = f"/opt/models/{env_preset}" if env_preset else None
 
-    if os.path.isdir(self._model_name):
+    def is_valid_preset_dir(path: Optional[str]) -> bool:
+      if not path or not os.path.isdir(path):
+        return False
+      return os.path.isfile(os.path.join(path, "config.json")) or os.path.isfile(os.path.join(path, "model.weights.h5"))
+
+    if is_valid_preset_dir(self._model_name):
       target_path = self._model_name
-    elif os.path.isdir(baked_candidate):
+    elif is_valid_preset_dir(baked_candidate):
       target_path = baked_candidate
-    elif env_candidate and os.path.isdir(env_candidate):
+    elif is_valid_preset_dir(env_candidate):
       target_path = env_candidate
-    elif os.path.isdir("/opt/models/gemma"):
+    elif is_valid_preset_dir("/opt/models/gemma"):
       target_path = "/opt/models/gemma"
 
     print(f"Loading Gemma model from: {target_path}")
