@@ -22,6 +22,7 @@ os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
 os.environ.setdefault("XLA_PYTHON_CLIENT_ALLOCATOR", "platform")
 
 from apache_beam.ml.inference.base import ModelHandler, PredictionResult
+import jax
 import keras
 import keras_hub
 
@@ -85,23 +86,46 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
 
     print(f"Loading Gemma model from: {target_path}")
     model_name_lower = self._model_name.lower()
+    cpu_device = jax.devices("cpu")[0] if jax.devices("cpu") else None
+    
     if hasattr(keras_hub.models, "Gemma4CausalLM") and "gemma4" in model_name_lower:
       try:
-        model = keras_hub.models.Gemma4CausalLM.from_preset(
-            target_path, dtype="bfloat16")
+        if cpu_device:
+          with jax.default_device(cpu_device):
+            model = keras_hub.models.Gemma4CausalLM.from_preset(
+                target_path, dtype="bfloat16")
+        else:
+          model = keras_hub.models.Gemma4CausalLM.from_preset(
+              target_path, dtype="bfloat16")
         return (model, None)
       except Exception as e:
         print(f"Loading Gemma 4 with standalone tokenizer: {e}")
-        model = keras_hub.models.Gemma4CausalLM.from_preset(
-            target_path, preprocessor=None, dtype="bfloat16")
-        tokenizer = keras_hub.models.Gemma4Tokenizer.from_preset(target_path)
+        if cpu_device:
+          with jax.default_device(cpu_device):
+            model = keras_hub.models.Gemma4CausalLM.from_preset(
+                target_path, preprocessor=None, dtype="bfloat16")
+            tokenizer = keras_hub.models.Gemma4Tokenizer.from_preset(target_path)
+        else:
+          model = keras_hub.models.Gemma4CausalLM.from_preset(
+              target_path, preprocessor=None, dtype="bfloat16")
+          tokenizer = keras_hub.models.Gemma4Tokenizer.from_preset(target_path)
         return (model, tokenizer)
     if hasattr(keras_hub.models, "Gemma3CausalLM") and "gemma3" in model_name_lower:
-      model = keras_hub.models.Gemma3CausalLM.from_preset(
-          target_path, dtype="bfloat16")
+      if cpu_device:
+        with jax.default_device(cpu_device):
+          model = keras_hub.models.Gemma3CausalLM.from_preset(
+              target_path, dtype="bfloat16")
+      else:
+        model = keras_hub.models.Gemma3CausalLM.from_preset(
+            target_path, dtype="bfloat16")
       return (model, None)
-    model = keras_hub.models.GemmaCausalLM.from_preset(
-        target_path, dtype="bfloat16")
+    if cpu_device:
+      with jax.default_device(cpu_device):
+        model = keras_hub.models.GemmaCausalLM.from_preset(
+            target_path, dtype="bfloat16")
+    else:
+      model = keras_hub.models.GemmaCausalLM.from_preset(
+          target_path, dtype="bfloat16")
     return (model, None)
 
   def run_inference(
