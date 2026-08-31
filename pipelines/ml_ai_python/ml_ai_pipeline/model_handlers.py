@@ -69,14 +69,14 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
               os.path.isfile(os.path.join(path, "model.safetensors")) or
               os.path.isfile(os.path.join(path, "model.weights.h5")))
 
-    if is_valid_model_dir(self._model_name):
+    if is_valid_model_dir("/opt/models/gemma"):
+      target_path = "/opt/models/gemma"
+    elif is_valid_model_dir(self._model_name):
       target_path = self._model_name
     elif is_valid_model_dir(baked_candidate):
       target_path = baked_candidate
     elif is_valid_model_dir(env_candidate):
       target_path = env_candidate
-    elif is_valid_model_dir("/opt/models/gemma"):
-      target_path = "/opt/models/gemma"
 
     print(f"Loading Gemma vLLM model from: {target_path}")
     sampling_params = SamplingParams(

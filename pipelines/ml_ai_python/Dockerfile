@@ -31,7 +31,7 @@ RUN pip install --upgrade --no-cache-dir pip \
   && pip install --no-cache-dir -r requirements.txt \
   && pip install --no-cache-dir -e .
 
-ARG MODEL_PRESET="google/gemma-4-2b-it"
+ARG MODEL_PRESET="google/gemma-4-E2B-it"
 ARG KAGGLE_USERNAME=""
 ARG KAGGLE_KEY=""
 ARG HF_TOKEN=""
@@ -43,15 +43,15 @@ ENV MODEL_DIR="/opt/models/${MODEL_PRESET}"
 COPY gemma/ /opt/models/gemma/
 
 # Pre-download and bake model weights into container image during build
-RUN if [ -d "/opt/models/gemma" ] && [ "$(ls -A /opt/models/gemma 2>/dev/null)" ]; then \
-      echo "Model weights found in build context."; \
+RUN if [ -f "/opt/models/gemma/config.json" ] || [ -f "/opt/models/gemma/model.safetensors" ]; then \
+      echo "Model weights found in build context at /opt/models/gemma."; \
     elif [ -n "${KAGGLE_USERNAME}" ] || [ -n "${HF_TOKEN}" ]; then \
       echo "Downloading and baking model preset ${MODEL_PRESET} into ${MODEL_DIR}..."; \
       KAGGLE_USERNAME=${KAGGLE_USERNAME} KAGGLE_KEY=${KAGGLE_KEY} HF_TOKEN=${HF_TOKEN} \
       python -m ml_ai_pipeline.download_model "${MODEL_DIR}"; \
     else \
       echo "Attempting anonymous pre-download of ${MODEL_PRESET} into ${MODEL_DIR}..."; \
-      python -m ml_ai_pipeline.download_model "${MODEL_DIR}" || echo "Pre-download skipped (credentials required for gated models)."; \
+      python -m ml_ai_pipeline.download_model "${MODEL_DIR}" || echo "Pre-download skipped."; \
     fi
 
 # Copy files from official SDK image, including script/dependencies.

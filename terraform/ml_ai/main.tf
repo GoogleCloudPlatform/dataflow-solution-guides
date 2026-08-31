@@ -115,8 +115,8 @@ export IMAGE_NAME=dataflow-solutions-ml-ai
 export DOCKER_TAG=0.2.0
 export DOCKER_IMAGE=$REGION-docker.pkg.dev/$PROJECT/$DOCKER_REPOSITORY/$IMAGE_NAME
 
-export MODEL_PRESET=gemma4_instruct_2b
-export GCS_GEMMA_PATH=gs://${local.bucket_name}/gemma4_2b
+export MODEL_PRESET=google/gemma-4-E2B-it
+export GCS_GEMMA_PATH=gs://${local.bucket_name}/gemma
 export CONTAINER_URI=$DOCKER_IMAGE:$DOCKER_TAG
 
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
