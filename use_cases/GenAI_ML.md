@@ -58,7 +58,7 @@ applications. Several unique capabilities make Dataflow the leading choice:
     same compute.
 - **Open-source compatibility**: Dataflow has support for
   [running inference with Gemma](https://cloud.google.com/dataflow/docs/machine-learning/gemma)
-  using modern frameworks such as **Keras 3 with JAX backend** and **PyTorch**.
-  Customers can leverage XLA hardware compilation and multi-token prediction (MTP) with Gemma 4 / Gemma 3
-  on GPU-accelerated workers (e.g. NVIDIA L4 GPUs). Customers should feel comfortable that these pipelines can be ported to
+  using high-throughput inference engines such as **vLLM** and **PyTorch**.
+  Customers can leverage high-performance GPU serving with Gemma 4 (`google/gemma-4-E2B-it`)
+  on GPU-accelerated workers (e.g. NVIDIA L4 GPUs) running Python 3.14. Model weights are baked directly into custom container images, eliminating runtime downloads. Customers should feel comfortable that these pipelines can be ported to
   any other execution engine with Apache Beam support.
