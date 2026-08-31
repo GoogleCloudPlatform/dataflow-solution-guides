@@ -82,10 +82,6 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
       target_path = env_candidate
 
     print(f"Loading Gemma vLLM model from: {target_path}")
-    sampling_params = SamplingParams(
-        max_tokens=self._max_length,
-        temperature=0.0,
-    )
     llm = LLM(
         model=target_path,
         gpu_memory_utilization=self._gpu_memory_utilization,
@@ -93,7 +89,7 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
         dtype="bfloat16",
         enforce_eager=False,
     )
-    return (llm, sampling_params)
+    return llm
 
   def run_inference(
       self,
@@ -104,14 +100,18 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
 
     Args:
       batch: A sequence of prompt strings.
-      model_obj: A tuple of (LLM, SamplingParams).
+      model_obj: The vLLM LLM instance or shared proxy.
       unused: Optional additional arguments for interface compatibility.
 
     Returns:
       An Iterable of type PredictionResult.
     """
     _ = unused
-    llm, sampling_params = model_obj
+    llm = model_obj
+    sampling_params = SamplingParams(
+        max_tokens=self._max_length,
+        temperature=0.0,
+    )
     prompts = list(batch)
     outputs = llm.generate(prompts, sampling_params)
     for prompt, output in zip(prompts, outputs):
