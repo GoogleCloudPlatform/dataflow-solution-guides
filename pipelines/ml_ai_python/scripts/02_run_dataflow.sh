@@ -23,11 +23,17 @@ RUN_MACHINE_TYPE="${MACHINE_TYPE:-g2-standard-4}"
 ACCELERATOR_OPT="worker_accelerator=type:nvidia-l4;count:1;install-nvidia-driver:5xx"
 RUN_MODEL_PRESET="${MODEL_PRESET:-gemma4_instruct_2b}"
 
+ZONE_OPT=""
+if [ -n "$ZONE" ]; then
+  ZONE_OPT="--zone=$ZONE"
+fi
+
 python main.py \
   --runner=DataflowRunner \
   --project=$PROJECT \
   --temp_location=$TEMP_LOCATION \
   --region=$REGION \
+  $ZONE_OPT \
   --save_main_session \
   --machine_type=$RUN_MACHINE_TYPE \
   --num_workers=1 \
