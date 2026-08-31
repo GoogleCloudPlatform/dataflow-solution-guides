@@ -77,27 +77,57 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
     print(f"Loading Gemma model from: {target_path}")
     model_name_lower = self._model_name.lower()
     if hasattr(keras_hub.models, "Gemma4CausalLM") and "gemma4" in model_name_lower:
-      return keras_hub.models.Gemma4CausalLM.from_preset(target_path)
+      try:
+        model = keras_hub.models.Gemma4CausalLM.from_preset(target_path)
+        return (model, None)
+      except Exception as e:
+        print(f"Loading Gemma 4 with standalone tokenizer: {e}")
+        model = keras_hub.models.Gemma4CausalLM.from_preset(
+            target_path, preprocessor=None)
+        tokenizer = keras_hub.models.Gemma4Tokenizer.from_preset(target_path)
+        return (model, tokenizer)
     if hasattr(keras_hub.models, "Gemma3CausalLM") and "gemma3" in model_name_lower:
-      return keras_hub.models.Gemma3CausalLM.from_preset(target_path)
-    return keras_hub.models.GemmaCausalLM.from_preset(target_path)
+      model = keras_hub.models.Gemma3CausalLM.from_preset(target_path)
+      return (model, None)
+    model = keras_hub.models.GemmaCausalLM.from_preset(target_path)
+    return (model, None)
 
   def run_inference(
       self,
       batch: Sequence[str],
-      model: Any,
+      model_obj: Any,
       unused: Optional[dict[str, Any]] = None) -> Iterable[PredictionResult]:
     """Runs inferences on a batch of text strings.
 
     Args:
       batch: A sequence of examples as text strings.
-      model: The Gemma model being used.
+      model_obj: The Gemma model (or model and tokenizer pair).
       unused: Optional additional arguments for interface compatibility.
 
     Returns:
       An Iterable of type PredictionResult.
     """
     _ = unused  # for interface compatibility with Model Handler
+    model, tokenizer = (
+        model_obj if isinstance(model_obj, tuple) else (model_obj, None))
     for one_text in batch:
-      result = model.generate(one_text, max_length=self._max_length)
-      yield PredictionResult(one_text, result, self._model_name)
+      if tokenizer is not None:
+        stop_token_ids = (tokenizer.end_token_id,)
+        tokens = tokenizer(one_text)
+        output = model.generate(
+            tokens, max_length=self._max_length, stop_token_ids=stop_token_ids)
+        if isinstance(output, dict) and "token_ids" in output:
+          result = tokenizer.detokenize(output["token_ids"])
+        else:
+          result = tokenizer.detokenize(output)
+        if hasattr(result, "numpy"):
+          result = result.numpy()
+        if isinstance(result, bytes):
+          result = result.decode("utf-8", errors="replace")
+        elif isinstance(result, (list, tuple)):
+          result = " ".join(str(r) for r in result)
+        else:
+          result = str(result)
+      else:
+        result = model.generate(one_text, max_length=self._max_length)
+      yield PredictionResult(one_text, str(result), self._model_name)
