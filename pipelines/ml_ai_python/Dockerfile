@@ -61,6 +61,10 @@ COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 ENV KERAS_BACKEND="jax"
 ENV XLA_PYTHON_CLIENT_PREALLOCATE="false"
 ENV XLA_PYTHON_CLIENT_MEM_FRACTION="0.75"
+ENV LD_LIBRARY_PATH="/usr/local/nvidia/lib64:/usr/local/nvidia/lib:${LD_LIBRARY_PATH}"
+ENV PATH="/usr/local/nvidia/bin:${PATH}"
+ENV NVIDIA_VISIBLE_DEVICES="all"
+ENV NVIDIA_DRIVER_CAPABILITIES="compute,utility"
 
 # Set the entrypoint to Apache Beam SDK launcher.
 ENTRYPOINT ["/opt/apache/beam/boot"]
