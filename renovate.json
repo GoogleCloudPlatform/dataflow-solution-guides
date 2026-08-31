@@ -5,22 +5,22 @@
   ],
   "packageRules": [
     {
-      "description": "Limit Python versions to 3.11, 3.12, or 3.13 for Apache Beam and Dataflow compatibility",
+      "description": "Limit Python versions to 3.11, 3.12, 3.13, or 3.14 for Apache Beam and Dataflow compatibility",
       "matchPackageNames": [
         "python",
         "docker.io/library/python",
         "actions/python-versions"
       ],
-      "allowedVersions": "/^(?:v?3\\.(?:11|12|13))(?:[.-]|$)/"
+      "allowedVersions": "/^(?:v?3\\.(?:11|12|13|14))(?:[.-]|$)/"
     },
     {
-      "description": "Limit Python versions to 3.11, 3.12, or 3.13 for Apache Beam and Dataflow compatibility",
+      "description": "Limit Python versions to 3.11, 3.12, 3.13, or 3.14 for Apache Beam and Dataflow compatibility",
       "matchDepNames": [
         "python",
         "docker.io/library/python",
         "actions/python-versions"
       ],
-      "allowedVersions": "/^(?:v?3\\.(?:11|12|13))(?:[.-]|$)/"
+      "allowedVersions": "/^(?:v?3\\.(?:11|12|13|14))(?:[.-]|$)/"
     }
   ]
 }

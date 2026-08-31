@@ -19,7 +19,7 @@ following stages:
    to add a preprocessing step leveraging
    [the Enrichment transform](https://cloud.google.com/dataflow/docs/guides/enrichment) to perform
    feature engineering before calling the model.
-3. **Inference:** Uses the RunInference transform with a model handler, using Keras and Tensorflow, to call the fraud detection model. The pipeline uses a GPU with the Dataflow worker, to speed up the inference.
+3. **Inference:** Uses the RunInference transform with `VertexAIModelHandlerJSON` to call the fraud detection model hosted on a Vertex AI endpoint.
 4. **Detections:** The detections are sent to another Pub/Sub topic as output.
 
 

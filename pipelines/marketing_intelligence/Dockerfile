@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-FROM python:3.13-slim
+FROM python:3.14-slim
 WORKDIR /workspace
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
@@ -31,6 +31,6 @@ RUN pip install --upgrade --no-cache-dir pip \
     && pip install --no-cache-dir -e .
 
 # Copy Apache Beam boot entrypoint binaries
-COPY --from=apache/beam_python3.13_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 
 ENTRYPOINT ["/opt/apache/beam/boot"]
