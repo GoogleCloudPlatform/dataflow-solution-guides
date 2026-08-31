@@ -59,7 +59,8 @@ RUN if [ -f "/opt/models/gemma/config.json" ]; then \
 COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 
 ENV KERAS_BACKEND="jax"
-ENV XLA_PYTHON_CLIENT_MEM_FRACTION="0.85"
+ENV XLA_PYTHON_CLIENT_PREALLOCATE="false"
+ENV XLA_PYTHON_CLIENT_MEM_FRACTION="0.75"
 
 # Set the entrypoint to Apache Beam SDK launcher.
 ENTRYPOINT ["/opt/apache/beam/boot"]

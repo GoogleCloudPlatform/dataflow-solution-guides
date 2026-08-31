@@ -37,6 +37,8 @@ python main.py \
   --no_use_public_ips \
   --service_account_email=$SERVICE_ACCOUNT \
   $SUBNET_OPT \
+  --experiments=use_runner_v2 \
+  --experiments=no_use_multiple_sdk_containers \
   --sdk_container_image=$CONTAINER_URI \
   --dataflow_service_options="$ACCELERATOR_OPT" \
   --messages_subscription=projects/$PROJECT/subscriptions/messages-sub \
