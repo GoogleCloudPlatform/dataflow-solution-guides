@@ -58,7 +58,8 @@ RUN if [ -f "/opt/models/gemma/config.json" ] || [ -f "/opt/models/gemma/model.s
 COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 
 ENV VLLM_WORKER_MULTIPROC_METHOD="spawn"
-ENV VLLM_USE_V1="0"
+ENV VLLM_USE_FLASHINFER_SAMPLER="0"
+ENV VLLM_SAMPLER_BACKEND="torch"
 ENV FLASHINFER_ENABLE_JIT="0"
 ENV LD_LIBRARY_PATH="/usr/local/nvidia/lib64:/usr/local/nvidia/lib:${LD_LIBRARY_PATH}"
 ENV PATH="/usr/local/nvidia/bin:${PATH}"

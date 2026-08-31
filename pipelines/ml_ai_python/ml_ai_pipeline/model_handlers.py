@@ -19,7 +19,8 @@ from typing import Any, Iterable, Optional, Sequence
 from apache_beam.ml.inference.base import ModelHandler, PredictionResult
 
 os.environ.setdefault("VLLM_CONFIGURE_LOGGING", "0")
-os.environ.setdefault("VLLM_USE_V1", "0")
+os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
+os.environ.setdefault("VLLM_SAMPLER_BACKEND", "torch")
 os.environ.setdefault("FLASHINFER_ENABLE_JIT", "0")
 try:
   import vllm
@@ -83,8 +84,7 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
     print(f"Loading Gemma vLLM model from: {target_path}")
     sampling_params = SamplingParams(
         max_tokens=self._max_length,
-        temperature=0.7,
-        top_p=0.95,
+        temperature=0.0,
     )
     llm = LLM(
         model=target_path,
