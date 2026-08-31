@@ -60,7 +60,7 @@ COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 
 ENV KERAS_BACKEND="jax"
 ENV XLA_PYTHON_CLIENT_PREALLOCATE="false"
-ENV XLA_PYTHON_CLIENT_MEM_FRACTION="0.90"
+ENV XLA_PYTHON_CLIENT_ALLOCATOR="platform"
 ENV TF_GPU_ALLOCATOR="cuda_malloc_async"
 ENV LD_LIBRARY_PATH="/usr/local/nvidia/lib64:/usr/local/nvidia/lib:${LD_LIBRARY_PATH}"
 ENV PATH="/usr/local/nvidia/bin:${PATH}"
