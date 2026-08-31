@@ -56,7 +56,7 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
 
     once-per-worker-process on a VM.
     """
-    return True
+    return False
 
   def load_model(self) -> Any:
     """Loads and initializes the Gemma model using vLLM."""
@@ -100,7 +100,7 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
 
     Args:
       batch: A sequence of prompt strings.
-      model_obj: The vLLM LLM instance or shared proxy.
+      model_obj: The vLLM LLM instance.
       unused: Optional additional arguments for interface compatibility.
 
     Returns:
@@ -112,8 +112,15 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
         max_tokens=self._max_length,
         temperature=0.0,
     )
-    prompts = list(batch)
-    outputs = llm.generate(prompts, sampling_params)
-    for prompt, output in zip(prompts, outputs):
+    formatted_prompts = []
+    for p in batch:
+      if "<start_of_turn>" in p:
+        formatted_prompts.append(p)
+      else:
+        formatted_prompts.append(
+            f"<start_of_turn>user\n{p}<end_of_turn>\n<start_of_turn>model\n")
+
+    outputs = llm.generate(formatted_prompts, sampling_params)
+    for raw_prompt, output in zip(batch, outputs):
       generated_text = output.outputs[0].text if output.outputs else ""
-      yield PredictionResult(prompt, generated_text, self._model_name)
+      yield PredictionResult(raw_prompt, generated_text.strip(), self._model_name)
