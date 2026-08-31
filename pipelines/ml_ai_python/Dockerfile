@@ -29,7 +29,31 @@ COPY setup.py setup.py
 
 RUN pip install --upgrade --no-cache-dir pip \
   && pip install --no-cache-dir -r requirements.txt \
+  && pip install --no-cache-dir --no-deps git+https://github.com/keras-team/keras-hub.git \
   && pip install --no-cache-dir -e .
+
+ARG MODEL_PRESET="gemma4_instruct_2b"
+ARG KAGGLE_USERNAME=""
+ARG KAGGLE_KEY=""
+ARG HF_TOKEN=""
+
+ENV MODEL_PRESET=${MODEL_PRESET}
+ENV MODEL_DIR="/opt/models/${MODEL_PRESET}"
+
+# Copy pre-staged model directory if present
+COPY gemma/ /opt/models/gemma/
+
+# Pre-download and bake model weights into container image during build
+RUN if [ -d "/opt/models/gemma" ] && [ -n "$(ls -A /opt/models/gemma 2>/dev/null)" ]; then \
+      echo "Model weights found in build context."; \
+    elif [ -n "${KAGGLE_USERNAME}" ] || [ -n "${HF_TOKEN}" ]; then \
+      echo "Downloading and baking model preset ${MODEL_PRESET} into ${MODEL_DIR}..."; \
+      KAGGLE_USERNAME=${KAGGLE_USERNAME} KAGGLE_KEY=${KAGGLE_KEY} HF_TOKEN=${HF_TOKEN} \
+      python -m ml_ai_pipeline.download_model "${MODEL_DIR}"; \
+    else \
+      echo "Attempting anonymous pre-download of ${MODEL_PRESET} into ${MODEL_DIR}..."; \
+      python -m ml_ai_pipeline.download_model "${MODEL_DIR}" || echo "Pre-download skipped (credentials required for gated models)."; \
+    fi
 
 # Copy files from official SDK image, including script/dependencies.
 COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam

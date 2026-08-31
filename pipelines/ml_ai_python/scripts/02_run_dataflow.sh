@@ -21,7 +21,7 @@ fi
 
 RUN_MACHINE_TYPE="${MACHINE_TYPE:-g2-standard-4}"
 ACCELERATOR_OPT="worker_accelerator=type:nvidia-l4;count:1;install-nvidia-driver:5xx"
-RUN_MODEL_PRESET="${MODEL_PRESET:-gemma4_instruct_4b_en}"
+RUN_MODEL_PRESET="${MODEL_PRESET:-gemma4_instruct_2b}"
 
 python main.py \
   --runner=DataflowRunner \

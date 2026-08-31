@@ -14,7 +14,8 @@
 
 apache-beam[gcp]==2.75.0
 keras>=3.15.0
-keras-hub>=0.19.0
 jax[cuda12]
 sentencepiece>=0.2.0
+tokenizers>=0.23.0
+huggingface_hub>=1.29.0
 protobuf>=5.29.0

@@ -16,20 +16,33 @@ steps:
   - name: 'gcr.io/cloud-builders/gcloud'
     script: |
       if [ "$_GCS_GEMMA_PATH" != "unset" ] && [ -n "$_GCS_GEMMA_PATH" ]; then
-        echo "Copying Gemma model weights from $_GCS_GEMMA_PATH"
-        gcloud storage cp --recursive "$_GCS_GEMMA_PATH" /workspace || true
+        echo "Copying Gemma model weights from $_GCS_GEMMA_PATH to gemma/"
+        mkdir -p gemma
+        gcloud storage cp --recursive "$_GCS_GEMMA_PATH/*" gemma/ || true
       else
-        echo "No custom GCS Gemma path specified. Model will be loaded via KerasHub preset."
+        echo "No custom GCS Gemma path specified. Model will be downloaded or baked during build."
       fi
   - name: 'gcr.io/cloud-builders/docker'
     script: |
-      docker build -t ${_TAG} .
+      docker build \
+        --build-arg MODEL_PRESET="${_MODEL_PRESET}" \
+        --build-arg KAGGLE_USERNAME="${_KAGGLE_USERNAME}" \
+        --build-arg KAGGLE_KEY="${_KAGGLE_KEY}" \
+        --build-arg HF_TOKEN="${_HF_TOKEN}" \
+        -t ${_TAG} .
+  - name: 'gcr.io/cloud-builders/docker'
+    script: |
+      docker push ${_TAG}
 substitutions:
     _GCS_GEMMA_PATH: ''
+    _MODEL_PRESET: 'gemma4_instruct_2b'
+    _KAGGLE_USERNAME: ''
+    _KAGGLE_KEY: ''
+    _HF_TOKEN: ''
     _TAG: unset
 options:
     substitutionOption: 'ALLOW_LOOSE'
     automapSubstitutions: true
-    machineType: E2_HIGHCPU_8
+    machineType: E2_HIGHCPU_32
 images:
   - ${_TAG}

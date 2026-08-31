@@ -16,5 +16,5 @@ gcloud builds submit \
   --project=$PROJECT \
   --region=$REGION \
   --default-buckets-behavior=regional-user-owned-bucket \
-  --substitutions _TAG=$CONTAINER_URI,_GCS_GEMMA_PATH=${GCS_GEMMA_PATH:-""} \
+  --substitutions _TAG=$CONTAINER_URI,_GCS_GEMMA_PATH=${GCS_GEMMA_PATH:-""},_MODEL_PRESET=${MODEL_PRESET:-"gemma4_instruct_2b"},_KAGGLE_USERNAME=${KAGGLE_USERNAME:-""},_KAGGLE_KEY=${KAGGLE_KEY:-""},_HF_TOKEN=${HF_TOKEN:-""} \
   .

@@ -27,7 +27,7 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
   """A RunInference model handler for Gemma models using Keras 3 with JAX backend."""
 
   def __init__(self,
-               model_name: str = "gemma4_instruct_4b_en",
+               model_name: str = "gemma4_instruct_2b",
                max_length: int = 128):
     """Implementation of the ModelHandler interface for Gemma using text as input.
 
@@ -36,7 +36,7 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
       pcoll | RunInference(GemmaModelHandler())
 
     Args:
-      model_name: The Gemma model preset or path. Default is gemma4_instruct_4b_en.
+      model_name: The Gemma model preset or path. Default is gemma4_instruct_2b.
       max_length: The maximum sequence length to generate. Default is 128.
     """
     super().__init__()
@@ -54,7 +54,28 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
 
   def load_model(self) -> Any:
     """Loads and initializes the Gemma model using KerasHub with JAX backend."""
-    return keras_hub.models.GemmaCausalLM.from_preset(self._model_name)
+    # Check if the model is baked into local container path /opt/models/...
+    target_path = self._model_name
+    baked_candidate = f"/opt/models/{self._model_name}"
+    env_preset = os.environ.get("MODEL_PRESET", "")
+    env_candidate = f"/opt/models/{env_preset}" if env_preset else None
+
+    if os.path.isdir(self._model_name):
+      target_path = self._model_name
+    elif os.path.isdir(baked_candidate):
+      target_path = baked_candidate
+    elif env_candidate and os.path.isdir(env_candidate):
+      target_path = env_candidate
+    elif os.path.isdir("/opt/models/gemma"):
+      target_path = "/opt/models/gemma"
+
+    print(f"Loading Gemma model from: {target_path}")
+    model_name_lower = self._model_name.lower()
+    if hasattr(keras_hub.models, "Gemma4CausalLM") and "gemma4" in model_name_lower:
+      return keras_hub.models.Gemma4CausalLM.from_preset(target_path)
+    if hasattr(keras_hub.models, "Gemma3CausalLM") and "gemma3" in model_name_lower:
+      return keras_hub.models.Gemma3CausalLM.from_preset(target_path)
+    return keras_hub.models.GemmaCausalLM.from_preset(target_path)
 
   def run_inference(
       self,
