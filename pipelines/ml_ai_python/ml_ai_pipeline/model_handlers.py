@@ -114,11 +114,11 @@ class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
     )
     formatted_prompts = []
     for p in batch:
-      if "<start_of_turn>" in p:
+      if "<|turn>" in p or "<start_of_turn>" in p:
         formatted_prompts.append(p)
       else:
         formatted_prompts.append(
-            f"<start_of_turn>user\n{p}<end_of_turn>\n<start_of_turn>model\n")
+            f"<|turn>user\n{p}<turn|>\n<|turn>model\n")
 
     outputs = llm.generate(formatted_prompts, sampling_params)
     for raw_prompt, output in zip(batch, outputs):
