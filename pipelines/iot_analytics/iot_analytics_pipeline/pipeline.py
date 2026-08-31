@@ -18,6 +18,7 @@ import apache_beam as beam
 from apache_beam import Pipeline
 from .options import MyPipelineOptions
 import json
+import os
 import pickle
 from .aggregate_metrics import AggregateMetrics
 from .parse_timestamp import VehicleStateEvent
@@ -43,8 +44,15 @@ def custom_join(left: Dict[str, Any], right: Dict[str, Any]):
   return enriched
 
 
-with open("maintenance_model.pkl", "rb") as model_file:
-  sklearn_model_handler = pickle.load(model_file)
+def _load_model(model_path: str = "maintenance_model.pkl"):
+  """Loads the scikit-learn model artifact."""
+  if not os.path.exists(model_path):
+    raise FileNotFoundError(
+        f"Model file '{model_path}' not found. Please train and generate the model "
+        "first by running: python scripts/model.py"
+    )
+  with open(model_path, "rb") as model_file:
+    return pickle.load(model_file)
 
 
 def create_pipeline(pipeline_options: MyPipelineOptions) -> Pipeline:
@@ -89,7 +97,7 @@ def create_pipeline(pipeline_options: MyPipelineOptions) -> Pipeline:
   | "EnrichWithBigtable" >> Enrichment(
       bigtable_handler, join_fn=custom_join, timeout=10)
   predictions = enriched_data | "RunInference" >> beam.ParDo(
-      RunInference(model=sklearn_model_handler))
+      RunInference(model=_load_model()))
   predictions | "WriteToBigQuery" >> beam.io.gcp.bigquery.WriteToBigQuery(
       method=beam.io.WriteToBigQuery.Method.STORAGE_WRITE_API,
       project=pipeline_options.project,

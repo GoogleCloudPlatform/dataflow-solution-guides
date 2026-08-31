@@ -309,5 +309,8 @@ cython_debug/
 **/Pipfile.lock
 **/.venv
 
+# ML / Serialized model artifacts
+*.pkl
+
 # Git worktrees for parallel agent PR reviews
 .worktrees/

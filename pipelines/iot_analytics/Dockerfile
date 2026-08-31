@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-FROM apache/beam_python3.13_sdk:2.75.0
+FROM apache/beam_python3.14_sdk:2.75.0
 WORKDIR /workspace
 
 RUN apt-get update -y && apt-get install -y \
@@ -20,17 +20,18 @@ RUN apt-get update -y && apt-get install -y \
 
 COPY requirements.txt requirements.txt
 COPY main.py main.py
+COPY scripts scripts
 COPY iot_analytics_pipeline iot_analytics_pipeline
-COPY maintenance_model.pkl maintenance_model.pkl
 COPY MANIFEST.in MANIFEST.in
 COPY setup.py setup.py
 
 RUN pip install --upgrade --no-cache-dir pip \
   && pip install --no-cache-dir -r requirements.txt \
-  && pip install --no-cache-dir -e .
+  && pip install --no-cache-dir -e . \
+  && python scripts/model.py
 
 # Copy files from official SDK image, including script/dependencies.
-COPY --from=apache/beam_python3.13_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 
 # Set the entrypoint to Apache Beam SDK launcher.
 ENTRYPOINT ["/opt/apache/beam/boot"]

@@ -235,7 +235,9 @@ jobs:
         if: (steps.filter.outputs.pylint == 'true' || steps.filter.outputs.shared == 'true') && steps.targets.outputs.dirs != ''
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.13'
+          python-version: |
+            3.13
+            3.14
       - name: Install pylint
         if: (steps.filter.outputs.pylint == 'true' || steps.filter.outputs.shared == 'true') && steps.targets.outputs.dirs != ''
         run: |
@@ -284,6 +286,7 @@ jobs:
               - 'pipelines/**/setup.py'
               - 'pipelines/**/requirements*.txt'
               - 'pipelines/**/Pipfile*'
+              - 'pipelines/**/.python-version'
       - name: Detect target Python pipelines
         if: steps.filter.outputs.python == 'true' || steps.filter.outputs.workflow == 'true'
         id: targets
@@ -310,7 +313,9 @@ jobs:
         if: (steps.filter.outputs.python == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.13'
+          python-version: |
+            3.13
+            3.14
       - name: Install pipenv
         if: (steps.filter.outputs.python == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
@@ -332,11 +337,18 @@ jobs:
               echo -------------------------------------
               echo
               cd "$pipeline_dir"
-              pipenv install
+              PY_VER="3.14"
+              if [ -f ".python-version" ]; then
+                PY_VER=$(tr -d '[:space:]' < .python-version)
+              fi
+              echo "Using Python $PY_VER for $pipeline_dir"
+              pipenv --python "$PY_VER" install
               for req_txt in requirements*.txt
               do
-                echo ----- Installing dependencies in "$req_txt" -----
-                pipenv install -r "$req_txt"
+                if [ -s "$req_txt" ]; then
+                  echo ----- Installing dependencies in "$req_txt" -----
+                  pipenv install -r "$req_txt"
+                fi
               done
               echo ----- Building package -----
               pipenv run python setup.py sdist
