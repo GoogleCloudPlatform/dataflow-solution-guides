@@ -9,3 +9,4 @@ build/
 dist/
 .terraform/
 .terraform.lock.hcl
+gemma/
