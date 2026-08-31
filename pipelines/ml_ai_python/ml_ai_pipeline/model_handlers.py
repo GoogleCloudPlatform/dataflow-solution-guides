@@ -18,8 +18,10 @@ from typing import Any, Iterable, Optional, Sequence
 
 from apache_beam.ml.inference.base import ModelHandler, PredictionResult
 
+os.environ.setdefault("VLLM_CONFIGURE_LOGGING", "0")
+os.environ.setdefault("VLLM_USE_DEEP_GEMM", "0")
+os.environ.setdefault("VLLM_ATTENTION_BACKEND", "TRITON")
 try:
-  os.environ["VLLM_CONFIGURE_LOGGING"] = "0"
   import vllm
   from vllm import LLM, SamplingParams
 except ModuleNotFoundError:

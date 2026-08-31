@@ -58,8 +58,11 @@ RUN if [ -f "/opt/models/gemma/config.json" ] || [ -f "/opt/models/gemma/model.s
 COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 
 ENV VLLM_WORKER_MULTIPROC_METHOD="spawn"
+ENV VLLM_USE_DEEP_GEMM="0"
+ENV VLLM_ATTENTION_BACKEND="TRITON"
+ENV CUDA_HOME="/usr/local/cuda"
 ENV LD_LIBRARY_PATH="/usr/local/nvidia/lib64:/usr/local/nvidia/lib:${LD_LIBRARY_PATH}"
-ENV PATH="/usr/local/nvidia/bin:${PATH}"
+ENV PATH="/usr/local/cuda/bin:/usr/local/nvidia/bin:${PATH}"
 ENV NVIDIA_VISIBLE_DEVICES="all"
 ENV NVIDIA_DRIVER_CAPABILITIES="compute,utility"
 
