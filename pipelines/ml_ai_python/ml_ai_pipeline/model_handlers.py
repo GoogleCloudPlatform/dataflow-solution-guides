@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,63 +11,67 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""
-Custom model handlers to be used with RunInference.
-"""
+"""Custom model handlers to be used with RunInference."""
 
-from typing import Sequence, Optional, Any, Iterable
+import os
+from typing import Any, Iterable, Optional, Sequence
 
-import keras_nlp
+# Set JAX as the Keras backend before importing Keras/KerasHub
+os.environ.setdefault("KERAS_BACKEND", "jax")
+
 from apache_beam.ml.inference.base import ModelHandler, PredictionResult
-from keras_nlp.models import GemmaCausalLM
+import keras_hub
 
 
-class GemmaModelHandler(ModelHandler[str, PredictionResult, GemmaCausalLM]):
-  """
-  A RunInference model handler for the Gemma model.
-  """
+class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
+  """A RunInference model handler for Gemma models using Keras 3 with JAX backend."""
 
-  def __init__(self, model_name: str = "gemma_2B"):
-    """ Implementation of the ModelHandler interface for Gemma using text as input.
+  def __init__(self,
+               model_name: str = "gemma4_instruct_4b_en",
+               max_length: int = 128):
+    """Implementation of the ModelHandler interface for Gemma using text as input.
 
     Example Usage::
 
       pcoll | RunInference(GemmaModelHandler())
 
     Args:
-      model_name: The Gemma model name. Default is gemma_2B.
+      model_name: The Gemma model preset or path. Default is gemma4_instruct_4b_en.
+      max_length: The maximum sequence length to generate. Default is 128.
     """
     super().__init__()
     self._model_name = model_name
+    self._max_length = max_length
     self._env_vars = {}
 
   def share_model_across_processes(self) -> bool:
-    """ Indicates if the model should be loaded once-per-VM rather than
+    """Indicates if the model should be loaded once-per-VM rather than
+
     once-per-worker-process on a VM. Because Gemma is a large language model,
-    this will always return True to avoid OOM errors.
+    this will always return True to optimize GPU memory usage.
     """
     return True
 
-  def load_model(self) -> GemmaCausalLM:
-    """Loads and initializes a model for processing."""
-    return keras_nlp.models.GemmaCausalLM.from_preset(self._model_name)
+  def load_model(self) -> Any:
+    """Loads and initializes the Gemma model using KerasHub with JAX backend."""
+    return keras_hub.models.GemmaCausalLM.from_preset(self._model_name)
 
   def run_inference(
       self,
       batch: Sequence[str],
-      model: GemmaCausalLM,
+      model: Any,
       unused: Optional[dict[str, Any]] = None) -> Iterable[PredictionResult]:
     """Runs inferences on a batch of text strings.
 
     Args:
       batch: A sequence of examples as text strings.
       model: The Gemma model being used.
+      unused: Optional additional arguments for interface compatibility.
 
     Returns:
       An Iterable of type PredictionResult.
     """
     _ = unused  # for interface compatibility with Model Handler
-    # Loop each text string, and use a tuple to store the inference results.
     for one_text in batch:
-      result = model.generate(one_text, max_length=64)
+      result = model.generate(one_text, max_length=self._max_length)
       yield PredictionResult(one_text, result, self._model_name)

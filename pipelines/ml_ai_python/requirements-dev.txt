@@ -12,4 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-tensorflow==2.20.0
+-r requirements.txt
+pytest
+pylint
+yapf

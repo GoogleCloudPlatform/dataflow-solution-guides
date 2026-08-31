@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -112,10 +112,11 @@ export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 
 export DOCKER_REPOSITORY=${module.registry_docker.name}
 export IMAGE_NAME=dataflow-solutions-ml-ai
-export DOCKER_TAG=0.1
+export DOCKER_TAG=0.2.0
 export DOCKER_IMAGE=$REGION-docker.pkg.dev/$PROJECT/$DOCKER_REPOSITORY/$IMAGE_NAME
 
-export GCS_GEMMA_PATH=gs://${local.bucket_name}/gemma_2B
+export MODEL_PRESET=gemma4_instruct_4b_en
+export GCS_GEMMA_PATH=gs://${local.bucket_name}/gemma_4_e4b
 export CONTAINER_URI=$DOCKER_IMAGE:$DOCKER_TAG
 
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}

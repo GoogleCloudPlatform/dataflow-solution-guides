@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -12,12 +12,14 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-ARG SERVING_BUILD_IMAGE=tensorflow/tensorflow:2.21.0-gpu
-FROM ${SERVING_BUILD_IMAGE}
+FROM python:3.14-slim
 WORKDIR /workspace
 
-RUN apt-get update -y && apt-get install -y \
-  cmake
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt requirements.txt
 COPY main.py main.py
@@ -30,11 +32,10 @@ RUN pip install --upgrade --no-cache-dir pip \
   && pip install --no-cache-dir -e .
 
 # Copy files from official SDK image, including script/dependencies.
-COPY --from=apache/beam_python3.13_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 
-COPY gemma_2B gemma_2B
-
-ENV KERAS_BACKEND="tensorflow"
+ENV KERAS_BACKEND="jax"
+ENV XLA_PYTHON_CLIENT_MEM_FRACTION="0.85"
 
 # Set the entrypoint to Apache Beam SDK launcher.
 ENTRYPOINT ["/opt/apache/beam/boot"]

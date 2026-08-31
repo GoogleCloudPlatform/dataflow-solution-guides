@@ -1,8 +1,6 @@
 # GenAI & Machine Learning inference sample pipeline (Python)
 
-This sample pipeline demonstrates how to use Dataflow to process data, and calculate predictions 
-using GenAI, specifically the [Google open source Gemma model](https://ai.google.dev/gemma). 
-This pipeline is written in Python.
+This sample pipeline demonstrates how to use Dataflow to process streaming data and calculate real-time predictions using GenAI, specifically the [Google open source Gemma 4 model](https://ai.google.dev/gemma) (e.g. **Gemma 4 E4B**) powered by **Keras 3 with the JAX backend (`KERAS_BACKEND="jax"`)** on **Python 3.14**.
 
 This pipeline is part of the [Dataflow Gen AI & ML solution guide](../../use_cases/GenAI_ML.md).
 
@@ -12,99 +10,83 @@ The generic architecture for an inference pipeline looks like as follows:
 
 ![Architecture](../imgs/ml_ai_arch.png)
 
-In this directory, you will find a specific implementation of the above architecture, with the 
-following stages:
+In this directory, you will find a specific implementation of the above architecture, with the following stages:
 
-1. **Data ingestion:** Reads data from a Pub/Sub topic.
-2. **Data preprocessing:** The sample pipeline does not do any transformation, but it is trivial
-   to add a preprocessing step leveraging 
-   [the Enrichment transform](https://cloud.google.com/dataflow/docs/guides/enrichment) to perform
-   feature engineering before calling the model.
-3. **Inference:** Uses the RunInference transform with a custom model handler, using Keras and Tensorflow, to call the Gemma model. The pipeline uses a GPU with the Dataflow worker, to speed up the inference.
-4. **Predictions:** The predictions are sent to another Pub/Sub topic as output.
+1. **Data ingestion:** Reads incoming prompt requests from a Pub/Sub topic.
+2. **Data preprocessing:** The sample pipeline decodes messages, but it is trivial to add a preprocessing step leveraging [the Enrichment transform](https://cloud.google.com/dataflow/docs/guides/enrichment) to perform feature lookup and prompt engineering before calling the model.
+3. **Inference:** Uses Apache Beam's `RunInference` transform with a custom `GemmaModelHandler` powered by **Keras 3 and JAX/XLA**. The model is compiled using XLA on NVIDIA L4 GPUs (`g2-standard-4`), providing fast Multi-Token Prediction (MTP) and low streaming latency.
+4. **Predictions:** The generated text responses are published to another Pub/Sub topic as output.
 
-## Gemma model
+## Gemma 4 E4B model
 
-The model needs to be uploaded to GCS in a directory named `gemma_2B` in the bucket configured in
-Terraform (by default, `gs://<YOUR_BUCKET_OR_PROJECT_ID>/gemma_2B`).
+By default, the pipeline uses the instruction-tuned **Gemma 4 E4B** preset (`gemma4_instruct_4b_en`), which requires ~5.5 GB VRAM in FP16/BF16 and fits comfortably on the **24 GB NVIDIA L4 GPU** (`g2-standard-4`) provisioned by Terraform.
 
-For that, please first [download the Gemma model from Kaggle](https://www.kaggle.com/models/google/gemma),
-uncompress it and then upload it with a command similar to this one:
+You can also use other KerasHub model presets (such as `gemma4_instruct_2b_en` or `gemma3_instruct_1b_en`) or point to custom fine-tuned weights saved in Cloud Storage:
 
 ```sh
-gcloud storage cp -r LOCAL_DIRECTORY gs://<YOUR_BUCKET_NAME>/gemma_2B
+# Optional: To use custom weights from Cloud Storage:
+gcloud storage cp -r LOCAL_DIRECTORY gs://<YOUR_BUCKET_NAME>/gemma_4_e4b
 ```
 
-That command will do parallel composite uploads to speed up the uploading of the largest files in
-the model.
+## Selecting the cloud region and worker hardware
 
-## Selecting the cloud region
+The Terraform deployment configures **`g2-standard-4`** workers equipped with an **NVIDIA L4 GPU** and 16 GB system memory, which is the recommended configuration for modern LLM inference with JAX on Dataflow.
 
-Not all the resources may be available in all the regions. The default values included in this
-directory have been tested using `us-central1` as region.
-
-The file `cloudbuild.yaml` is using the machine type `E2_HIGHCPU_8` as the default machine type. If
-that's not available in your preferred region, try with other machine types that are available
-in Cloud Build:
-* https://cloud.google.com/build/docs/api/reference/rest/v1/projects.builds#machinetype
-
-Moreover, the generated file `scripts/00_set_variables.sh` specifies a machine type for the Dataflow workers.
-The selected machine type, `g2-standard-4`, is the recommended one for inference with GPU. If that
-type is not available in your region, you can check what machines are available to use with the
-following command:
+You can verify available GPU accelerator machine types in your region with:
 
 ```sh
 gcloud compute machine-types list --zones=<ZONE A>,<ZONE B>,...
 ```
 
-See more info about selecting the right type of machine in the following link:
+See more info about selecting machine types:
 * https://cloud.google.com/compute/docs/machine-resource
 
 ## How to launch the pipeline
 
-All the scripts are located in the `scripts` directory and prepared to be launched from the top 
-sources directory.
+All the scripts are located in the `scripts` directory and prepared to be launched from the `pipelines/ml_ai_python` directory.
 
 The Terraform deployment automatically creates the environment script `scripts/00_set_variables.sh` with all the required resource names and configuration settings.
 
-Load those variables into the environment:
+1. **Load environment variables**:
+   ```sh
+   source scripts/00_set_variables.sh
+   ```
 
-```sh
-source scripts/00_set_variables.sh
-```
+2. **Build and publish the custom Dataflow worker container**:
+   Build the custom container packaging Python 3.14, JAX with CUDA 12 support, KerasHub, and Apache Beam 2.75.0:
+   ```sh
+   ./scripts/01_build_and_push_container.sh
+   ```
 
-And then run the script that builds and publishes the custom Dataflow container. This container will
-contain the Gemma model, and all the required dependencies:
-
-```sh
-./scripts/01_build_and_push_container.sh
-```
-
-This will create a Cloud Build job that can take a few minutes to complete. Once it completes, you
-can trigger the pipeline with the following:
+3. **Launch the streaming Dataflow job**:
 
 > [!IMPORTANT]
 > **Python Version Matching:**
-> When submitting the pipeline using `DirectRunner` or `DataflowRunner`, ensure that the Python minor version in your local submission environment matches the Python version in the custom worker container image (**Python 3.13**). If a different version (such as Python 3.11 or 3.12) is used at submission time, Apache Beam's runtime descriptor verification and object deserialization on the worker will fail with a `RuntimeError: Pipeline construction environment and pipeline runtime environment are not compatible`.
+> When submitting the pipeline using `DirectRunner` or `DataflowRunner`, ensure that the Python minor version in your local submission environment matches the Python version in the custom worker container image (**Python 3.14**). If a different version is used at submission time, Apache Beam's runtime descriptor verification and object deserialization on the worker will fail with a `RuntimeError: Pipeline construction environment and pipeline runtime environment are not compatible`.
 >
 > You can create a matching virtual environment using `uv` or `venv`:
 > ```sh
-> uv python install 3.13
-> uv venv .venv --python 3.13
+> uv python install 3.14
+> uv venv .venv --python 3.14
 > source .venv/bin/activate
 > pip install -r requirements.txt -e .
 > ```
 
+Launch the pipeline to Dataflow:
 ```sh
 ./scripts/02_run_dataflow.sh
 ```
 
 ## Input data
 
-To send data into the pipeline, you need to publish messages in the `messages` topic. Those
-messages are passed "as is" to Gemma, so you may want to add some prompting to the question.
+To send data into the pipeline, publish messages to the `messages` Pub/Sub topic:
+```sh
+gcloud pubsub topics publish messages --message="Explain how Apache Beam streaming inference works with Gemma on GPUs."
+```
 
 ## Output data
 
-The predictions are published into the topic `predictions`, and can be observed using the 
-subscription `predictions-sub`.
+The predictions are published into the topic `predictions`, and can be observed using the subscription `predictions-sub`:
+```sh
+gcloud pubsub subscriptions pull predictions-sub --auto-ack --limit=5
+```

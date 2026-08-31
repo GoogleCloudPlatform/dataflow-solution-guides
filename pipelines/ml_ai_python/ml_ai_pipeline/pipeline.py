@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,15 +11,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""
-A machine learning streaming inference pipeline for the Dataflow Solution Guides.
-"""
-
-from apache_beam import Pipeline, PCollection
-from apache_beam.ml.inference import RunInference
-from apache_beam.io.gcp import pubsub
+"""A machine learning streaming inference pipeline for Gemma on Dataflow."""
 
 import apache_beam as beam
+from apache_beam import PCollection, Pipeline
+from apache_beam.io.gcp import pubsub
+from apache_beam.ml.inference import RunInference
 from apache_beam.ml.inference.base import PredictionResult
 
 from .model_handlers import GemmaModelHandler
@@ -41,19 +38,19 @@ def _extract(p: Pipeline, subscription: str) -> PCollection[str]:
 def _transform(msgs: PCollection[str], model_path: str) -> PCollection[str]:
   preds: PCollection[
       PredictionResult] = msgs | "RunInference-Gemma" >> RunInference(
-          GemmaModelHandler(model_path))
+          GemmaModelHandler(model_name=model_path))
   return preds | "Format Output" >> beam.Map(_format_output)
 
 
 def create_pipeline(options: MyPipelineOptions) -> Pipeline:
-  """ Create the pipeline object.
+  """Create the pipeline object.
 
   Args:
     options: The pipeline options, with type `MyPipelineOptions`.
 
   Returns:
     The pipeline object.
-    """
+  """
   pipeline = beam.Pipeline(options=options)
   # Extract
   msgs: PCollection[str] = pipeline | "Read" >> _extract(

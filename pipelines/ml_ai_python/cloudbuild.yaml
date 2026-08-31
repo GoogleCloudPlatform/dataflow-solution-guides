@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,14 +15,17 @@
 steps:
   - name: 'gcr.io/cloud-builders/gcloud'
     script: |
-      echo Copying Gemma model from $_GCS_GEMMA_PATH
-      gcloud storage cp --recursive $_GCS_GEMMA_PATH /workspace
-      echo All files copied.
+      if [ "$_GCS_GEMMA_PATH" != "unset" ] && [ -n "$_GCS_GEMMA_PATH" ]; then
+        echo "Copying Gemma model weights from $_GCS_GEMMA_PATH"
+        gcloud storage cp --recursive "$_GCS_GEMMA_PATH" /workspace || true
+      else
+        echo "No custom GCS Gemma path specified. Model will be loaded via KerasHub preset."
+      fi
   - name: 'gcr.io/cloud-builders/docker'
     script: |
       docker build -t ${_TAG} .
 substitutions:
-    _GCS_GEMMA_PATH: unset
+    _GCS_GEMMA_PATH: ''
     _TAG: unset
 options:
     substitutionOption: 'ALLOW_LOOSE'
