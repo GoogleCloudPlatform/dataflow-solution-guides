@@ -1,4 +1,4 @@
-#  Copyright 2024 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -16,5 +16,5 @@ gcloud builds submit \
   --project=$PROJECT \
   --region=$REGION \
   --default-buckets-behavior=regional-user-owned-bucket \
-  --substitutions _TAG=$CONTAINER_URI,_GCS_GEMMA_PATH=$GCS_GEMMA_PATH \
+  --substitutions _TAG=$CONTAINER_URI,_GCS_GEMMA_PATH=${GCS_GEMMA_PATH:-""},_MODEL_PRESET=${MODEL_PRESET:-"google/gemma-4-2b-it"},_KAGGLE_USERNAME=${KAGGLE_USERNAME:-""},_KAGGLE_KEY=${KAGGLE_KEY:-""},_HF_TOKEN=${HF_TOKEN:-""} \
   .

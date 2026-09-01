@@ -13,6 +13,11 @@
 #  limitations under the License.
 
 apache-beam[gcp]==2.75.0
-keras_nlp==0.31.1
-keras==3.15.1
-protobuf==5.29.6
+vllm>=0.28.0
+torch>=2.13.0
+transformers>=4.48.0
+accelerate>=1.0.0
+huggingface_hub>=0.28.0
+openai>=1.60.0
+kagglehub>=0.3.0
+protobuf>=5.29.0

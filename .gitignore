@@ -311,6 +311,11 @@ cython_debug/
 
 # ML / Serialized model artifacts
 *.pkl
+*.safetensors
+*.bin
+*.h5
+pipelines/ml_ai_python/gemma/*
+!pipelines/ml_ai_python/gemma/.gitkeep
 
 # Git worktrees for parallel agent PR reviews
 .worktrees/

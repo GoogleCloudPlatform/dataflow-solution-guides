@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,63 +11,59 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""
-Custom model handlers to be used with RunInference.
-"""
+"""Model handlers leveraging Apache Beam built-in vllm_inference."""
 
-from typing import Sequence, Optional, Any, Iterable
+import os
+from typing import Optional
 
-import keras_nlp
-from apache_beam.ml.inference.base import ModelHandler, PredictionResult
-from keras_nlp.models import GemmaCausalLM
+from apache_beam.ml.inference.vllm_inference import VLLMCompletionsModelHandler
 
 
-class GemmaModelHandler(ModelHandler[str, PredictionResult, GemmaCausalLM]):
-  """
-  A RunInference model handler for the Gemma model.
-  """
+def get_model_path(model_name: Optional[str] = None) -> str:
+  """Resolves the model path to baked local weights or model preset."""
+  target_path = model_name or os.environ.get("MODEL_PRESET",
+                                             "google/gemma-4-E2B-it")
+  baked_candidate = f"/opt/models/{target_path}"
+  env_preset = os.environ.get("MODEL_PRESET", "")
+  env_candidate = f"/opt/models/{env_preset}" if env_preset else None
 
-  def __init__(self, model_name: str = "gemma_2B"):
-    """ Implementation of the ModelHandler interface for Gemma using text as input.
+  def is_valid_model_dir(path: Optional[str]) -> bool:
+    if not path or not os.path.isdir(path):
+      return False
+    return (os.path.isfile(os.path.join(path, "config.json")) or
+            os.path.isfile(os.path.join(path, "model.safetensors")) or
+            os.path.isfile(os.path.join(path, "model.weights.h5")))
 
-    Example Usage::
+  if is_valid_model_dir("/opt/models/gemma"):
+    return "/opt/models/gemma"
+  if is_valid_model_dir(target_path):
+    return target_path
+  if is_valid_model_dir(baked_candidate):
+    return baked_candidate
+  if is_valid_model_dir(env_candidate):
+    return env_candidate
+  return target_path
 
-      pcoll | RunInference(GemmaModelHandler())
 
-    Args:
-      model_name: The Gemma model name. Default is gemma_2B.
-    """
-    super().__init__()
-    self._model_name = model_name
-    self._env_vars = {}
+def create_vllm_model_handler(
+    model_name: Optional[str] = None,
+    gpu_memory_utilization: float = 0.85,
+) -> VLLMCompletionsModelHandler:
+  """Creates a VLLMCompletionsModelHandler using Beam's built-in vllm_inference."""
+  # If running in custom container or targeting baked weights, default to /opt/models/gemma
+  if not model_name or model_name == "google/gemma-4-E2B-it" or not os.path.exists(
+      model_name):
+    target_model = "/opt/models/gemma"
+  else:
+    target_model = model_name
 
-  def share_model_across_processes(self) -> bool:
-    """ Indicates if the model should be loaded once-per-VM rather than
-    once-per-worker-process on a VM. Because Gemma is a large language model,
-    this will always return True to avoid OOM errors.
-    """
-    return True
-
-  def load_model(self) -> GemmaCausalLM:
-    """Loads and initializes a model for processing."""
-    return keras_nlp.models.GemmaCausalLM.from_preset(self._model_name)
-
-  def run_inference(
-      self,
-      batch: Sequence[str],
-      model: GemmaCausalLM,
-      unused: Optional[dict[str, Any]] = None) -> Iterable[PredictionResult]:
-    """Runs inferences on a batch of text strings.
-
-    Args:
-      batch: A sequence of examples as text strings.
-      model: The Gemma model being used.
-
-    Returns:
-      An Iterable of type PredictionResult.
-    """
-    _ = unused  # for interface compatibility with Model Handler
-    # Loop each text string, and use a tuple to store the inference results.
-    for one_text in batch:
-      result = model.generate(one_text, max_length=64)
-      yield PredictionResult(one_text, result, self._model_name)
+  vllm_server_kwargs = {
+      "gpu-memory-utilization": str(gpu_memory_utilization),
+      "trust-remote-code": None,
+      "dtype": "bfloat16",
+      "max-model-len": "8192",
+  }
+  return VLLMCompletionsModelHandler(
+      model_name=target_model,
+      vllm_server_kwargs=vllm_server_kwargs,
+  )

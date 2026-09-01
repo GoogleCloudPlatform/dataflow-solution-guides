@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -12,12 +12,14 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-ARG SERVING_BUILD_IMAGE=tensorflow/tensorflow:2.21.0-gpu
-FROM ${SERVING_BUILD_IMAGE}
+FROM python:3.14-slim
 WORKDIR /workspace
 
-RUN apt-get update -y && apt-get install -y \
-  cmake
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt requirements.txt
 COPY main.py main.py
@@ -29,12 +31,40 @@ RUN pip install --upgrade --no-cache-dir pip \
   && pip install --no-cache-dir -r requirements.txt \
   && pip install --no-cache-dir -e .
 
+ARG MODEL_PRESET="google/gemma-4-E2B-it"
+ARG KAGGLE_USERNAME=""
+ARG KAGGLE_KEY=""
+ARG HF_TOKEN=""
+
+ENV MODEL_PRESET=${MODEL_PRESET}
+ENV MODEL_DIR="/opt/models/${MODEL_PRESET}"
+
+# Copy pre-staged model directory if present
+COPY gemma/ /opt/models/gemma/
+
+# Pre-download and bake model weights into container image during build
+RUN if [ -f "/opt/models/gemma/config.json" ] || [ -f "/opt/models/gemma/model.safetensors" ]; then \
+      echo "Model weights found in build context at /opt/models/gemma."; \
+    elif [ -n "${KAGGLE_USERNAME}" ] || [ -n "${HF_TOKEN}" ]; then \
+      echo "Downloading and baking model preset ${MODEL_PRESET} into ${MODEL_DIR}..."; \
+      KAGGLE_USERNAME=${KAGGLE_USERNAME} KAGGLE_KEY=${KAGGLE_KEY} HF_TOKEN=${HF_TOKEN} \
+      python -m ml_ai_pipeline.download_model "${MODEL_DIR}"; \
+    else \
+      echo "Attempting anonymous pre-download of ${MODEL_PRESET} into ${MODEL_DIR}..."; \
+      python -m ml_ai_pipeline.download_model "${MODEL_DIR}" || echo "Pre-download skipped."; \
+    fi
+
 # Copy files from official SDK image, including script/dependencies.
-COPY --from=apache/beam_python3.13_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
 
-COPY gemma_2B gemma_2B
-
-ENV KERAS_BACKEND="tensorflow"
+ENV VLLM_WORKER_MULTIPROC_METHOD="spawn"
+ENV VLLM_USE_FLASHINFER_SAMPLER="0"
+ENV VLLM_SAMPLER_BACKEND="torch"
+ENV FLASHINFER_ENABLE_JIT="0"
+ENV LD_LIBRARY_PATH="/usr/local/nvidia/lib64:/usr/local/nvidia/lib:${LD_LIBRARY_PATH}"
+ENV PATH="/usr/local/nvidia/bin:${PATH}"
+ENV NVIDIA_VISIBLE_DEVICES="all"
+ENV NVIDIA_DRIVER_CAPABILITIES="compute,utility"
 
 # Set the entrypoint to Apache Beam SDK launcher.
 ENTRYPOINT ["/opt/apache/beam/boot"]

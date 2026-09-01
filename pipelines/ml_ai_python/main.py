@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,19 +11,18 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""
-A machine learning streaming inference example for the Dataflow Solution Guides.
-"""
+"""A machine learning streaming inference example for the Dataflow Solution Guides."""
 
 import time
 
-from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions
+from apache_beam.options.pipeline_options import GoogleCloudOptions, PipelineOptions
 
 from ml_ai_pipeline.options import MyPipelineOptions
 from ml_ai_pipeline.pipeline import create_pipeline
 
 
 def main(options: MyPipelineOptions):
+  """Run the Gemma ML inference pipeline."""
   pipeline = create_pipeline(options)
   pipeline.run()
 
