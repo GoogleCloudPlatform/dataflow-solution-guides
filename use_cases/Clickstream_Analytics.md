@@ -13,7 +13,7 @@ For the full version of this solution guide, please refer to:
 
 ## Assets included in this repository
 
-- [Terraform code to deploy a project for Clickstream Analytics](../terraform/clickstream_analytics/)
+- [Terraform code to deploy infrastructure for Clickstream Analytics](../terraform/clickstream_analytics/)
 - [Sample pipeline in Java for clickstream analytics with Dataflow](../pipelines/clickstream_analytics_java/)
 
 ## Technical benefits
