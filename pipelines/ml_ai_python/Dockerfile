@@ -55,7 +55,7 @@ RUN if [ -f "/opt/models/gemma/config.json" ] || [ -f "/opt/models/gemma/model.s
     fi
 
 # Copy files from official SDK image, including script/dependencies.
-COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.14_sdk:2.76.0 /opt/apache/beam /opt/apache/beam
 
 ENV VLLM_WORKER_MULTIPROC_METHOD="spawn"
 ENV VLLM_USE_FLASHINFER_SAMPLER="0"

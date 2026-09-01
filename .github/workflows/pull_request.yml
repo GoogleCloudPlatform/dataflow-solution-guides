@@ -350,6 +350,7 @@ jobs:
                   pipenv install -r "$req_txt"
                 fi
               done
+              pipenv run pip install setuptools
               echo ----- Building package -----
               pipenv run python setup.py sdist
               if [ -d "tests" ]; then

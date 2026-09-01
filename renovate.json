@@ -21,6 +21,15 @@
         "actions/python-versions"
       ],
       "allowedVersions": "/^(?:v?3\\.(?:11|12|13|14))(?:[.-]|$)/"
+    },
+    {
+      "description": "Group Apache Beam dependencies across Python SDK and Docker boot containers",
+      "matchPackageNames": [
+        "apache-beam",
+        "apache/beam_python3.13_sdk",
+        "apache/beam_python3.14_sdk"
+      ],
+      "groupName": "apache-beam"
     }
   ]
 }

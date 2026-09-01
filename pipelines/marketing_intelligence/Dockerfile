@@ -32,6 +32,6 @@ RUN pip install --upgrade --no-cache-dir pip \
     && python scripts/01_train_model.py
 
 # Copy Apache Beam boot entrypoint binaries
-COPY --from=apache/beam_python3.14_sdk:2.75.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.14_sdk:2.76.0 /opt/apache/beam /opt/apache/beam
 
 ENTRYPOINT ["/opt/apache/beam/boot"]
