@@ -25,7 +25,6 @@ import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Instant;
 
@@ -35,11 +34,6 @@ public final class DeadletterConverter {
 
     public static PTransform<PCollection<ParsingError>, PCollection<TableRow>> fromParseErrors() {
         return new ParseErrorsToTableRowTransform();
-    }
-
-    public static PTransform<PCollection<KV<String, String>>, PCollection<TableRow>>
-            fromKvParseErrors() {
-        return new KvParseErrorsToTableRowTransform();
     }
 
     public static PTransform<PCollection<BigQueryStorageApiInsertError>, PCollection<TableRow>>
@@ -79,33 +73,6 @@ public final class DeadletterConverter {
                                     ParsingError element = c.element();
                                     deadletterMessages.inc();
                                     c.output(element.toTableRow());
-                                }
-                            }));
-        }
-    }
-
-    private static class KvParseErrorsToTableRowTransform
-            extends PTransform<PCollection<KV<String, String>>, PCollection<TableRow>> {
-        @Override
-        public PCollection<TableRow> expand(PCollection<KV<String, String>> input) {
-            return input.apply(
-                    "KvParseErrorToDeadletterRow",
-                    ParDo.of(
-                            new DoFn<KV<String, String>, TableRow>() {
-                                private final Counter deadletterMessages =
-                                        Metrics.counter(
-                                                DeadletterConverter.class, "deadletter-messages");
-
-                                @ProcessElement
-                                public void processElement(ProcessContext c) {
-                                    KV<String, String> element = c.element();
-                                    deadletterMessages.inc();
-                                    c.output(
-                                            formatDeadletterRow(
-                                                    Instant.now().toString(),
-                                                    element.getValue(),
-                                                    element.getKey(),
-                                                    ""));
                                 }
                             }));
         }

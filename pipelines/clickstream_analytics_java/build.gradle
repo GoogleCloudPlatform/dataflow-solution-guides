@@ -24,14 +24,11 @@ ext {
   appName = "ClickStreamPubSubToBq"
   appVersion = "${gitVersion()}-SNAPSHOT"
   beamVersion = "2.76.0"
-  slf4jVersion = "1.7.36"
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
   googleJavaFormat = '1.36.1'
   errorProneCoreVersion = '2.50.0'
   autoValueVersion = '1.11.1'
-  autoServiceVersion = '1.1.1'
-
 }
 repositories {
   mavenCentral()
@@ -66,19 +63,13 @@ dependencies {
 
   implementation "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
   annotationProcessor "com.google.auto.value:auto-value:${autoValueVersion}"
-  implementation "com.google.auto.service:auto-service-annotations:${autoServiceVersion}"
-  annotationProcessor "com.google.auto.service:auto-service:${autoServiceVersion}"
 
   // Tests dependencies.
   testImplementation "junit:junit:${junitVersion}"
   testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
   testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
   testImplementation "org.mockito:mockito-core:4.11.0"
-  implementation 'org.checkerframework:checker-qual:4.2.2'
   errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
-
-  // Google Java format for Gradle
-  implementation "com.google.googlejavaformat:google-java-format:${googleJavaFormat}"
 }
 
 // Package a self-contained jar file.

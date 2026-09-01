@@ -30,7 +30,6 @@ import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.SerializableFunction;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Instant;
 import org.junit.Rule;
@@ -86,35 +85,6 @@ public class DeadletterConverterTest {
         PCollection<TableRow> rows =
                 pipeline.apply("CreateErrors", Create.of(parseError))
                         .apply("ConvertToDeadletter", DeadletterConverter.fromParseErrors());
-
-        PAssert.that(rows)
-                .satisfies(
-                        (SerializableFunction<Iterable<TableRow>, Void>)
-                                input -> {
-                                    int count = 0;
-                                    for (TableRow row : input) {
-                                        count++;
-                                        assertEquals("{\"bad\": json}", row.get("payloadString"));
-                                        assertEquals(
-                                                "JSON_PARSING_ERROR: Invalid syntax",
-                                                row.get("errorMessage"));
-                                        assertNotNull(row.get("timestamp"));
-                                    }
-                                    assertEquals(1, count);
-                                    return null;
-                                });
-
-        pipeline.run().waitUntilFinish();
-    }
-
-    @Test
-    public void testFromKvParseErrorsTransform() {
-        KV<String, String> parseError =
-                KV.of("JSON_PARSING_ERROR: Invalid syntax", "{\"bad\": json}");
-
-        PCollection<TableRow> rows =
-                pipeline.apply("CreateKvErrors", Create.of(parseError))
-                        .apply("ConvertKvToDeadletter", DeadletterConverter.fromKvParseErrors());
 
         PAssert.that(rows)
                 .satisfies(

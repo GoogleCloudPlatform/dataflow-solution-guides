@@ -49,10 +49,6 @@ public abstract class JsonToEvents extends PTransform<PCollection<String>, PColl
         return new AutoValue_JsonToEvents();
     }
 
-    public static JsonToEvents run() {
-        return create();
-    }
-
     public static JsonToEvents parseJson() {
         return create();
     }

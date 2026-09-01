@@ -26,7 +26,9 @@ import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
 import org.joda.time.Instant;
 
-public class ClickstreamObjects {
+public final class ClickstreamObjects {
+
+    private ClickstreamObjects() {}
 
     /** Represents a raw or enriched clickstream event. */
     @DefaultSchema(AutoValueSchema.class)
