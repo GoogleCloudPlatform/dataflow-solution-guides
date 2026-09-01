@@ -88,18 +88,21 @@ def run_generator(
       next_candidates = PAGE_GRAPH.get(curr_page, ALL_PAGES)
       next_page = random.choice(next_candidates)
 
-      # 2% chance to inject an error event to test Deadletter routing
-      if inject_errors and random.random() < 0.02:
-        error_type = random.choice(["invalid_json", "oversized"])
+      # 3% chance to inject an error event to test Deadletter routing
+      if inject_errors and random.random() < 0.03:
+        error_type = random.choice(
+            ["invalid_json", "bad_types", "corrupted_payload"]
+        )
         if error_type == "invalid_json":
-          payload_str = f'{{"user_id": "{user_id}", "curr": "{next_page}", INVALID_JSON}}'
-        else:
+          payload_str = f'{{"user_id": "{user_id}", "curr": "{next_page}", "malformed": }}'
+        elif error_type == "bad_types":
           payload_str = json.dumps({
               "user_id": user_id,
               "curr": next_page,
-              "n": 1,
-              "padding": "X" * (11 * 1024 * 1024),  # > 10MB to trigger size limit
+              "n": "NOT_AN_INTEGER_ERROR",
           })
+        else:
+          payload_str = "RAW_UNPARSEABLE_TEXT_CLICKSTREAM_EVENT"
       else:
         event = generate_event(user_id, curr_page, next_page)
         payload_str = json.dumps(event)

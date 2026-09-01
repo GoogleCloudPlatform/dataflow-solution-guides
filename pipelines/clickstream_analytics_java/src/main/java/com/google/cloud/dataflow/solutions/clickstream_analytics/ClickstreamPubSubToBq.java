@@ -55,20 +55,20 @@ public class ClickstreamPubSubToBq {
         void setBqProjectId(String value);
 
         @Description("BigQuery Dataset Name")
-        String getBQDataset();
+        String getBqDataset();
 
-        void setBQDataset(String value);
+        void setBqDataset(String value);
 
         @Description("BigQuery Table for Enriched Events")
-        String getBQTable();
+        String getBqTable();
 
-        void setBQTable(String value);
+        void setBqTable(String value);
 
         @Description("BigQuery Table for Aggregated Sessions")
         @Default.String("sessions")
-        String getBQSessionsTable();
+        String getBqSessionsTable();
 
-        void setBQSessionsTable(String value);
+        void setBqSessionsTable(String value);
 
         @Description("PubSub Subscription Name")
         String getSubscription();
@@ -76,14 +76,14 @@ public class ClickstreamPubSubToBq {
         void setSubscription(String value);
 
         @Description("BigTable Instance Name")
-        String getBTInstance();
+        String getBtInstance();
 
-        void setBTInstance(String value);
+        void setBtInstance(String value);
 
         @Description("BigTable Table Name")
-        String getBTTable();
+        String getBtTable();
 
-        void setBTTable(String value);
+        void setBtTable(String value);
 
         @Description("BigQuery Deadletter Table Name")
         String getOutputDeadletterTable();
@@ -119,12 +119,12 @@ public class ClickstreamPubSubToBq {
         final String PROJECT = options.getBqProjectId();
         final String SUBSCRIPTION = options.getSubscription();
         final String BQ_PROJECT = PROJECT;
-        final String BQ_DATASET = options.getBQDataset();
-        final String BQ_TABLE = options.getBQTable();
-        final String BQ_SESSIONS_TABLE = options.getBQSessionsTable();
+        final String BQ_DATASET = options.getBqDataset();
+        final String BQ_TABLE = options.getBqTable();
+        final String BQ_SESSIONS_TABLE = options.getBqSessionsTable();
         final String BQ_DEADLETTER_TABLE = options.getOutputDeadletterTable();
-        final String BT_INSTANCE = options.getBTInstance();
-        final String BT_TABLE = options.getBTTable();
+        final String BT_INSTANCE = options.getBtInstance();
+        final String BT_TABLE = options.getBtTable();
         final String BT_LOOKUP_KEY = options.getBtLookupKey();
         final int SESSION_GAP_MINUTES =
                 options.getSessionGapDurationMinutes() != null
