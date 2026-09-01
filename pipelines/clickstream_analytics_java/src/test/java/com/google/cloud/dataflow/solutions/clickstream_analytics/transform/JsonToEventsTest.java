@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.dataflow.solutions.clickstream_analytics;
+package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -43,7 +43,7 @@ public class JsonToEventsTest implements Serializable {
                 "{\"user_id\":\"user_123\",\"prev\":\"Main_Page\",\"curr\":\"Google_Cloud\",\"type\":\"link\",\"n\":2,\"timestamp\":\"2026-09-01T12:00:00Z\"}";
 
         PCollection<String> input = pipeline.apply(Create.of(validJson));
-        PCollectionTuple results = input.apply(JsonToEvents.run());
+        PCollectionTuple results = input.apply(JsonToEvents.create());
 
         PCollection<ClickstreamEvent> successEvents = results.get(JsonToEvents.SUCCESS_TAG);
 
@@ -68,7 +68,7 @@ public class JsonToEventsTest implements Serializable {
         String invalidJson = "{invalid_json_payload: missing_quotes}";
 
         PCollection<String> input = pipeline.apply(Create.of(invalidJson));
-        PCollectionTuple results = input.apply(JsonToEvents.run());
+        PCollectionTuple results = input.apply(JsonToEvents.create());
 
         PCollection<KV<String, String>> failureEvents = results.get(JsonToEvents.FAILURE_TAG);
 
@@ -91,7 +91,7 @@ public class JsonToEventsTest implements Serializable {
         String oversized = new String(chars);
 
         PCollection<String> input = pipeline.apply(Create.of(oversized));
-        PCollectionTuple results = input.apply(JsonToEvents.run());
+        PCollectionTuple results = input.apply(JsonToEvents.create());
 
         PCollection<KV<String, String>> failureEvents = results.get(JsonToEvents.FAILURE_TAG);
 

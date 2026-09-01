@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.dataflow.solutions.clickstream_analytics;
+package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.auto.value.AutoValue;
+import com.google.cloud.dataflow.solutions.clickstream_analytics.Metrics;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ClickstreamEvent;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -31,34 +33,68 @@ import org.apache.beam.sdk.values.TupleTagList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JsonToEvents {
+@AutoValue
+public abstract class JsonToEvents extends PTransform<PCollection<String>, PCollectionTuple> {
 
-    public static final int MESSAGE_LIMIT_SIZE = 10 * 1024 * 1024;
+    public static final int DEFAULT_MESSAGE_LIMIT_SIZE = 10 * 1024 * 1024;
+    public static final int MESSAGE_LIMIT_SIZE = DEFAULT_MESSAGE_LIMIT_SIZE;
 
     public static final TupleTag<ClickstreamEvent> SUCCESS_TAG =
             new TupleTag<ClickstreamEvent>() {};
     public static final TupleTag<KV<String, String>> FAILURE_TAG =
             new TupleTag<KV<String, String>>() {};
 
-    public static PTransform<PCollection<String>, PCollectionTuple> run() {
-        return new ParseJsonTransform();
+    public abstract int messageLimitSize();
+
+    public static JsonToEvents create() {
+        return builder().build();
     }
 
-    private static class ParseJsonTransform
-            extends PTransform<PCollection<String>, PCollectionTuple> {
+    public static JsonToEvents run() {
+        return create();
+    }
 
-        @Override
-        public PCollectionTuple expand(PCollection<String> jsonStrings) {
-            return jsonStrings.apply(
-                    "ParseClickstreamJson",
-                    ParDo.of(new ParseJsonDoFn())
-                            .withOutputTags(SUCCESS_TAG, TupleTagList.of(FAILURE_TAG)));
+    public static Builder builder() {
+        return new AutoValue_JsonToEvents.Builder().messageLimitSize(DEFAULT_MESSAGE_LIMIT_SIZE);
+    }
+
+    public JsonToEvents withMessageLimitSize(int messageLimitSize) {
+        return toBuilder().messageLimitSize(messageLimitSize).build();
+    }
+
+    public abstract Builder toBuilder();
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+        public abstract Builder messageLimitSize(int messageLimitSize);
+
+        public Builder withMessageLimitSize(int messageLimitSize) {
+            return messageLimitSize(messageLimitSize);
         }
+
+        public abstract JsonToEvents build();
+    }
+
+    @Override
+    public PCollectionTuple expand(PCollection<String> jsonStrings) {
+        return jsonStrings.apply(
+                "ParseClickstreamJson",
+                ParDo.of(new ParseJsonDoFn(messageLimitSize()))
+                        .withOutputTags(SUCCESS_TAG, TupleTagList.of(FAILURE_TAG)));
     }
 
     public static class ParseJsonDoFn extends DoFn<String, ClickstreamEvent> {
         private static final Logger LOG = LoggerFactory.getLogger(ParseJsonDoFn.class);
+        private final int messageLimitSize;
         private transient ObjectMapper objectMapper;
+
+        public ParseJsonDoFn(int messageLimitSize) {
+            this.messageLimitSize = messageLimitSize;
+        }
+
+        public ParseJsonDoFn() {
+            this(DEFAULT_MESSAGE_LIMIT_SIZE);
+        }
 
         @Setup
         public void setup() {
@@ -77,7 +113,7 @@ public class JsonToEvents {
             String jsonString = context.element();
             byte[] messageBytes = jsonString.getBytes(StandardCharsets.UTF_8);
 
-            if (messageBytes.length >= MESSAGE_LIMIT_SIZE) {
+            if (messageBytes.length >= messageLimitSize) {
                 LOG.error("Row is too big, size {} bytes", messageBytes.length);
                 Metrics.tooBigMessages.inc();
                 context.output(FAILURE_TAG, KV.of("TooBigRow", jsonString));

@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.dataflow.solutions.clickstream_analytics;
+package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 
+import com.google.auto.value.AutoValue;
+import com.google.cloud.dataflow.solutions.clickstream_analytics.Metrics;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ClickstreamEvent;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.UserSession;
 import java.util.ArrayList;
@@ -34,17 +36,48 @@ import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 
-public class SessionAnalytics
+@AutoValue
+public abstract class SessionAnalytics
         extends PTransform<PCollection<ClickstreamEvent>, PCollection<UserSession>> {
 
-    private final int gapDurationMinutes;
+    public static final int DEFAULT_GAP_DURATION_MINUTES = 30;
 
-    public SessionAnalytics(int gapDurationMinutes) {
-        this.gapDurationMinutes = gapDurationMinutes > 0 ? gapDurationMinutes : 30;
-    }
+    public abstract int gapDurationMinutes();
 
     public static SessionAnalytics of(int gapDurationMinutes) {
-        return new SessionAnalytics(gapDurationMinutes);
+        return builder()
+                .gapDurationMinutes(
+                        gapDurationMinutes > 0 ? gapDurationMinutes : DEFAULT_GAP_DURATION_MINUTES)
+                .build();
+    }
+
+    public static SessionAnalytics create() {
+        return builder().build();
+    }
+
+    public static Builder builder() {
+        return new AutoValue_SessionAnalytics.Builder()
+                .gapDurationMinutes(DEFAULT_GAP_DURATION_MINUTES);
+    }
+
+    public SessionAnalytics withGapDurationMinutes(int gapDurationMinutes) {
+        return toBuilder()
+                .gapDurationMinutes(
+                        gapDurationMinutes > 0 ? gapDurationMinutes : DEFAULT_GAP_DURATION_MINUTES)
+                .build();
+    }
+
+    public abstract Builder toBuilder();
+
+    @AutoValue.Builder
+    public abstract static class Builder {
+        public abstract Builder gapDurationMinutes(int gapDurationMinutes);
+
+        public Builder withGapDurationMinutes(int gapDurationMinutes) {
+            return gapDurationMinutes(gapDurationMinutes);
+        }
+
+        public abstract SessionAnalytics build();
     }
 
     @Override
@@ -73,7 +106,7 @@ public class SessionAnalytics
                         "ApplySessionWindow",
                         Window.<KV<String, ClickstreamEvent>>into(
                                 Sessions.withGapDuration(
-                                        Duration.standardMinutes(gapDurationMinutes))))
+                                        Duration.standardMinutes(gapDurationMinutes()))))
                 .apply("GroupSessionsByKey", GroupByKey.create())
                 .apply("AggregateSessionMetrics", ParDo.of(new AggregateSessionDoFn()));
     }

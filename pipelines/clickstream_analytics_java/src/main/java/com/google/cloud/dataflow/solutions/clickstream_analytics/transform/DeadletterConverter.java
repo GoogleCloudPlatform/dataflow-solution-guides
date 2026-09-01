@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.dataflow.solutions.clickstream_analytics;
+package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 
 import com.google.api.services.bigquery.model.TableRow;
+import com.google.cloud.dataflow.solutions.clickstream_analytics.Metrics;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryStorageApiInsertError;
@@ -26,7 +27,9 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Instant;
 
-public class DeadletterConverter {
+public final class DeadletterConverter {
+
+    private DeadletterConverter() {}
 
     public static PTransform<PCollection<KV<String, String>>, PCollection<TableRow>>
             fromParseErrors() {

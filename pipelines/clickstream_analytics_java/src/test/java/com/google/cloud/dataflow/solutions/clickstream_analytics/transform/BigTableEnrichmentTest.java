@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.dataflow.solutions.clickstream_analytics;
+package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -23,7 +23,6 @@ import java.io.Serializable;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
-import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.junit.Rule;
 import org.junit.Test;
@@ -68,9 +67,12 @@ public class BigTableEnrichmentTest implements Serializable {
         PCollection<ClickstreamEvent> enriched =
                 input.apply(
                         "DisabledBigtableEnrichment",
-                        ParDo.of(
-                                new BigTableEnrichment(
-                                        "test-proj", "test-inst", "test-table", "curr", false)));
+                        BigTableEnrichment.create()
+                                .withProjectId("test-proj")
+                                .withInstanceId("test-inst")
+                                .withTableId("test-table")
+                                .withLookupKeyField("curr")
+                                .withEnabled(false));
 
         PAssert.that(enriched)
                 .satisfies(

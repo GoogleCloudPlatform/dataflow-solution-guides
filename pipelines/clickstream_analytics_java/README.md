@@ -61,21 +61,34 @@ All data models are defined in [`ClickstreamObjects.java`](src/main/java/com/goo
 pipelines/clickstream_analytics_java/
 ├── build.gradle                                      # Gradle configuration (Beam 2.76, Java 25, AutoValue)
 ├── src/main/java/.../clickstream_analytics/
-│   ├── ClickstreamPubSubToBq.java                    # Main pipeline DAG & options interface
-│   ├── BigTableEnrichment.java                       # Cloud Bigtable lookup DoFn
-│   ├── SessionAnalytics.java                         # Session windowing & aggregation transform
-│   ├── JsonToEvents.java                             # JSON parser & validator transform
-│   ├── DeadletterConverter.java                      # Dead-letter TableRow converter
+│   ├── ClickstreamPubSubToBq.java                    # Main pipeline DAG orchestrator
 │   ├── Metrics.java                                  # Pipeline counters & metrics
-│   └── data/
-│       └── ClickstreamObjects.java                   # AutoValue + Beam Schema data classes
+│   ├── options/
+│   │   └── ClickstreamProcessingOptions.java         # Pipeline options interface
+│   ├── data/
+│   │   ├── ClickstreamObjects.java                   # AutoValue + Beam Schema data classes
+│   │   └── SchemaUtils.java                          # Dead-letter BigQuery JSON schema loader
+│   ├── extract/
+│   │   └── PubSub.java                               # PubSub streaming read PTransform
+│   ├── transform/
+│   │   ├── JsonToEvents.java                         # JSON parser & validator PTransform
+│   │   ├── BigTableEnrichment.java                   # Cloud Bigtable lookup enrichment PTransform
+│   │   ├── SessionAnalytics.java                     # Session windowing & aggregation PTransform
+│   │   └── DeadletterConverter.java                  # Dead-letter TableRow converter PTransforms
+│   └── load/
+│       └── BigQuery.java                             # BigQuery events, sessions, and deadletter sinks
 ├── src/main/resources/
 │   └── streaming_source_deadletter_table_schema.json # DLQ BigQuery table schema
 ├── src/test/java/.../clickstream_analytics/          # Unit tests (100% pass rate)
-│   ├── JsonToEventsTest.java
-│   ├── BigTableEnrichmentTest.java
-│   ├── SessionAnalyticsTest.java
-│   └── DeadletterConverterTest.java
+│   ├── extract/
+│   │   └── PubSubTest.java
+│   ├── transform/
+│   │   ├── JsonToEventsTest.java
+│   │   ├── BigTableEnrichmentTest.java
+│   │   ├── SessionAnalyticsTest.java
+│   │   └── DeadletterConverterTest.java
+│   └── load/
+│       └── BigQueryTest.java
 └── scripts/
     ├── 01_launch_pipeline.sh                         # Dataflow submission wrapper
     ├── populate_bigtable.py                          # Seeds Cloud Bigtable with Wikipedia metadata
