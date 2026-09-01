@@ -67,14 +67,3 @@ def create_vllm_model_handler(
       model_name=target_model,
       vllm_server_kwargs=vllm_server_kwargs,
   )
-
-
-def GemmaModelHandler(  # pylint: disable=invalid-name
-    model_name: Optional[str] = None,
-    gpu_memory_utilization: float = 0.85,
-) -> VLLMCompletionsModelHandler:
-  """Alias for create_vllm_model_handler for backward compatibility."""
-  return create_vllm_model_handler(
-      model_name=model_name,
-      gpu_memory_utilization=gpu_memory_utilization,
-  )
