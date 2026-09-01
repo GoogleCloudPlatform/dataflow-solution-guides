@@ -17,6 +17,7 @@ package com.google.cloud.dataflow.solutions.clickstream_analytics;
 
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ClickstreamEvent;
+import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ParsingError;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.UserSession;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.SchemaUtils;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.extract.ClickstreamPubSubReader;
@@ -30,7 +31,6 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.WriteResult;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.Flatten;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
@@ -78,7 +78,7 @@ public class ClickstreamPubSubToBq {
                 pubsubMessages.apply("TransformJSONToEvents", JsonToEvents.create());
 
         PCollection<ClickstreamEvent> validEvents = parseResults.get(JsonToEvents.SUCCESS_TAG);
-        PCollection<KV<String, String>> parseErrors = parseResults.get(JsonToEvents.FAILURE_TAG);
+        PCollection<ParsingError> parseErrors = parseResults.get(JsonToEvents.ERROR_TAG);
 
         PCollection<TableRow> parseErrorRows =
                 parseErrors.apply("ParseErrorsToDeadletter", DeadletterConverter.fromParseErrors());

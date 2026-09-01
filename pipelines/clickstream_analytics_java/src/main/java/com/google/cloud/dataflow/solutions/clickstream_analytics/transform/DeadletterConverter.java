@@ -16,6 +16,7 @@
 package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 
 import com.google.api.services.bigquery.model.TableRow;
+import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ParsingError;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryStorageApiInsertError;
@@ -32,9 +33,13 @@ public final class DeadletterConverter {
 
     private DeadletterConverter() {}
 
-    public static PTransform<PCollection<KV<String, String>>, PCollection<TableRow>>
-            fromParseErrors() {
+    public static PTransform<PCollection<ParsingError>, PCollection<TableRow>> fromParseErrors() {
         return new ParseErrorsToTableRowTransform();
+    }
+
+    public static PTransform<PCollection<KV<String, String>>, PCollection<TableRow>>
+            fromKvParseErrors() {
+        return new KvParseErrorsToTableRowTransform();
     }
 
     public static PTransform<PCollection<BigQueryStorageApiInsertError>, PCollection<TableRow>>
@@ -58,11 +63,33 @@ public final class DeadletterConverter {
     }
 
     private static class ParseErrorsToTableRowTransform
+            extends PTransform<PCollection<ParsingError>, PCollection<TableRow>> {
+        @Override
+        public PCollection<TableRow> expand(PCollection<ParsingError> input) {
+            return input.apply(
+                    "ParseErrorToDeadletterRow",
+                    ParDo.of(
+                            new DoFn<ParsingError, TableRow>() {
+                                private final Counter deadletterMessages =
+                                        Metrics.counter(
+                                                DeadletterConverter.class, "deadletter-messages");
+
+                                @ProcessElement
+                                public void processElement(ProcessContext c) {
+                                    ParsingError element = c.element();
+                                    deadletterMessages.inc();
+                                    c.output(element.toTableRow());
+                                }
+                            }));
+        }
+    }
+
+    private static class KvParseErrorsToTableRowTransform
             extends PTransform<PCollection<KV<String, String>>, PCollection<TableRow>> {
         @Override
         public PCollection<TableRow> expand(PCollection<KV<String, String>> input) {
             return input.apply(
-                    "ParseErrorToDeadletterRow",
+                    "KvParseErrorToDeadletterRow",
                     ParDo.of(
                             new DoFn<KV<String, String>, TableRow>() {
                                 private final Counter deadletterMessages =

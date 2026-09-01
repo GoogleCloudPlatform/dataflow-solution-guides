@@ -26,8 +26,9 @@ Pub/Sub ──> JsonToEvents ──> BigTableEnrichment
 
 1. **Pub/Sub Ingestion**: Reads JSON clickstream events from a dedicated Pub/Sub subscription.
 2. **Schema & AutoValue Parsing (`JsonToEvents`)**:
-   - Parses raw JSON directly into typed `ClickstreamEvent` records using Google AutoValue, AutoBuilder, and Apache Beam Schemas (`@DefaultSchema(AutoValueSchema.class)`).
-   - Validates payload size (max 10MB) and syntax. Malformed or oversized records are immediately routed to a dead-letter failure tag.
+   - Parses raw JSON directly into typed `ClickstreamEvent` records using Apache Beam's native schema-driven parsing via `JsonToRow.withExceptionReporting(...)` and `Convert.fromRows(...)`.
+   - Beam Schemas are inferred automatically via `@DefaultSchema(AutoValueSchema.class)` and `@SchemaFieldName(...)` annotations.
+   - Syntax errors and schema validation mismatches are captured with extended error info and routed to `ERROR_TAG` as strongly-typed `ParsingError` records.
 3. **Cloud Bigtable Enrichment (`BigTableEnrichment`)**:
    - Uses the modern Google Cloud Bigtable v2 Java Client (`bigtableDataClient.readRows(...)`).
    - Looks up article metadata based on the current page (`curr` attribute) from the Bigtable `wikipedia` table (`cf` column family).
@@ -114,10 +115,10 @@ The unit test suite validates all Beam transforms, error routing, Bigtable clien
 
 | Test Class | Scope & Verification |
 | :--- | :--- |
-| [`JsonToEventsTest`](src/test/java/com/google/cloud/dataflow/solutions/clickstream_analytics/JsonToEventsTest.java) | Validates JSON parsing into typed `ClickstreamEvent` records, ensures oversized payloads (>10MB) and malformed syntax route to the dead-letter failure tag. |
-| [`BigTableEnrichmentTest`](src/test/java/com/google/cloud/dataflow/solutions/clickstream_analytics/BigTableEnrichmentTest.java) | Uses Mockito to verify Bigtable row lookups, column cell extraction into `category` and `enriched_data`, and pass-through fallback on cache misses or when enrichment is disabled. |
-| [`SessionAnalyticsTest`](src/test/java/com/google/cloud/dataflow/solutions/clickstream_analytics/SessionAnalyticsTest.java) | Validates user session windowing (`Sessions.withGapDuration`), chronological sorting for `first_page` and `last_page`, duration computation, and unique page counting. |
-| [`DeadletterConverterTest`](src/test/java/com/google/cloud/dataflow/solutions/clickstream_analytics/DeadletterConverterTest.java) | Tests conversion of `ParsingError` and BigQuery Storage Write API insertion failures into standard dead-letter `TableRow`s matching the DLQ schema. |
+| [`JsonToEventsTest`](src/test/java/com/google/cloud/dataflow/solutions/clickstream_analytics/transform/JsonToEventsTest.java) | Validates schema-driven JSON parsing into typed `ClickstreamEvent` records, ensures malformed syntax and schema mismatches route to `ParsingError` dead-letter tag. |
+| [`BigTableEnrichmentTest`](src/test/java/com/google/cloud/dataflow/solutions/clickstream_analytics/transform/BigTableEnrichmentTest.java) | Uses Mockito to verify Bigtable row lookups, column cell extraction into `category` and `enriched_data`, and pass-through fallback on cache misses or when enrichment is disabled. |
+| [`SessionAnalyticsTest`](src/test/java/com/google/cloud/dataflow/solutions/clickstream_analytics/transform/SessionAnalyticsTest.java) | Validates user session windowing (`Sessions.withGapDuration`), chronological sorting for `first_page` and `last_page`, duration computation, and unique page counting. |
+| [`DeadletterConverterTest`](src/test/java/com/google/cloud/dataflow/solutions/clickstream_analytics/transform/DeadletterConverterTest.java) | Tests conversion of `ParsingError` and BigQuery Storage Write API insertion failures into standard dead-letter `TableRow`s matching the DLQ schema. |
 
 ### Code Formatting (Spotless)
 This repository enforces Google Java Style. Validate and format code using Spotless:

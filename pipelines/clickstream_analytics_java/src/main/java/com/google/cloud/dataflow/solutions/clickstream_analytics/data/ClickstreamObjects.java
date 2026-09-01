@@ -18,10 +18,13 @@ package com.google.cloud.dataflow.solutions.clickstream_analytics.data;
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.auto.value.AutoValue;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import javax.annotation.Nullable;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
+import org.joda.time.Instant;
 
 public class ClickstreamObjects {
 
@@ -214,14 +217,32 @@ public class ClickstreamObjects {
     @AutoValue
     public abstract static class ParsingError implements Serializable {
 
-        @SchemaFieldName("payload_string")
-        public abstract String getPayloadString();
+        @SchemaFieldName("input_data")
+        public abstract String getInputData();
 
         @SchemaFieldName("error_message")
         public abstract String getErrorMessage();
 
         @SchemaFieldName("timestamp")
-        public abstract String getTimestamp();
+        public abstract Instant getTimestamp();
+
+        public String getPayloadString() {
+            return getInputData();
+        }
+
+        public TableRow toTableRow() {
+            TableRow row = new TableRow();
+            row.set(
+                    "timestamp",
+                    getTimestamp() != null ? getTimestamp().toString() : Instant.now().toString());
+            String payload = getInputData() != null ? getInputData() : "";
+            row.set("payloadString", payload);
+            row.set("payloadBytes", payload.getBytes(StandardCharsets.UTF_8));
+            row.set("attributes", Collections.emptyList());
+            row.set("errorMessage", getErrorMessage() != null ? getErrorMessage() : "");
+            row.set("stacktrace", "");
+            return row;
+        }
 
         public static Builder builder() {
             return new AutoValue_ClickstreamObjects_ParsingError.Builder();
@@ -229,11 +250,11 @@ public class ClickstreamObjects {
 
         @AutoValue.Builder
         public abstract static class Builder {
-            public abstract Builder setPayloadString(String value);
+            public abstract Builder setInputData(String value);
 
             public abstract Builder setErrorMessage(String value);
 
-            public abstract Builder setTimestamp(String value);
+            public abstract Builder setTimestamp(Instant value);
 
             public abstract ParsingError build();
         }

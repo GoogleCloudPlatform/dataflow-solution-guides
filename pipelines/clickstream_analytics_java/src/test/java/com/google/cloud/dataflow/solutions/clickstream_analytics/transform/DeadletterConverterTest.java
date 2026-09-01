@@ -21,6 +21,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.api.services.bigquery.model.TableRow;
+import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ParsingError;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryStorageApiInsertError;
@@ -31,6 +32,7 @@ import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+import org.joda.time.Instant;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -74,12 +76,45 @@ public class DeadletterConverterTest {
 
     @Test
     public void testFromParseErrorsTransform() {
-        KV<String, String> parseError =
-                KV.of("JSON_PARSING_ERROR: Invalid syntax", "{\"bad\": json}");
+        ParsingError parseError =
+                ParsingError.builder()
+                        .setInputData("{\"bad\": json}")
+                        .setErrorMessage("JSON_PARSING_ERROR: Invalid syntax")
+                        .setTimestamp(Instant.parse("2026-09-01T12:00:00Z"))
+                        .build();
 
         PCollection<TableRow> rows =
                 pipeline.apply("CreateErrors", Create.of(parseError))
                         .apply("ConvertToDeadletter", DeadletterConverter.fromParseErrors());
+
+        PAssert.that(rows)
+                .satisfies(
+                        (SerializableFunction<Iterable<TableRow>, Void>)
+                                input -> {
+                                    int count = 0;
+                                    for (TableRow row : input) {
+                                        count++;
+                                        assertEquals("{\"bad\": json}", row.get("payloadString"));
+                                        assertEquals(
+                                                "JSON_PARSING_ERROR: Invalid syntax",
+                                                row.get("errorMessage"));
+                                        assertNotNull(row.get("timestamp"));
+                                    }
+                                    assertEquals(1, count);
+                                    return null;
+                                });
+
+        pipeline.run().waitUntilFinish();
+    }
+
+    @Test
+    public void testFromKvParseErrorsTransform() {
+        KV<String, String> parseError =
+                KV.of("JSON_PARSING_ERROR: Invalid syntax", "{\"bad\": json}");
+
+        PCollection<TableRow> rows =
+                pipeline.apply("CreateKvErrors", Create.of(parseError))
+                        .apply("ConvertKvToDeadletter", DeadletterConverter.fromKvParseErrors());
 
         PAssert.that(rows)
                 .satisfies(

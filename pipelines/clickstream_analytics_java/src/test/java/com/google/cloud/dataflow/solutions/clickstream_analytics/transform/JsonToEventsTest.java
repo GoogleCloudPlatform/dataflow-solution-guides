@@ -17,14 +17,14 @@ package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ClickstreamEvent;
+import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ParsingError;
 import java.io.Serializable;
-import java.util.Arrays;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.junit.Rule;
@@ -43,7 +43,7 @@ public class JsonToEventsTest implements Serializable {
                 "{\"user_id\":\"user_123\",\"prev\":\"Main_Page\",\"curr\":\"Google_Cloud\",\"type\":\"link\",\"n\":2,\"timestamp\":\"2026-09-01T12:00:00Z\"}";
 
         PCollection<String> input = pipeline.apply(Create.of(validJson));
-        PCollectionTuple results = input.apply(JsonToEvents.create());
+        PCollectionTuple results = input.apply(JsonToEvents.parseJson());
 
         PCollection<ClickstreamEvent> successEvents = results.get(JsonToEvents.SUCCESS_TAG);
 
@@ -70,14 +70,17 @@ public class JsonToEventsTest implements Serializable {
         PCollection<String> input = pipeline.apply(Create.of(invalidJson));
         PCollectionTuple results = input.apply(JsonToEvents.create());
 
-        PCollection<KV<String, String>> failureEvents = results.get(JsonToEvents.FAILURE_TAG);
+        PCollection<ParsingError> failureEvents = results.get(JsonToEvents.FAILURE_TAG);
 
         PAssert.that(failureEvents)
                 .satisfies(
                         errors -> {
-                            KV<String, String> error = errors.iterator().next();
-                            assertEquals("JsonParseError", error.getKey());
-                            assertEquals(invalidJson, error.getValue());
+                            ParsingError error = errors.iterator().next();
+                            assertEquals(invalidJson, error.getInputData());
+                            assertEquals(invalidJson, error.getPayloadString());
+                            assertNotNull(error.getErrorMessage());
+                            assertTrue(!error.getErrorMessage().isEmpty());
+                            assertNotNull(error.getTimestamp());
                             return null;
                         });
 
@@ -85,22 +88,23 @@ public class JsonToEventsTest implements Serializable {
     }
 
     @Test
-    public void testOversizedPayloadRoutesToFailureTag() {
-        char[] chars = new char[JsonToEvents.MESSAGE_LIMIT_SIZE];
-        Arrays.fill(chars, 'a');
-        String oversized = new String(chars);
+    public void testSchemaTypeMismatchRoutesToErrorTag() {
+        String typeMismatchJson =
+                "{\"user_id\":\"user_456\",\"n\":\"not_a_valid_integer\",\"timestamp\":\"2026-09-01T12:00:00Z\"}";
 
-        PCollection<String> input = pipeline.apply(Create.of(oversized));
+        PCollection<String> input = pipeline.apply(Create.of(typeMismatchJson));
         PCollectionTuple results = input.apply(JsonToEvents.create());
 
-        PCollection<KV<String, String>> failureEvents = results.get(JsonToEvents.FAILURE_TAG);
+        PCollection<ParsingError> failureEvents = results.get(JsonToEvents.ERROR_TAG);
 
         PAssert.that(failureEvents)
                 .satisfies(
                         errors -> {
-                            KV<String, String> error = errors.iterator().next();
-                            assertEquals("TooBigRow", error.getKey());
-                            assertNotNull(error.getValue());
+                            ParsingError error = errors.iterator().next();
+                            assertEquals(typeMismatchJson, error.getInputData());
+                            assertNotNull(error.getErrorMessage());
+                            assertTrue(!error.getErrorMessage().isEmpty());
+                            assertNotNull(error.getTimestamp());
                             return null;
                         });
 

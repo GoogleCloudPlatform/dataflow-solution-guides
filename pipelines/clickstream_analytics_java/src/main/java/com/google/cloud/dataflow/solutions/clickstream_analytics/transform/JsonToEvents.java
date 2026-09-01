@@ -15,168 +15,143 @@
  */
 package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auto.value.AutoValue;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ClickstreamEvent;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ParsingError;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
+import org.apache.beam.sdk.schemas.NoSuchSchemaException;
+import org.apache.beam.sdk.schemas.Schema;
+import org.apache.beam.sdk.schemas.transforms.Convert;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.DoFn.FieldAccess;
+import org.apache.beam.sdk.transforms.JsonToRow;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionRowTuple;
 import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TupleTag;
-import org.apache.beam.sdk.values.TupleTagList;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.joda.time.Instant;
 
+/** Parse JSON strings and return {@link ClickstreamEvent} elements using Apache Beam Schemas. */
 @AutoValue
 public abstract class JsonToEvents extends PTransform<PCollection<String>, PCollectionTuple> {
 
-    public static final int DEFAULT_MESSAGE_LIMIT_SIZE = 10 * 1024 * 1024;
-    public static final int MESSAGE_LIMIT_SIZE = DEFAULT_MESSAGE_LIMIT_SIZE;
-
     public static final TupleTag<ClickstreamEvent> SUCCESS_TAG =
-            new TupleTag<ClickstreamEvent>() {};
-    public static final TupleTag<KV<String, String>> FAILURE_TAG =
-            new TupleTag<KV<String, String>>() {};
-
-    public abstract int messageLimitSize();
+            new TupleTag<ClickstreamEvent>("SUCCESS_TAG") {};
+    public static final TupleTag<ParsingError> ERROR_TAG =
+            new TupleTag<ParsingError>("ERROR_TAG") {};
+    public static final TupleTag<ParsingError> FAILURE_TAG = ERROR_TAG;
 
     public static JsonToEvents create() {
-        return builder().build();
+        return new AutoValue_JsonToEvents();
     }
 
     public static JsonToEvents run() {
         return create();
     }
 
-    public static Builder builder() {
-        return new AutoValue_JsonToEvents.Builder().messageLimitSize(DEFAULT_MESSAGE_LIMIT_SIZE);
-    }
-
-    public JsonToEvents withMessageLimitSize(int messageLimitSize) {
-        return toBuilder().messageLimitSize(messageLimitSize).build();
-    }
-
-    public abstract Builder toBuilder();
-
-    @AutoValue.Builder
-    public abstract static class Builder {
-        public abstract Builder messageLimitSize(int messageLimitSize);
-
-        public Builder withMessageLimitSize(int messageLimitSize) {
-            return messageLimitSize(messageLimitSize);
-        }
-
-        public abstract JsonToEvents build();
+    public static JsonToEvents parseJson() {
+        return create();
     }
 
     @Override
-    public PCollectionTuple expand(PCollection<String> jsonStrings) {
-        return jsonStrings.apply(
-                "ParseClickstreamJson",
-                ParDo.of(new ParseJsonDoFn(messageLimitSize()))
-                        .withOutputTags(SUCCESS_TAG, TupleTagList.of(FAILURE_TAG)));
+    public PCollectionTuple expand(PCollection<String> input) {
+        // Parse JSON strings to Rows conforming to ClickstreamEvent schema
+        PCollectionRowTuple allRows = input.apply("Json2Row", new Json2Row());
+        PCollection<Row> goodRows = allRows.get(Json2Row.RESULTS_TAG);
+        PCollection<Row> badRows = allRows.get(Json2Row.ERROR_TAG);
+
+        // Convert Rows to strongly typed AutoValue data classes
+        PCollection<ClickstreamEvent> events =
+                goodRows.apply("Row2ClickstreamEvent", Convert.fromRows(ClickstreamEvent.class));
+        PCollection<ParsingError> errors = badRows.apply("Row2Error", new Row2ErrorMessage());
+
+        return PCollectionTuple.of(SUCCESS_TAG, events).and(ERROR_TAG, errors);
     }
 
-    public static class ParseJsonDoFn extends DoFn<String, ClickstreamEvent> {
-        private static final Logger LOG = LoggerFactory.getLogger(ParseJsonDoFn.class);
-        private final Counter successfulMessages =
-                Metrics.counter(JsonToEvents.class, "successful-messages");
-        private final Counter jsonParseErrorMessages =
-                Metrics.counter(JsonToEvents.class, "json-parse-failed-messages");
-        private final Counter tooBigMessages =
-                Metrics.counter(JsonToEvents.class, "too-big-messages");
+    /** Parses JSON to Row and verifies that data conforms to the assumed schema. */
+    private static class Json2Row extends PTransform<PCollection<String>, PCollectionRowTuple> {
+        static final String RESULTS_TAG = "RESULTS_TAG";
+        static final String ERROR_TAG = "ERROR_TAG";
 
-        private final int messageLimitSize;
-        private transient ObjectMapper objectMapper;
-
-        public ParseJsonDoFn(int messageLimitSize) {
-            this.messageLimitSize = messageLimitSize;
-        }
-
-        public ParseJsonDoFn() {
-            this(DEFAULT_MESSAGE_LIMIT_SIZE);
-        }
-
-        @Setup
-        public void setup() {
-            objectMapper = new ObjectMapper();
-        }
-
-        private ObjectMapper getMapper() {
-            if (objectMapper == null) {
-                objectMapper = new ObjectMapper();
+        @Override
+        public PCollectionRowTuple expand(PCollection<String> input) {
+            Schema eventSchema;
+            try {
+                eventSchema =
+                        input.getPipeline().getSchemaRegistry().getSchema(ClickstreamEvent.class);
+            } catch (NoSuchSchemaException e) {
+                throw new IllegalStateException(
+                        String.format(
+                                "No schema found for ClickstreamEvent class: %s", e.getMessage()));
             }
-            return objectMapper;
+
+            JsonToRow.ParseResult parseResult =
+                    input.apply(
+                            "Json2Row",
+                            JsonToRow.withExceptionReporting(eventSchema).withExtendedErrorInfo());
+
+            PCollection<Row> results = parseResult.getResults();
+            PCollection<Row> errors = parseResult.getFailedToParseLines();
+
+            return PCollectionRowTuple.of(RESULTS_TAG, results).and(ERROR_TAG, errors);
+        }
+    }
+
+    /** Maps failed JSON parse rows into strongly typed {@link ParsingError} elements. */
+    private static class Row2ErrorMessage
+            extends PTransform<PCollection<Row>, PCollection<ParsingError>> {
+        @Override
+        public PCollection<ParsingError> expand(PCollection<Row> input) {
+            Schema errorSchema;
+            try {
+                errorSchema = input.getPipeline().getSchemaRegistry().getSchema(ParsingError.class);
+            } catch (NoSuchSchemaException e) {
+                throw new IllegalStateException(
+                        String.format(
+                                "No schema found for ParsingError class: %s", e.getMessage()));
+            }
+
+            PCollection<Row> rowsWithRightSchema =
+                    input.apply(
+                            "JsonRow2ErrorMessage",
+                            ParDo.of(new JsonRow2ErrorMessageRowDoFn(errorSchema)));
+
+            return rowsWithRightSchema
+                    .setRowSchema(errorSchema)
+                    .apply("Row2ErrorMessage", Convert.fromRows(ParsingError.class));
+        }
+    }
+
+    /** DoFn that builds an error Row matching ParsingError schema from failed JSON parse info. */
+    private static class JsonRow2ErrorMessageRowDoFn extends DoFn<Row, Row> {
+        private static final Counter jsonParseErrorMessages =
+                Metrics.counter(JsonToEvents.class, "json-parse-failed-messages");
+
+        private final Schema errorRowSchema;
+
+        JsonRow2ErrorMessageRowDoFn(Schema errorRowSchema) {
+            this.errorRowSchema = errorRowSchema;
         }
 
         @ProcessElement
-        public void processElement(ProcessContext context) {
-            String jsonString = context.element();
-            byte[] messageBytes = jsonString.getBytes(StandardCharsets.UTF_8);
+        public void processElement(
+                @FieldAccess("line") String inputData,
+                @FieldAccess("err") String errorMessage,
+                @Timestamp Instant timestamp,
+                OutputReceiver<Row> outputReceiver) {
+            jsonParseErrorMessages.inc();
+            Row outputRow =
+                    Row.withSchema(this.errorRowSchema)
+                            .withFieldValue("input_data", inputData)
+                            .withFieldValue("error_message", errorMessage)
+                            .withFieldValue("timestamp", timestamp)
+                            .build();
 
-            if (messageBytes.length >= messageLimitSize) {
-                LOG.error("Row is too big, size {} bytes", messageBytes.length);
-                tooBigMessages.inc();
-                context.output(FAILURE_TAG, KV.of("TooBigRow", jsonString));
-                return;
-            }
-
-            try {
-                JsonNode node = getMapper().readTree(jsonString);
-                ClickstreamEvent.Builder eventBuilder = ClickstreamEvent.builder();
-
-                if (node.hasNonNull("user_id")) {
-                    eventBuilder.setUserId(node.get("user_id").asText());
-                } else if (node.hasNonNull("client_id")) {
-                    eventBuilder.setUserId(node.get("client_id").asText());
-                }
-
-                if (node.hasNonNull("timestamp")) {
-                    eventBuilder.setTimestamp(node.get("timestamp").asText());
-                }
-
-                if (node.hasNonNull("prev")) {
-                    eventBuilder.setPrev(node.get("prev").asText());
-                }
-
-                if (node.hasNonNull("curr")) {
-                    eventBuilder.setCurr(node.get("curr").asText());
-                }
-
-                if (node.hasNonNull("type")) {
-                    eventBuilder.setType(node.get("type").asText());
-                }
-
-                if (node.hasNonNull("n")) {
-                    eventBuilder.setN(node.get("n").asInt());
-                } else {
-                    eventBuilder.setN(1);
-                }
-
-                if (node.hasNonNull("category")) {
-                    eventBuilder.setCategory(node.get("category").asText());
-                }
-
-                if (node.hasNonNull("enriched_data")) {
-                    eventBuilder.setEnrichedData(node.get("enriched_data").asText());
-                }
-
-                ClickstreamEvent event = eventBuilder.build();
-                successfulMessages.inc();
-                context.output(event);
-
-            } catch (IOException | IllegalArgumentException e) {
-                LOG.error("Failed to parse clickstream event JSON: {}", e.getMessage());
-                jsonParseErrorMessages.inc();
-                context.output(FAILURE_TAG, KV.of("JsonParseError", jsonString));
-            }
+            outputReceiver.output(outputRow);
         }
     }
 }
