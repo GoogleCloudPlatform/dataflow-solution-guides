@@ -23,6 +23,11 @@ public final class Metrics {
     public static Counter jsonParseErrorMessages = counter("json-parse-failed-messages");
     public static Counter tooBigMessages = counter("too-big-messages");
     public static Counter failedInsertMessages = counter("failed-insert-messages");
+    public static Counter bigtableEnrichedMessages = counter("bigtable-enriched-messages");
+    public static Counter bigtableCacheMisses = counter("bigtable-cache-misses");
+    public static Counter bigtableErrors = counter("bigtable-errors");
+    public static Counter sessionsProcessed = counter("sessions-processed");
+    public static Counter deadletterMessages = counter("deadletter-messages");
 
     static Counter counter(String name) {
         return org.apache.beam.sdk.metrics.Metrics.counter(Metrics.class, name);

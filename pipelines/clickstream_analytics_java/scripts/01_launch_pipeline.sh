@@ -32,8 +32,11 @@ fi
   --bqProjectId=$PROJECT \
   --bqDataset=$BQ_DATASET \
   --bqTable=$BQ_TABLE \
-  --pubsubSubscription=$SUBSCRIPTION \
+  --bqSessionsTable=${BQ_SESSIONS_TABLE:-sessions} \
+  --subscription=$SUBSCRIPTION \
   --btInstance=$BIGTABLE_INSTANCE \
   --btTable=$BIGTABLE_TABLE \
   --outputDeadletterTable=$BQ_DEADLETTER_TABLE \
-  --btLookupKey=$BT_LOOKUP_KEY"
+  --btLookupKey=${BT_LOOKUP_KEY:-curr} \
+  --sessionGapDurationMinutes=${SESSION_GAP_DURATION_MINUTES:-30} \
+  --enableBigtableEnrichment=${ENABLE_BIGTABLE:-true}"
