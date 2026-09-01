@@ -49,7 +49,12 @@ def create_vllm_model_handler(
     gpu_memory_utilization: float = 0.85,
 ) -> VLLMCompletionsModelHandler:
   """Creates a VLLMCompletionsModelHandler using Beam's built-in vllm_inference."""
-  resolved_path = get_model_path(model_name)
+  # If running in custom container or targeting baked weights, default to /opt/models/gemma
+  if not model_name or model_name == "google/gemma-4-E2B-it" or not os.path.exists(model_name):
+    target_model = "/opt/models/gemma"
+  else:
+    target_model = model_name
+
   vllm_server_kwargs = {
       "gpu-memory-utilization": str(gpu_memory_utilization),
       "trust-remote-code": None,
@@ -57,7 +62,7 @@ def create_vllm_model_handler(
       "max-model-len": "8192",
   }
   return VLLMCompletionsModelHandler(
-      model_name=resolved_path,
+      model_name=target_model,
       vllm_server_kwargs=vllm_server_kwargs,
   )
 
