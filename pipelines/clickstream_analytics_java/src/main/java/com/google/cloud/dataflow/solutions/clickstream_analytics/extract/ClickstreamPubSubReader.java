@@ -21,9 +21,10 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 
-public final class PubSub {
+/** Composite PTransform for reading clickstream JSON messages from Cloud Pub/Sub. */
+public final class ClickstreamPubSubReader {
 
-    private PubSub() {}
+    private ClickstreamPubSubReader() {}
 
     public static Read.Builder read() {
         return Read.builder();
@@ -39,7 +40,7 @@ public final class PubSub {
         public abstract String subscription();
 
         public static Builder builder() {
-            return new AutoValue_PubSub_Read.Builder();
+            return new AutoValue_ClickstreamPubSubReader_Read.Builder();
         }
 
         public Read withSubscription(String subscription) {

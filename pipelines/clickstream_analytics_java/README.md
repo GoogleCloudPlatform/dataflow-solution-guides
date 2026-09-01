@@ -68,26 +68,26 @@ pipelines/clickstream_analytics_java/
 │   │   ├── ClickstreamObjects.java                   # AutoValue + Beam Schema data classes
 │   │   └── SchemaUtils.java                          # Dead-letter BigQuery JSON schema loader
 │   ├── extract/
-│   │   └── PubSub.java                               # PubSub streaming read PTransform
+│   │   └── ClickstreamPubSubReader.java              # PubSub streaming read PTransform
 │   ├── transform/
 │   │   ├── JsonToEvents.java                         # JSON parser & validator PTransform
 │   │   ├── BigTableEnrichment.java                   # Cloud Bigtable lookup enrichment PTransform
 │   │   ├── SessionAnalytics.java                     # Session windowing & aggregation PTransform
 │   │   └── DeadletterConverter.java                  # Dead-letter TableRow converter PTransforms
 │   └── load/
-│       └── BigQuery.java                             # BigQuery events, sessions, and deadletter sinks
+│       └── ClickstreamBigQuerySinks.java             # BigQuery events, sessions, and deadletter sinks
 ├── src/main/resources/
 │   └── streaming_source_deadletter_table_schema.json # DLQ BigQuery table schema
 ├── src/test/java/.../clickstream_analytics/          # Unit tests (100% pass rate)
 │   ├── extract/
-│   │   └── PubSubTest.java
+│   │   └── ClickstreamPubSubReaderTest.java
 │   ├── transform/
 │   │   ├── JsonToEventsTest.java
 │   │   ├── BigTableEnrichmentTest.java
 │   │   ├── SessionAnalyticsTest.java
 │   │   └── DeadletterConverterTest.java
 │   └── load/
-│       └── BigQueryTest.java
+│       └── ClickstreamBigQuerySinksTest.java
 └── scripts/
     ├── 01_launch_pipeline.sh                         # Dataflow submission wrapper
     ├── populate_bigtable.py                          # Seeds Cloud Bigtable with Wikipedia metadata

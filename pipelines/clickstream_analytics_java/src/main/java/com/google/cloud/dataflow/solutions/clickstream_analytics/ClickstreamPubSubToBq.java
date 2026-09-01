@@ -19,8 +19,8 @@ import com.google.api.services.bigquery.model.TableRow;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ClickstreamEvent;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.UserSession;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.SchemaUtils;
-import com.google.cloud.dataflow.solutions.clickstream_analytics.extract.PubSub;
-import com.google.cloud.dataflow.solutions.clickstream_analytics.load.BigQuery;
+import com.google.cloud.dataflow.solutions.clickstream_analytics.extract.ClickstreamPubSubReader;
+import com.google.cloud.dataflow.solutions.clickstream_analytics.load.ClickstreamBigQuerySinks;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.options.ClickstreamProcessingOptions;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.transform.BigTableEnrichment;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.transform.DeadletterConverter;
@@ -71,7 +71,7 @@ public class ClickstreamPubSubToBq {
 
         // E: Extract raw JSON messages from Pub/Sub
         PCollection<String> pubsubMessages =
-                p.apply("ReadPubSubData", PubSub.fromSubscription(subscription));
+                p.apply("ReadPubSubData", ClickstreamPubSubReader.fromSubscription(subscription));
 
         // T: Transform JSON strings into strongly typed ClickstreamEvent objects
         PCollectionTuple parseResults =
@@ -98,7 +98,7 @@ public class ClickstreamPubSubToBq {
         WriteResult eventsWriteResult =
                 enrichedEvents.apply(
                         "WriteEventsToBQ",
-                        BigQuery.writeEvents()
+                        ClickstreamBigQuerySinks.writeEvents()
                                 .withProjectId(bqProject)
                                 .withDataset(bqDataset)
                                 .withTable(bqTable)
@@ -113,7 +113,7 @@ public class ClickstreamPubSubToBq {
         WriteResult sessionsWriteResult =
                 sessionSummaries.apply(
                         "WriteSessionsToBQ",
-                        BigQuery.writeSessions()
+                        ClickstreamBigQuerySinks.writeSessions()
                                 .withProjectId(bqProject)
                                 .withDataset(bqDataset)
                                 .withTable(bqSessionsTable)
@@ -144,7 +144,7 @@ public class ClickstreamPubSubToBq {
                 .apply("FlattenDeadletterRows", Flatten.pCollections())
                 .apply(
                         "WriteDeadletterToBigQuery",
-                        BigQuery.writeDeadletter()
+                        ClickstreamBigQuerySinks.writeDeadletter()
                                 .withProjectId(bqProject)
                                 .withDataset(bqDataset)
                                 .withTable(bqDeadletterTable)

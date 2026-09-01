@@ -33,9 +33,13 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.PCollection;
 
-public final class BigQuery {
+/**
+ * BigQuery sink PTransforms for writing raw enriched events, aggregated user sessions, and
+ * dead-letter records using the BigQuery Storage Write API.
+ */
+public final class ClickstreamBigQuerySinks {
 
-    private BigQuery() {}
+    private ClickstreamBigQuerySinks() {}
 
     public static WriteEvents.Builder writeEvents() {
         return WriteEvents.builder();
@@ -60,7 +64,7 @@ public final class BigQuery {
         public abstract String table();
 
         public static Builder builder() {
-            return new AutoValue_BigQuery_WriteEvents.Builder();
+            return new AutoValue_ClickstreamBigQuerySinks_WriteEvents.Builder();
         }
 
         public WriteEvents withProjectId(String projectId) {
@@ -135,7 +139,7 @@ public final class BigQuery {
         public abstract String table();
 
         public static Builder builder() {
-            return new AutoValue_BigQuery_WriteSessions.Builder();
+            return new AutoValue_ClickstreamBigQuerySinks_WriteSessions.Builder();
         }
 
         public WriteSessions withProjectId(String projectId) {
@@ -222,7 +226,7 @@ public final class BigQuery {
         public abstract @Nullable String jsonSchema();
 
         public static Builder builder() {
-            return new AutoValue_BigQuery_WriteDeadletter.Builder();
+            return new AutoValue_ClickstreamBigQuerySinks_WriteDeadletter.Builder();
         }
 
         public WriteDeadletter withProjectId(String projectId) {

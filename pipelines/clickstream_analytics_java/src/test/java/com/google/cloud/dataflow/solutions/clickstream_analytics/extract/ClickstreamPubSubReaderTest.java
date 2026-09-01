@@ -22,12 +22,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class PubSubTest {
+public class ClickstreamPubSubReaderTest {
 
     @Test
     public void testPubSubReadBuilder() {
         String subscription = "projects/test-project/subscriptions/test-sub";
-        PubSub.Read readTransform = PubSub.read().withSubscription(subscription).build();
+        ClickstreamPubSubReader.Read readTransform =
+                ClickstreamPubSubReader.read().withSubscription(subscription).build();
 
         assertEquals(subscription, readTransform.subscription());
     }
@@ -35,7 +36,8 @@ public class PubSubTest {
     @Test
     public void testPubSubFromSubscription() {
         String subscription = "projects/test-project/subscriptions/test-sub-2";
-        PubSub.Read readTransform = PubSub.fromSubscription(subscription);
+        ClickstreamPubSubReader.Read readTransform =
+                ClickstreamPubSubReader.fromSubscription(subscription);
 
         assertEquals(subscription, readTransform.subscription());
     }

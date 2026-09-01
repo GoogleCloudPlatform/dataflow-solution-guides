@@ -23,12 +23,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class BigQueryTest {
+public class ClickstreamBigQuerySinksTest {
 
     @Test
     public void testWriteEventsBuilder() {
-        BigQuery.WriteEvents write =
-                BigQuery.writeEvents()
+        ClickstreamBigQuerySinks.WriteEvents write =
+                ClickstreamBigQuerySinks.writeEvents()
                         .withProjectId("test-project")
                         .withDataset("clickstream")
                         .withTable("events")
@@ -41,8 +41,8 @@ public class BigQueryTest {
 
     @Test
     public void testWriteSessionsBuilder() {
-        BigQuery.WriteSessions write =
-                BigQuery.writeSessions()
+        ClickstreamBigQuerySinks.WriteSessions write =
+                ClickstreamBigQuerySinks.writeSessions()
                         .withProjectId("test-project")
                         .withDataset("clickstream")
                         .withTable("sessions")
@@ -55,8 +55,8 @@ public class BigQueryTest {
 
     @Test
     public void testWriteDeadletterBuilder() {
-        BigQuery.WriteDeadletter write =
-                BigQuery.writeDeadletter()
+        ClickstreamBigQuerySinks.WriteDeadletter write =
+                ClickstreamBigQuerySinks.writeDeadletter()
                         .withProjectId("test-project")
                         .withDataset("clickstream")
                         .withTable("deadletter")
@@ -71,8 +71,8 @@ public class BigQueryTest {
 
     @Test
     public void testWriteDeadletterBuilderWithoutSchema() {
-        BigQuery.WriteDeadletter write =
-                BigQuery.writeDeadletter()
+        ClickstreamBigQuerySinks.WriteDeadletter write =
+                ClickstreamBigQuerySinks.writeDeadletter()
                         .withProjectId("test-project")
                         .withDataset("clickstream")
                         .withTable("deadletter")
