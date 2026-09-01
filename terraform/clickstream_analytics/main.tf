@@ -14,6 +14,8 @@
 
 locals {
   dataflow_service_account = var.service_account_name != null ? var.service_account_name : "clickstream-dataflow-sa"
+  pubsub_topic             = "dataflow-clickstream-input"
+  pubsub_subscription      = "dataflow-clickstream-input-sub"
   bigtable_instance        = "clickstream-analytics"
   bigtable_zone            = "${var.region}-a"
   bigtable_lookup_key      = "bigtable-lookup-key"
@@ -142,9 +144,9 @@ module "buckets" {
 module "input_topic" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
   project_id = var.project_id
-  name       = "input"
+  name       = local.pubsub_topic
   subscriptions = {
-    messages-sub = {}
+    (local.pubsub_subscription) = {}
   }
 
   depends_on = [
@@ -198,7 +200,8 @@ export BQ_DATASET=${module.dataset.dataset_id}
 export BQ_TABLE=${google_bigquery_table.wikipedia.table_id}
 export BQ_DEADLETTER_TABLE=${google_bigquery_table.deadletter.table_id}
 
-export SUBSCRIPTION=${module.input_topic.subscriptions["messages-sub"].id}
+export TOPIC=${module.input_topic.id}
+export SUBSCRIPTION=${module.input_topic.subscriptions[local.pubsub_subscription].id}
 
 export BIGTABLE_INSTANCE=${google_bigtable_instance.clickstream_analytics.name}
 export BIGTABLE_TABLE=$BQ_TABLE

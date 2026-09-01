@@ -11,8 +11,8 @@ The scripts will create the following application-level resources:
 
 | Resource | Name | Description |
 | :--- | :---: | :--- |
-| **Pub/Sub topic** | `input` | The input Pub/Sub topic for streaming clickstream events. |
-| **Pub/Sub subscription** | `messages-sub` | The subscription to the `input` topic consumed by the Dataflow streaming pipeline. |
+| **Pub/Sub topic** | `dataflow-clickstream-input` | The input Pub/Sub topic for streaming clickstream events. |
+| **Pub/Sub subscription** | `dataflow-clickstream-input-sub` | The subscription to the input topic consumed by the Dataflow streaming pipeline. |
 | **Bigtable Instance** | `clickstream-analytics` | Cloud Bigtable instance to store enrichment metadata for incoming clickstream messages. |
 | **BigQuery Dataset** | `clickstream_analytics` | BigQuery dataset where processed records and dead-letter tables reside. |
 | **BigQuery Table** | `wikipedia` | Stores processed clickstream records from the Dataflow job. |
