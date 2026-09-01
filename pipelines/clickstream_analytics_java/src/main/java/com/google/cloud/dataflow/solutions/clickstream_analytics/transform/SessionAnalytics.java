@@ -16,7 +16,6 @@
 package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 
 import com.google.auto.value.AutoValue;
-import com.google.cloud.dataflow.solutions.clickstream_analytics.Metrics;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ClickstreamEvent;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.UserSession;
 import java.util.ArrayList;
@@ -24,6 +23,8 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.apache.beam.sdk.metrics.Counter;
+import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -114,6 +115,9 @@ public abstract class SessionAnalytics
     public static class AggregateSessionDoFn
             extends DoFn<KV<String, Iterable<ClickstreamEvent>>, UserSession> {
 
+        private final Counter sessionsProcessed =
+                Metrics.counter(SessionAnalytics.class, "sessions-processed");
+
         private static Instant parseTimestamp(String ts) {
             if (ts == null || ts.trim().isEmpty()) {
                 return Instant.EPOCH;
@@ -182,7 +186,7 @@ public abstract class SessionAnalytics
                             .setTotalViews(totalViews)
                             .build();
 
-            Metrics.sessionsProcessed.inc();
+            sessionsProcessed.inc();
             receiver.output(session);
         }
     }

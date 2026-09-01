@@ -18,10 +18,11 @@ package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auto.value.AutoValue;
-import com.google.cloud.dataflow.solutions.clickstream_analytics.Metrics;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ClickstreamEvent;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import org.apache.beam.sdk.metrics.Counter;
+import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -85,6 +86,13 @@ public abstract class JsonToEvents extends PTransform<PCollection<String>, PColl
 
     public static class ParseJsonDoFn extends DoFn<String, ClickstreamEvent> {
         private static final Logger LOG = LoggerFactory.getLogger(ParseJsonDoFn.class);
+        private final Counter successfulMessages =
+                Metrics.counter(JsonToEvents.class, "successful-messages");
+        private final Counter jsonParseErrorMessages =
+                Metrics.counter(JsonToEvents.class, "json-parse-failed-messages");
+        private final Counter tooBigMessages =
+                Metrics.counter(JsonToEvents.class, "too-big-messages");
+
         private final int messageLimitSize;
         private transient ObjectMapper objectMapper;
 
@@ -115,7 +123,7 @@ public abstract class JsonToEvents extends PTransform<PCollection<String>, PColl
 
             if (messageBytes.length >= messageLimitSize) {
                 LOG.error("Row is too big, size {} bytes", messageBytes.length);
-                Metrics.tooBigMessages.inc();
+                tooBigMessages.inc();
                 context.output(FAILURE_TAG, KV.of("TooBigRow", jsonString));
                 return;
             }
@@ -161,12 +169,12 @@ public abstract class JsonToEvents extends PTransform<PCollection<String>, PColl
                 }
 
                 ClickstreamEvent event = eventBuilder.build();
-                Metrics.successfulMessages.inc();
+                successfulMessages.inc();
                 context.output(event);
 
             } catch (IOException | IllegalArgumentException e) {
                 LOG.error("Failed to parse clickstream event JSON: {}", e.getMessage());
-                Metrics.jsonParseErrorMessages.inc();
+                jsonParseErrorMessages.inc();
                 context.output(FAILURE_TAG, KV.of("JsonParseError", jsonString));
             }
         }

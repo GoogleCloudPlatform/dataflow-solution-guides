@@ -62,7 +62,6 @@ pipelines/clickstream_analytics_java/
 ├── build.gradle                                      # Gradle configuration (Beam 2.76, Java 25, AutoValue)
 ├── src/main/java/.../clickstream_analytics/
 │   ├── ClickstreamPubSubToBq.java                    # Main pipeline DAG orchestrator
-│   ├── Metrics.java                                  # Pipeline counters & metrics
 │   ├── options/
 │   │   └── ClickstreamProcessingOptions.java         # Pipeline options interface
 │   ├── data/

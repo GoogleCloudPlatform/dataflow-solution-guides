@@ -16,10 +16,11 @@
 package com.google.cloud.dataflow.solutions.clickstream_analytics.transform;
 
 import com.google.api.services.bigquery.model.TableRow;
-import com.google.cloud.dataflow.solutions.clickstream_analytics.Metrics;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryStorageApiInsertError;
+import org.apache.beam.sdk.metrics.Counter;
+import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -64,10 +65,14 @@ public final class DeadletterConverter {
                     "ParseErrorToDeadletterRow",
                     ParDo.of(
                             new DoFn<KV<String, String>, TableRow>() {
+                                private final Counter deadletterMessages =
+                                        Metrics.counter(
+                                                DeadletterConverter.class, "deadletter-messages");
+
                                 @ProcessElement
                                 public void processElement(ProcessContext c) {
                                     KV<String, String> element = c.element();
-                                    Metrics.deadletterMessages.inc();
+                                    deadletterMessages.inc();
                                     c.output(
                                             formatDeadletterRow(
                                                     Instant.now().toString(),
@@ -87,11 +92,19 @@ public final class DeadletterConverter {
                     "StorageApiErrorToDeadletterRow",
                     ParDo.of(
                             new DoFn<BigQueryStorageApiInsertError, TableRow>() {
+                                private final Counter failedInsertMessages =
+                                        Metrics.counter(
+                                                DeadletterConverter.class,
+                                                "failed-insert-messages");
+                                private final Counter deadletterMessages =
+                                        Metrics.counter(
+                                                DeadletterConverter.class, "deadletter-messages");
+
                                 @ProcessElement
                                 public void processElement(ProcessContext c) {
                                     BigQueryStorageApiInsertError error = c.element();
-                                    Metrics.failedInsertMessages.inc();
-                                    Metrics.deadletterMessages.inc();
+                                    failedInsertMessages.inc();
+                                    deadletterMessages.inc();
                                     String payload =
                                             error.getRow() != null ? error.getRow().toString() : "";
                                     c.output(

@@ -22,11 +22,12 @@ import com.google.cloud.bigtable.data.v2.models.Query;
 import com.google.cloud.bigtable.data.v2.models.Row;
 import com.google.cloud.bigtable.data.v2.models.RowCell;
 import com.google.cloud.bigtable.data.v2.models.TableId;
-import com.google.cloud.dataflow.solutions.clickstream_analytics.Metrics;
 import com.google.cloud.dataflow.solutions.clickstream_analytics.data.ClickstreamObjects.ClickstreamEvent;
 import java.io.IOException;
 import java.util.Iterator;
 import javax.annotation.Nullable;
+import org.apache.beam.sdk.metrics.Counter;
+import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -154,6 +155,13 @@ public abstract class BigTableEnrichment
     }
 
     public static class BigTableEnrichmentDoFn extends DoFn<ClickstreamEvent, ClickstreamEvent> {
+        private final Counter bigtableEnrichedMessages =
+                Metrics.counter(BigTableEnrichment.class, "bigtable-enriched-messages");
+        private final Counter bigtableCacheMisses =
+                Metrics.counter(BigTableEnrichment.class, "bigtable-cache-misses");
+        private final Counter bigtableErrors =
+                Metrics.counter(BigTableEnrichment.class, "bigtable-errors");
+
         private final String projectId;
         private final String instanceId;
         private final String tableId;
@@ -220,7 +228,7 @@ public abstract class BigTableEnrichment
                                 .readRows(Query.create(TableId.of(tableId)).rowKey(rowKey))
                                 .iterator();
                 if (!rows.hasNext()) {
-                    Metrics.bigtableCacheMisses.inc();
+                    bigtableCacheMisses.inc();
                     context.output(event);
                     return;
                 }
@@ -251,16 +259,16 @@ public abstract class BigTableEnrichment
                 }
 
                 if (foundEnrichment) {
-                    Metrics.bigtableEnrichedMessages.inc();
+                    bigtableEnrichedMessages.inc();
                 } else {
-                    Metrics.bigtableCacheMisses.inc();
+                    bigtableCacheMisses.inc();
                 }
 
                 context.output(enrichedBuilder.build());
 
             } catch (Exception e) {
                 LOG.warn("Error looking up row key '{}' in Bigtable: {}", rowKey, e.getMessage());
-                Metrics.bigtableErrors.inc();
+                bigtableErrors.inc();
                 context.output(event);
             }
         }
