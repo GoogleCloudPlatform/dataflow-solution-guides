@@ -20,6 +20,7 @@ For the full version of this solution guide, please refer to:
   - User session windowing with configurable inactivity gap duration (`--sessionGapDurationMinutes`).
   - Dual BigQuery sinks: append-only for enriched events, and Storage Write API **UPSERTs** for session aggregations.
   - Unified dead-letter queue (DLQ) capturing parse/validation errors and BigQuery write failures.
+  - Dataflow **Streaming Engine** execution (`--enableStreamingEngine`) for offloading session window state and low-latency processing.
   - Reference data seeder (`scripts/populate_bigtable.py`) and synthetic streaming generator (`scripts/generate_clickstream_events.py`).
   - End-to-end verification runbook: [Testing & Verification Guide](../pipelines/clickstream_analytics_java/README.md#end-to-end-cloud-deployment--testing-runbook).
 

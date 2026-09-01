@@ -216,8 +216,10 @@ Submit the streaming pipeline to Dataflow using the launch script:
 ```
 
 The launch script configures:
+- Streaming Engine enabled (`--enableStreamingEngine`, `--streaming`)
 - Private IPs only (`--usePublicIps=false`)
 - Dedicated worker service account (`--serviceAccount=$SERVICE_ACCOUNT`)
+- Worker machine type (`--workerMachineType=$WORKER_TYPE` if defined)
 - Shared VPC subnetwork (if defined)
 - Storage Write API UPSERTs on the `sessions` table
 - Session inactivity gap duration (`--sessionGapDurationMinutes=30`)
@@ -343,4 +345,3 @@ gcloud dataflow jobs list --status=active --region=$REGION
 cd ../../terraform/clickstream_analytics
 terraform destroy
 ```
-
