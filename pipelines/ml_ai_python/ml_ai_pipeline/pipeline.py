@@ -19,12 +19,25 @@ from apache_beam.io.gcp import pubsub
 from apache_beam.ml.inference import RunInference
 from apache_beam.ml.inference.base import PredictionResult
 
-from .model_handlers import GemmaModelHandler
+from .model_handlers import create_vllm_model_handler
 from .options import MyPipelineOptions
 
 
 def _format_output(element: PredictionResult) -> str:
-  return f"Input: \n{element.example}, \n\n\nOutput: \n{element.inference}"
+  output_text = ""
+  if hasattr(element.inference, "choices") and element.inference.choices:
+    output_text = element.inference.choices[0].text
+  elif isinstance(element.inference, str):
+    output_text = element.inference
+  else:
+    output_text = str(element.inference)
+  return f"Input: \n{element.example}, \n\n\nOutput: \n{output_text.strip()}"
+
+
+def _format_prompt(prompt: str) -> str:
+  if "<|turn>" in prompt or "<start_of_turn>" in prompt:
+    return prompt
+  return f"<|turn>user\n{prompt}<turn|>\n<|turn>model\n"
 
 
 @beam.ptransform_fn
@@ -36,9 +49,14 @@ def _extract(p: Pipeline, subscription: str) -> PCollection[str]:
 
 @beam.ptransform_fn
 def _transform(msgs: PCollection[str], model_path: str) -> PCollection[str]:
-  preds: PCollection[
-      PredictionResult] = msgs | "RunInference-Gemma" >> RunInference(
-          GemmaModelHandler(model_name=model_path))
+  formatted_msgs = msgs | "Format Prompt" >> beam.Map(_format_prompt)
+  preds: PCollection[PredictionResult] = (
+      formatted_msgs
+      | "RunInference-vLLM" >> RunInference(
+          create_vllm_model_handler(model_name=model_path),
+          inference_args={"max_tokens": 128, "temperature": 0.0},
+      )
+  )
   return preds | "Format Output" >> beam.Map(_format_output)
 
 

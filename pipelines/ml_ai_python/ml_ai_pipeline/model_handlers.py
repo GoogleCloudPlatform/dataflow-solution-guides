@@ -11,116 +11,56 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""Custom model handlers to be used with RunInference."""
+"""Model handlers leveraging Apache Beam built-in vllm_inference."""
 
 import os
-from typing import Any, Iterable, Optional, Sequence
+from typing import Optional
 
-from apache_beam.ml.inference.base import ModelHandler, PredictionResult
-
-os.environ.setdefault("VLLM_CONFIGURE_LOGGING", "0")
-os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
-os.environ.setdefault("VLLM_SAMPLER_BACKEND", "torch")
-os.environ.setdefault("FLASHINFER_ENABLE_JIT", "0")
-try:
-  import vllm
-  from vllm import LLM, SamplingParams
-except ModuleNotFoundError:
-  vllm = None
-  LLM = None
-  SamplingParams = None
+from apache_beam.ml.inference.vllm_inference import VLLMCompletionsModelHandler
 
 
-class GemmaModelHandler(ModelHandler[str, PredictionResult, Any]):
-  """A RunInference model handler for Gemma models using vLLM."""
+def get_model_path(model_name: Optional[str] = None) -> str:
+  """Resolves the model path to baked local weights or model preset."""
+  target_path = model_name or os.environ.get("MODEL_PRESET", "google/gemma-4-E2B-it")
+  baked_candidate = f"/opt/models/{target_path}"
+  env_preset = os.environ.get("MODEL_PRESET", "")
+  env_candidate = f"/opt/models/{env_preset}" if env_preset else None
 
-  def __init__(self,
-               model_name: str = "google/gemma-4-2b-it",
-               max_length: int = 128,
-               gpu_memory_utilization: float = 0.85):
-    """Implementation of the ModelHandler interface for Gemma using vLLM.
+  def is_valid_model_dir(path: Optional[str]) -> bool:
+    if not path or not os.path.isdir(path):
+      return False
+    return (os.path.isfile(os.path.join(path, "config.json")) or
+            os.path.isfile(os.path.join(path, "model.safetensors")) or
+            os.path.isfile(os.path.join(path, "model.weights.h5")))
 
-    Args:
-      model_name: The Gemma model repo or local path. Default is google/gemma-4-2b-it.
-      max_length: The maximum tokens to generate. Default is 128.
-      gpu_memory_utilization: The fraction of GPU memory to reserve for vLLM.
-    """
-    super().__init__()
-    self._model_name = model_name
-    self._max_length = max_length
-    self._gpu_memory_utilization = gpu_memory_utilization
-    self._env_vars = {}
+  if is_valid_model_dir("/opt/models/gemma"):
+    return "/opt/models/gemma"
+  if is_valid_model_dir(target_path):
+    return target_path
+  if is_valid_model_dir(baked_candidate):
+    return baked_candidate
+  if is_valid_model_dir(env_candidate):
+    return env_candidate
+  return target_path
 
-  def share_model_across_processes(self) -> bool:
-    """Indicates if the model should be loaded once-per-VM rather than
 
-    once-per-worker-process on a VM.
-    """
-    return False
+def create_vllm_model_handler(
+    model_name: Optional[str] = None,
+    gpu_memory_utilization: float = 0.85,
+) -> VLLMCompletionsModelHandler:
+  """Creates a VLLMCompletionsModelHandler using Beam's built-in vllm_inference."""
+  resolved_path = get_model_path(model_name)
+  vllm_server_kwargs = {
+      "gpu-memory-utilization": str(gpu_memory_utilization),
+      "trust-remote-code": None,
+      "dtype": "bfloat16",
+      "max-model-len": "8192",
+  }
+  return VLLMCompletionsModelHandler(
+      model_name=resolved_path,
+      vllm_server_kwargs=vllm_server_kwargs,
+  )
 
-  def load_model(self) -> Any:
-    """Loads and initializes the Gemma model using vLLM."""
-    target_path = self._model_name
-    baked_candidate = f"/opt/models/{self._model_name}"
-    env_preset = os.environ.get("MODEL_PRESET", "")
-    env_candidate = f"/opt/models/{env_preset}" if env_preset else None
 
-    def is_valid_model_dir(path: Optional[str]) -> bool:
-      if not path or not os.path.isdir(path):
-        return False
-      return (os.path.isfile(os.path.join(path, "config.json")) or
-              os.path.isfile(os.path.join(path, "model.safetensors")) or
-              os.path.isfile(os.path.join(path, "model.weights.h5")))
-
-    if is_valid_model_dir("/opt/models/gemma"):
-      target_path = "/opt/models/gemma"
-    elif is_valid_model_dir(self._model_name):
-      target_path = self._model_name
-    elif is_valid_model_dir(baked_candidate):
-      target_path = baked_candidate
-    elif is_valid_model_dir(env_candidate):
-      target_path = env_candidate
-
-    print(f"Loading Gemma vLLM model from: {target_path}")
-    llm = LLM(
-        model=target_path,
-        gpu_memory_utilization=self._gpu_memory_utilization,
-        trust_remote_code=True,
-        dtype="bfloat16",
-        enforce_eager=False,
-    )
-    return llm
-
-  def run_inference(
-      self,
-      batch: Sequence[str],
-      model_obj: Any,
-      unused: Optional[dict[str, Any]] = None) -> Iterable[PredictionResult]:
-    """Runs inferences on a batch of text strings.
-
-    Args:
-      batch: A sequence of prompt strings.
-      model_obj: The vLLM LLM instance.
-      unused: Optional additional arguments for interface compatibility.
-
-    Returns:
-      An Iterable of type PredictionResult.
-    """
-    _ = unused
-    llm = model_obj
-    sampling_params = SamplingParams(
-        max_tokens=self._max_length,
-        temperature=0.0,
-    )
-    formatted_prompts = []
-    for p in batch:
-      if "<|turn>" in p or "<start_of_turn>" in p:
-        formatted_prompts.append(p)
-      else:
-        formatted_prompts.append(
-            f"<|turn>user\n{p}<turn|>\n<|turn>model\n")
-
-    outputs = llm.generate(formatted_prompts, sampling_params)
-    for raw_prompt, output in zip(batch, outputs):
-      generated_text = output.outputs[0].text if output.outputs else ""
-      yield PredictionResult(raw_prompt, generated_text.strip(), self._model_name)
+# Alias for backward compatibility
+GemmaModelHandler = create_vllm_model_handler

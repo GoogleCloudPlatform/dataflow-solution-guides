@@ -14,7 +14,7 @@ In this directory, you will find a specific implementation of the above architec
 
 1. **Data ingestion:** Reads incoming prompt requests from a Pub/Sub topic.
 2. **Data preprocessing:** The sample pipeline decodes messages, but it is trivial to add a preprocessing step leveraging [the Enrichment transform](https://cloud.google.com/dataflow/docs/guides/enrichment) to perform feature lookup and prompt engineering before calling the model.
-3. **Inference:** Uses Apache Beam's `RunInference` transform with a custom `GemmaModelHandler` powered by **vLLM**. Model weights are baked directly into the container image at `/opt/models/gemma`, ensuring zero runtime downloads and low latency streaming inference on NVIDIA L4 GPUs (`g2-standard-4`).
+3. **Inference:** Uses Apache Beam's built-in `RunInference` transform with `VLLMCompletionsModelHandler` (from `apache_beam.ml.inference.vllm_inference`). Model weights are baked directly into the container image at `/opt/models/gemma`, ensuring zero runtime downloads and low latency streaming inference on NVIDIA L4 GPUs (`g2-standard-4`).
 4. **Predictions:** The generated text responses are published to another Pub/Sub topic as output.
 
 ## Gemma 4 model & Baked Container Weights
