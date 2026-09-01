@@ -28,9 +28,7 @@ import javax.annotation.Nullable;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.RowMutationInformation;
 import org.apache.beam.sdk.io.gcp.bigquery.WriteResult;
-import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
-import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.PCollection;
 
 /**
@@ -106,20 +104,10 @@ public final class ClickstreamBigQuerySinks {
 
         @Override
         public WriteResult expand(PCollection<ClickstreamEvent> input) {
-            PCollection<TableRow> rows =
-                    input.apply(
-                            "EventsToTableRow",
-                            MapElements.via(
-                                    new SimpleFunction<ClickstreamEvent, TableRow>() {
-                                        @Override
-                                        public TableRow apply(ClickstreamEvent event) {
-                                            return event.toTableRow();
-                                        }
-                                    }));
-
-            return rows.apply(
+            return input.apply(
                     "WriteEventsToBQ",
-                    BigQueryIO.writeTableRows()
+                    BigQueryIO.<ClickstreamEvent>write()
+                            .withFormatFunction(ClickstreamEvent::toTableRow)
                             .withMethod(BigQueryIO.Write.Method.STORAGE_API_AT_LEAST_ONCE)
                             .withWriteDisposition(WRITE_APPEND)
                             .withCreateDisposition(CREATE_NEVER)
@@ -181,34 +169,23 @@ public final class ClickstreamBigQuerySinks {
 
         @Override
         public WriteResult expand(PCollection<UserSession> input) {
-            PCollection<TableRow> rows =
-                    input.apply(
-                            "SessionsToTableRow",
-                            MapElements.via(
-                                    new SimpleFunction<UserSession, TableRow>() {
-                                        @Override
-                                        public TableRow apply(UserSession session) {
-                                            return session.toTableRow();
-                                        }
-                                    }));
-
-            return rows.apply(
+            return input.apply(
                     "WriteSessionsToBQ",
-                    BigQueryIO.writeTableRows()
+                    BigQueryIO.<UserSession>write()
+                            .withFormatFunction(UserSession::toTableRow)
                             .withMethod(BigQueryIO.Write.Method.STORAGE_API_AT_LEAST_ONCE)
                             .withWriteDisposition(WRITE_APPEND)
                             .withCreateDisposition(CREATE_NEVER)
                             .withPrimaryKey(Collections.singletonList("session_id"))
                             .withRowMutationInformationFn(
-                                    row ->
+                                    session ->
                                             RowMutationInformation.of(
                                                     RowMutationInformation.MutationType.UPSERT,
                                                     String.valueOf(
-                                                            ((Number)
-                                                                            row.getOrDefault(
-                                                                                    "event_count",
-                                                                                    1))
-                                                                    .longValue())))
+                                                            session.getEventCount() != null
+                                                                    ? session.getEventCount()
+                                                                            .longValue()
+                                                                    : 1L)))
                             .to(String.format("%s:%s.%s", projectId(), dataset(), table())));
         }
     }
