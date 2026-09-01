@@ -1,94 +1,96 @@
 # Clickstream Analytics project deployment
 
-This directory contains the Terraform code to spawn a Google Cloud project
-with all the necessary infrastructure and configuration required for running
-the Clickstream Analytics solution guide.
+This directory contains the Terraform code to provision application-level infrastructure and configuration required for running the Clickstream Analytics solution guide on Google Cloud.
 
 These deployment scripts are part of the
 [Dataflow Clickstream Analytics solution guide](../../use_cases/Clickstream_Analytics.md).
 
 ## Bill of resources created by this script
 
-The scripts will create the following resources
+The scripts will create the following application-level resources:
 
-| Resource             |          Name           | Description                                                                                                                                                                                                                                 |
-| :------------------- | :---------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Project              |       Set by user       | Optional, you may reuse an existing project. If the project is created by Terraform, it will enable the APIs for Cloud Build, Dataflow, Monitoring, Pub/Sub, Dataflow Autoscaling, and Artifact Registry                                    |
-| Bucket               |   Same as project id    | Using the standard storage class, this is a regional bucket in the region specified by the user.                                                                                                                                            |
-| Pub/Sub topic        |         `input`         | The input Pub/Sub topic for the sample pipeline.                                                                                                                                                                                            |
-| Pub/Sub subscription |     `messages-sub`      | The subscription to the `input` topic that is actually used by the Dataflow pipeline.                                                                                                                                                       |
-| Service account      |    `my-dataflow-sa`     | Dataflow worker servive account. It has storage admin, Dataflow worker, metrics writer and Pub/Sub editor roles assigned at project level.                                                                                                  |
-| VPC network          |     `dataflow-net`      | If the project is created from scratch, the default network is removed and this network is re-created with a single regional sub-network.                                                                                                   |
-| Cloud NAT            |     `dataflow-nat`      | Cloud NAT in the region specified by the user, in case the Dataflow workers need to reach the Internet. This is not necessary for the sample pipeline provided.                                                                             |
-| Bigtable Instance    | `clickstream-analytics` | BigTable instance to store the information for enrichment of incoming messages                                                                                                                                                              |
-| BigQuery Dataset     | `clickstream_analytics` | BigQuery dataset where the tables will be created.                                                                                                                                                                                          |
-| BigQuery Table       |       `wikipedia`       | Store the processed records from dataflow job.                                                                                                                                                                                              |
-| BigQuery Table       |      `deadletter`       | Table for all the records that cannot be parsed, it contains more details about the error found processing each record.                                                                                                                     |
-| Firewall rules       |      Several rules      | Ingress and egress rules to remove unnecessary traffic, and to ensure the traffice required by Dataflow. If you want to access a VM using SSH, apply the network tag `ssh` to that instance. Same for `http-server` and for `https-server`. |
+| Resource | Name | Description |
+| :--- | :---: | :--- |
+| **Pub/Sub topic** | `dataflow-clickstream-input` | The input Pub/Sub topic for streaming clickstream events. |
+| **Pub/Sub subscription** | `dataflow-clickstream-input-sub` | The subscription to the input topic consumed by the Dataflow streaming pipeline. |
+| **Bigtable Instance** | `clickstream-analytics` | Cloud Bigtable instance to store enrichment metadata for incoming clickstream messages. |
+| **BigQuery Dataset** | `clickstream_analytics` | BigQuery dataset where processed records and dead-letter tables reside. |
+| **BigQuery Table** | `wikipedia` | Stores processed clickstream records from the Dataflow job. |
+| **BigQuery Table** | `deadletter` | Stores failed/unparseable records with full payload and error stacktrace for debugging. |
+| **Service account** | `clickstream-dataflow-sa` (configurable) | Dedicated Dataflow worker service account with least-privilege roles (`roles/storage.objectAdmin`, `roles/dataflow.worker`, `roles/monitoring.metricWriter`, `roles/pubsub.editor`, `roles/bigtable.reader`, `roles/bigquery.dataEditor`, `roles/bigquery.jobUser`). |
+| **GCS Bucket** *(Optional)* | `var.bucket_name` or `var.project_id` | Optional regional standard GCS bucket for Dataflow temp/staging files (created when `create_bucket = true`). |
 
 ## Configuration variables
 
 This deployment accepts the following configuration variables:
 
-| Variable                |   Type    | Description                                                                                                                                                                                            |
-| :---------------------- | :-------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `billing_account`       | `string`  | Optional. Billing account to be used if the project is created from scratch.                                                                                                                           |
-| `organization`          | `string`  | Optional. Organization (or folder) number, where the project will be created. Only required if you are creating the project from scratch. Use the format `organizations/XXXXXXX` or `folder/XXXXXXXX`. |
-| `project_create`        | `boolean` | Set to false to reuse an existing project. Or to true to create a new project from scratch.                                                                                                            |
-| `project_id`            | `string`  | Project Id.                                                                                                                                                                                            |
-| `region`                | `string`  | Region to be used for all the resources. The VPC will contain only a single sub-network in this region.                                                                                                |
-| `destroy_all_resources` |  `bool`   | Optional. Default true. Destroy buckets and the Spanner instance with `tf destroy`.                                                                                                                    |
-| `network-prefix`        | `string`  | Optional. Default "dataflow". Add a prefix to the network net, subnet, NAT                                                                                                                             |
-
-The default values of all the optional configuration variables are set for development projects.
-**For a production project, you should change `destroy_all_resources` to false.**
+| Variable | Type | Default | Description |
+| :--- | :---: | :---: | :--- |
+| `project_id` | `string` | *(Required)* | Existing GCP project ID where resources and IAM roles will be provisioned. |
+| `region` | `string` | *(Required)* | GCP region for Bigtable, BigQuery dataset, Pub/Sub, and Dataflow resources (e.g. `us-central1` or `europe-southwest1`). |
+| `subnetwork` | `string` | `null` | Optional subnetwork URL or path for Dataflow workers (e.g. `regions/europe-southwest1/subnetworks/dev-default` or full Shared VPC URI). If omitted, the default network is used. |
+| `bucket_name` | `string` | `null` | Optional GCS bucket name for Dataflow temp/staging files. Defaults to `project_id` if not specified. |
+| `service_account_name` | `string` | `"clickstream-dataflow-sa"` | Name of the dedicated Dataflow worker service account to create. |
+| `create_bucket` | `bool` | `false` | Set to `true` to provision a new GCS bucket, or `false` to reuse an existing bucket. |
+| `destroy_all_resources` | `bool` | `true` | When `true`, enables deletion of Bigtable instances and BigQuery dataset contents on `terraform destroy`. For production environments, set to `false`. |
 
 ## How to deploy
 
-1. **Set the configuration variables:**
+1. **Set configuration variables:**
 
-   - Create a file named `terraform.tfvars` in the current directory.
-   - Add the following configuration variables to the file, replacing the values with your own:
+   Create a file named `terraform.tfvars` in this directory:
 
-     ```bash
-     billing_account = "YOUR_BILLING_ACCOUNT"
-     organization = "YOUR_ORGANIZATION_ID"
-     project_create = TRUE_OR_FALSE
-     project_id = "YOUR_PROJECT_ID"
-     region = "YOUR_REGION"
-     ```
+   **Standard Deployment (Default Network / Same Project):**
+   ```hcl
+   project_id            = "YOUR_PROJECT_ID"
+   region                = "us-central1"
+   destroy_all_resources = true
+   ```
 
-   - If this is a production deployment, make sure you change also the optional variables.
+   **Shared VPC Deployment (Dataflow in Service Project, Network in Host Project):**
+   ```hcl
+   project_id            = "YOUR_PROJECT_ID"
+   region                = "europe-southwest1"
+   subnetwork            = "https://www.googleapis.com/compute/v1/projects/HOST_PROJECT_ID/regions/europe-southwest1/subnetworks/shared-dataflow-subnet"
+   bucket_name           = "YOUR_BUCKET_NAME"
+   create_bucket         = false
+   service_account_name  = "clickstream-dataflow-sa"
+   destroy_all_resources = true
+   ```
 
 2. **Initialize Terraform:**
-
-   - Run the following command to initialize Terraform:
-
-     ```bash
-     terraform init
-     ```
+   ```bash
+   terraform init
+   ```
 
 3. **Apply the configuration:**
+   ```bash
+   terraform plan -out=tfplan
+   terraform apply tfplan
+   ```
 
-   - Run the following command to apply the Terraform configuration:
+4. **Access the deployed resources:**
+   Terraform will automatically generate `pipelines/clickstream_analytics_java/scripts/00_set_variables.sh` with all required environment variables.
 
-     ```bash
-     terraform apply
-     ```
+## Scripts generation
 
-4. **Wait for the deployment to complete:**
-   - Terraform will output the status of the deployment. Wait for it to complete successfully.
-5. **Access the deployed resources:** You are now ready to launch the sample pipeline in this
-   solution guide.
+The Terraform code will generate an environment configuration script with all variable values to be used by the pipeline:
+
+```bash
+source ../../pipelines/clickstream_analytics_java/scripts/00_set_variables.sh
+```
 
 ## How to remove
 
-The setup will be continuously consuming as this is a streaming architecture, running without stop.
+To destroy all provisioned infrastructure:
 
-**BEWARE: THE COMMAND BELOW WILL DESTROY AND REMOVE ALL THE RESOURCES**.
+1. Cancel any active Dataflow streaming jobs first:
+   ```bash
+   gcloud dataflow jobs list --region=YOUR_REGION --status=active
+   gcloud dataflow jobs cancel JOB_ID --region=YOUR_REGION
+   ```
 
-To destroy and stop all the resources, run:
-
-```bash
-terraform destroy
-```
+2. Run `terraform destroy`:
+   ```bash
+   terraform destroy
+   ```
