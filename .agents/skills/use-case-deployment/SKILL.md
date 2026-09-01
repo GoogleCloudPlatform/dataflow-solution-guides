@@ -3,7 +3,7 @@ name: use-case-deployment
 description: >-
   End-to-end orchestration and deployment runner for all solution guides in this repository.
   Use when deploying, running, ingesting test data into, or validating any of the 8 solution guides:
-  GenAI & ML (Gemma on GPU), ETL & Integration (Spanner CDC), Customer Data Platform (CDP),
+  GenAI & ML (Gemma 4 with vLLM on GPU), ETL & Integration (Spanner CDC), Customer Data Platform (CDP),
   Anomaly Detection, Marketing Intelligence, Clickstream Analytics, IoT Analytics, or Log Replication.
 ---
 
@@ -53,7 +53,7 @@ Before deploying infrastructure or submitting Dataflow jobs:
 
 ## 3. End-to-End Execution Workflows
 
-### 1. GenAI & ML (Gemma LLM on GPU)
+### 1. GenAI & ML (Gemma 4 with vLLM on GPU)
 ```bash
 # 1. Terraform
 cd terraform/ml_ai

@@ -13,7 +13,7 @@ The codebase is organized into three interconnected tiers:
 ```
 dataflow-solution-guides/
 ├── use_cases/                # Solution architecture documentation, one-pagers, and guides
-│   ├── GenAI_ML.md           # Real-time inference with local GenAI models (Gemma on GPU)
+│   ├── GenAI_ML.md           # Real-time inference with local GenAI models (Gemma 4 on GPU)
 │   ├── ETL_integration.md    # Change Data Capture (CDC) from Cloud Spanner to BigQuery
 │   ├── CDP.md                # Real-time Customer Data Platform (multi-topic streaming joins)
 │   ├── Anomaly_Detection.md  # Real-time anomaly detection with Vertex AI
@@ -33,7 +33,7 @@ dataflow-solution-guides/
 │   └── log_replication_splunk/ # Pub/Sub, Secret Manager, Service Account, Optional Splunk VM
 │
 ├── pipelines/                # Apache Beam streaming pipeline implementations
-│   ├── ml_ai_python/         # Python: Beam RunInference with Gemma LLM on NVIDIA L4 GPU
+│   ├── ml_ai_python/         # Python: Beam RunInference with Gemma 4 using vLLM on NVIDIA L4 GPU
 │   ├── etl_integration_java/ # Java: Spanner change stream CDC publisher & template
 │   ├── cdp/                  # Python: Multi-stream customer data unification to BigQuery
 │   ├── anomaly_detection/    # Python: Vertex AI prediction pipeline

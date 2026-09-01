@@ -31,8 +31,8 @@ class MyPipelineOptions(PipelineOptions):
     parser.add_argument(
         "--model_path",
         type=str,
-        default="gemma4_instruct_2b",
-        help="KerasHub model preset name or local/GCS model path.",
+        default="google/gemma-4-E2B-it",
+        help="Model preset identifier (e.g. google/gemma-4-E2B-it) or local path.",
     )
     parser.add_argument(
         "--responses_topic",

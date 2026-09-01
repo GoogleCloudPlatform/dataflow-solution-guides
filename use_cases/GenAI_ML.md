@@ -20,7 +20,7 @@ For the full documentation of this solution guide, please refer to:
 ## Assets included in this repository
 
 - [Terraform code to deploy infrastructure for GenAI & ML inference](../terraform/ml_ai/)
-- [Sample pipeline in Python for leveraging the Gemma open LLM with Dataflow](../pipelines/ml_ai_python/)
+- [Sample pipeline in Python for leveraging Gemma 4 with vLLM on Dataflow](../pipelines/ml_ai_python/)
 
 ## Technical benefits
 

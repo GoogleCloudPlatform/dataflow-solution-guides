@@ -20,7 +20,7 @@ This the list of solution guides available at this moment:
 
 |                              Guide                              |                                               Description                                               |    Development status     |
 | :-------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------: | :-----------------------: |
-|  [GenAI & Machine Learning Inference](./use_cases/GenAI_ML.md)  |                        Real-time inference with local GenAI models, using a GPU                         | Ready :white_check_mark:  |
+|  [GenAI & Machine Learning Inference](./use_cases/GenAI_ML.md)  |                        Real-time inference with Gemma 4 using vLLM on a GPU                             | Ready :white_check_mark:  |
 |       [ETL / Integration](./use_cases/ETL_integration.md)       |                    Real-time change data capture from a Spanner database to BigQuery                    | Ready :white_check_mark:  |
 |  [Log Replication & Analytics](./use_cases/Log_replication.md)  |                                  Real-time log replication into Splunk                                  | Ready :white_check_mark:  |
 | [Marketing Intelligence](./use_cases/Marketing_Intelligence.md) |         Real-time marketing intelligence with Firestore enrichment & Scikit-Learn RunInference          | Ready :white_check_mark:  |

@@ -14,8 +14,8 @@ Low latency is normally a requirement for these kinds of workloads given the inh
 
 ## Assets included in this repository
 
-- [Terraform code to deploy a project for GenAI & ML inference](../terraform/anomaly_detection/)
-- [Sample pipeline in Python for leveraging the Gemma open LLM with Dataflow](../pipelines/anomaly_detection/)
+- [Terraform code to deploy infrastructure for anomaly detection](../terraform/anomaly_detection/)
+- [Sample pipeline in Python for real-time anomaly detection with Vertex AI](../pipelines/anomaly_detection/)
 
 ## Technical benefits
 
