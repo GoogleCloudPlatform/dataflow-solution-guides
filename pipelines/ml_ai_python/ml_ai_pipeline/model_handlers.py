@@ -21,7 +21,8 @@ from apache_beam.ml.inference.vllm_inference import VLLMCompletionsModelHandler
 
 def get_model_path(model_name: Optional[str] = None) -> str:
   """Resolves the model path to baked local weights or model preset."""
-  target_path = model_name or os.environ.get("MODEL_PRESET", "google/gemma-4-E2B-it")
+  target_path = model_name or os.environ.get("MODEL_PRESET",
+                                             "google/gemma-4-E2B-it")
   baked_candidate = f"/opt/models/{target_path}"
   env_preset = os.environ.get("MODEL_PRESET", "")
   env_candidate = f"/opt/models/{env_preset}" if env_preset else None
@@ -50,7 +51,8 @@ def create_vllm_model_handler(
 ) -> VLLMCompletionsModelHandler:
   """Creates a VLLMCompletionsModelHandler using Beam's built-in vllm_inference."""
   # If running in custom container or targeting baked weights, default to /opt/models/gemma
-  if not model_name or model_name == "google/gemma-4-E2B-it" or not os.path.exists(model_name):
+  if not model_name or model_name == "google/gemma-4-E2B-it" or not os.path.exists(
+      model_name):
     target_model = "/opt/models/gemma"
   else:
     target_model = model_name
@@ -67,5 +69,12 @@ def create_vllm_model_handler(
   )
 
 
-# Alias for backward compatibility
-GemmaModelHandler = create_vllm_model_handler
+def GemmaModelHandler(  # pylint: disable=invalid-name
+    model_name: Optional[str] = None,
+    gpu_memory_utilization: float = 0.85,
+) -> VLLMCompletionsModelHandler:
+  """Alias for create_vllm_model_handler for backward compatibility."""
+  return create_vllm_model_handler(
+      model_name=model_name,
+      gpu_memory_utilization=gpu_memory_utilization,
+  )

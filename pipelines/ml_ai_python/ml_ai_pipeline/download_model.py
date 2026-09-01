@@ -17,6 +17,16 @@ import os
 import shutil
 import sys
 
+try:
+  from huggingface_hub import snapshot_download
+except ImportError:
+  snapshot_download = None
+
+try:
+  import kagglehub
+except ImportError:
+  kagglehub = None
+
 
 def download_and_save_model(model_name: str, output_dir: str) -> None:
   """Downloads the model preset and saves it locally for offline container usage."""
@@ -24,35 +34,33 @@ def download_and_save_model(model_name: str, output_dir: str) -> None:
   os.makedirs(output_dir, exist_ok=True)
   hf_token = os.environ.get("HF_TOKEN") or None
 
-  try:
-    from huggingface_hub import snapshot_download
-
-    snapshot_download(
-        repo_id=model_name,
-        local_dir=output_dir,
-        token=hf_token,
-    )
-    print(f"Successfully baked HuggingFace model weights into {output_dir}")
-    return
-  except Exception as e:
-    print(f"HuggingFace snapshot_download failed: {e}")
-
-  try:
-    import kagglehub
-
-    download_path = kagglehub.model_download(model_name)
-    if os.path.exists(download_path):
-      for item in os.listdir(download_path):
-        s = os.path.join(download_path, item)
-        d = os.path.join(output_dir, item)
-        if os.path.isdir(s):
-          shutil.copytree(s, d, dirs_exist_ok=True)
-        else:
-          shutil.copy2(s, d)
-      print(f"Successfully baked Kaggle model weights into {output_dir}")
+  if snapshot_download is not None:
+    try:
+      snapshot_download(
+          repo_id=model_name,
+          local_dir=output_dir,
+          token=hf_token,
+      )
+      print(f"Successfully baked HuggingFace model weights into {output_dir}")
       return
-  except Exception as e:
-    print(f"Kagglehub model_download failed: {e}")
+    except Exception as e:  # pylint: disable=broad-exception-caught
+      print(f"HuggingFace snapshot_download failed: {e}")
+
+  if kagglehub is not None:
+    try:
+      download_path = kagglehub.model_download(model_name)
+      if os.path.exists(download_path):
+        for item in os.listdir(download_path):
+          s = os.path.join(download_path, item)
+          d = os.path.join(output_dir, item)
+          if os.path.isdir(s):
+            shutil.copytree(s, d, dirs_exist_ok=True)
+          else:
+            shutil.copy2(s, d)
+        print(f"Successfully baked Kaggle model weights into {output_dir}")
+        return
+    except Exception as e:  # pylint: disable=broad-exception-caught
+      print(f"Kagglehub model_download failed: {e}")
 
   raise RuntimeError(
       f"Failed to download model '{model_name}' from HuggingFace and Kaggle.")

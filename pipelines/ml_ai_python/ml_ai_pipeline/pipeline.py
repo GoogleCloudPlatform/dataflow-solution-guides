@@ -54,9 +54,11 @@ def _transform(msgs: PCollection[str], model_path: str) -> PCollection[str]:
       formatted_msgs
       | "RunInference-vLLM" >> RunInference(
           create_vllm_model_handler(model_name=model_path),
-          inference_args={"max_tokens": 128, "temperature": 0.0},
-      )
-  )
+          inference_args={
+              "max_tokens": 128,
+              "temperature": 0.0
+          },
+      ))
   return preds | "Format Output" >> beam.Map(_format_output)
 
 
