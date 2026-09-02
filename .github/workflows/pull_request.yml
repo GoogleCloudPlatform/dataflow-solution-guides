@@ -220,7 +220,7 @@ jobs:
           if [ "$IS_SHARED" = "true" ]; then
             DIRS=""
             for d in */; do
-              if [ -f "$d/setup.py" ]; then
+              if [ -d "$d" ] && [ -n "$(find "$d" -name "*.py" -not -path "*/.*" 2>/dev/null)" ]; then
                 DIRS="$DIRS ${d%/}"
               fi
             done
@@ -252,7 +252,7 @@ jobs:
           for pipeline_dir in $TARGET_DIRS
           do
             echo "Checking pipelines/$pipeline_dir"
-            if [ -f "$pipeline_dir/setup.py" ]
+            if [ -d "$pipeline_dir" ] && [ -n "$(find "$pipeline_dir" -name "*.py" -not -path "*/.*" 2>/dev/null)" ]
             then
               echo
               echo -------------------------------------
@@ -260,10 +260,10 @@ jobs:
               echo -------------------------------------
               echo
               cd "$pipeline_dir"
-              pylint --rcfile ../pylintrc .
+              pylint --rcfile ../pylintrc --ignore=.venv,venv,.gradle,build,bin,third_party .
               cd ..
             else
-              echo Ignoring, no Python pipeline found
+              echo "Ignoring, no Python files found in $pipeline_dir"
             fi
           done
   python-build:
@@ -298,7 +298,7 @@ jobs:
           if [ "$IS_WORKFLOW" = "true" ]; then
             DIRS=""
             for d in */; do
-              if [ -f "$d/setup.py" ]; then
+              if [ -d "$d" ] && [ -n "$(find "$d" \( -name "*.py" -o -name "requirements*.txt" \) -not -path "*/.*" 2>/dev/null)" ]; then
                 DIRS="$DIRS ${d%/}"
               fi
             done
@@ -329,11 +329,13 @@ jobs:
           for pipeline_dir in $TARGET_DIRS
           do
             echo "Checking pipelines/$pipeline_dir"
-            if [ -f "$pipeline_dir/setup.py" ]
+            HAS_PY=$(find "$pipeline_dir" -name "*.py" -not -path "*/.*" 2>/dev/null | head -n 1)
+            HAS_REQ=$(find "$pipeline_dir" -name "requirements*.txt" -not -path "*/.*" 2>/dev/null | head -n 1)
+            if [ -f "$pipeline_dir/setup.py" ] || [ -n "$HAS_PY" ] || [ -n "$HAS_REQ" ]
             then
               echo
               echo -------------------------------------
-              echo Building "$pipeline_dir"
+              echo Building / checking "$pipeline_dir"
               echo -------------------------------------
               echo
               cd "$pipeline_dir"
@@ -343,23 +345,32 @@ jobs:
               fi
               echo "Using Python $PY_VER for $pipeline_dir"
               pipenv --python "$PY_VER" install
-              for req_txt in requirements*.txt
-              do
+              while IFS= read -r req_txt; do
                 if [ -s "$req_txt" ]; then
-                  echo ----- Installing dependencies in "$req_txt" -----
+                  echo "----- Installing dependencies in $req_txt -----"
                   pipenv install -r "$req_txt"
                 fi
-              done
-              pipenv run pip install setuptools
-              echo ----- Building package -----
-              pipenv run python setup.py sdist
+              done < <(find . -name "requirements*.txt" -not -path "*/.*" -type f | sort)
+              if [ -f "setup.py" ]; then
+                pipenv run pip install setuptools
+                echo "----- Building package -----"
+                pipenv run python setup.py sdist
+              else
+                echo "No setup.py found, skipping package sdist build"
+              fi
               if [ -d "tests" ]; then
-                echo ----- Running unit tests -----
+                echo "----- Running unit tests in tests/ -----"
                 pipenv run python -m unittest discover tests
               fi
+              if [ -d "scripts/tests" ]; then
+                echo "----- Running unit tests in scripts/tests/ -----"
+                pipenv run python -m unittest discover scripts/tests
+              fi
+              echo "----- Verifying Python compilation syntax -----"
+              pipenv run python -m compileall -q .
               cd ..
             else
-              echo Ignoring, no Python pipeline found
+              echo "Ignoring, no Python code or dependencies found in $pipeline_dir"
             fi
           done
   docker-build:
@@ -398,8 +409,14 @@ jobs:
             done
             DIRS="${DIRS# }"
           else
-            DIRS=$(echo "$FILES_JSON" | jq -r '.[] | select(startswith("pipelines/")) | split("/") | select(length > 2) | .[1]' | sort -u | tr '\n' ' ')
-            DIRS="${DIRS% }"
+            RAW_DIRS=$(echo "$FILES_JSON" | jq -r '.[] | select(startswith("pipelines/")) | split("/") | select(length > 2) | .[1]' | sort -u)
+            DIRS=""
+            for d in $RAW_DIRS; do
+              if [ -f "$d/Dockerfile" ]; then
+                DIRS="$DIRS $d"
+              fi
+            done
+            DIRS="${DIRS# }"
           fi
           echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
           echo "Target Docker containers: $DIRS"
