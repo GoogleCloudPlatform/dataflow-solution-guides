@@ -21,25 +21,25 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.Validation;
 
 public interface SpannerPublisherOptions extends PipelineOptions {
-    @Validation.Required()
+    @Validation.Required
     @Description("Input topic with data to replicate in Spanner")
     void setPubsubTopic(String t);
 
     String getPubsubTopic();
 
-    @Validation.Required()
+    @Validation.Required
     @Description("Spanner table to write the data to")
     void setSpannerTable(String t);
 
     String getSpannerTable();
 
-    @Validation.Required()
+    @Validation.Required
     @Description("Spanner instance to write the data to")
     void setSpannerInstance(String s);
 
     String getSpannerInstance();
 
-    @Validation.Required()
+    @Validation.Required
     @Description("Spanner database to write the data to")
     void setSpannerDatabase(String d);
 

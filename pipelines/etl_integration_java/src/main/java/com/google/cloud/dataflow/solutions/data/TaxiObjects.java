@@ -20,7 +20,6 @@ import com.google.auto.value.AutoValue;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldName;
-import org.joda.time.Instant;
 
 public class TaxiObjects {
 
@@ -81,36 +80,6 @@ public class TaxiObjects {
             public abstract Builder setPassengerCount(Integer value);
 
             public abstract TaxiEvent build();
-        }
-    }
-
-    @AutoValue
-    @DefaultSchema(AutoValueSchema.class)
-    /* Represents a parsing error message event */
-    public abstract static class ParsingError {
-        // These field names are determined
-        @SchemaFieldName("input_data")
-        public abstract String getInputData();
-
-        @SchemaFieldName("error_message")
-        public abstract String getErrorMessage();
-
-        @SchemaFieldName("timestamp")
-        public abstract Instant getTimestamp();
-
-        public static Builder builder() {
-            return new AutoValue_TaxiObjects_ParsingError.Builder();
-        }
-
-        @AutoValue.Builder
-        public abstract static class Builder {
-            public abstract Builder setInputData(String i);
-
-            public abstract Builder setErrorMessage(String e);
-
-            public abstract Builder setTimestamp(Instant t);
-
-            public abstract ParsingError build();
         }
     }
 }
