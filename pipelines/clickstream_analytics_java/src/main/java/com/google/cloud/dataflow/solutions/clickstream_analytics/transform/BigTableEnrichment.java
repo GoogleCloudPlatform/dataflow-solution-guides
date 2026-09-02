@@ -154,7 +154,7 @@ public abstract class BigTableEnrichment
         return event.getPrev();
     }
 
-    public static class BigTableEnrichmentDoFn extends DoFn<ClickstreamEvent, ClickstreamEvent> {
+    private static class BigTableEnrichmentDoFn extends DoFn<ClickstreamEvent, ClickstreamEvent> {
         private final Counter bigtableEnrichedMessages =
                 Metrics.counter(BigTableEnrichment.class, "bigtable-enriched-messages");
         private final Counter bigtableCacheMisses =
@@ -170,7 +170,7 @@ public abstract class BigTableEnrichment
 
         private transient BigtableDataClient bigtableDataClient;
 
-        public BigTableEnrichmentDoFn(
+        BigTableEnrichmentDoFn(
                 String projectId,
                 String instanceId,
                 String tableId,
@@ -183,10 +183,7 @@ public abstract class BigTableEnrichment
             this.enabled = enabled;
         }
 
-        public void setBigtableDataClient(BigtableDataClient client) {
-            this.bigtableDataClient = client;
-        }
-
+        @SuppressWarnings({"unused", "EffectivelyPrivate"})
         @Setup
         public void setup() throws IOException {
             if (enabled && bigtableDataClient == null && projectId != null && instanceId != null) {
@@ -199,6 +196,7 @@ public abstract class BigTableEnrichment
             }
         }
 
+        @SuppressWarnings({"unused", "EffectivelyPrivate"})
         @Teardown
         public void teardown() {
             if (bigtableDataClient != null) {

@@ -112,7 +112,7 @@ public abstract class SessionAnalytics
                 .apply("AggregateSessionMetrics", ParDo.of(new AggregateSessionDoFn()));
     }
 
-    public static class AggregateSessionDoFn
+    private static class AggregateSessionDoFn
             extends DoFn<KV<String, Iterable<ClickstreamEvent>>, UserSession> {
 
         private final Counter sessionsProcessed =

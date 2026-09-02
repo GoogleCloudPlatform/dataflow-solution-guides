@@ -8,18 +8,20 @@ This pipeline is part of the [Dataflow Clickstream Analytics Solution Guide](../
 
 ## Pipeline Architecture
 
-```
-                                      ┌──> BigQuery: Enriched Raw Events (`wikipedia`)
-                                      │    (Storage Write API - Append)
-Pub/Sub ──> JsonToEvents ──> BigTableEnrichment
-                │                     │
-                │ (Parse Errors)      └──> SessionAnalytics ──> BigQuery: User Sessions (`sessions`)
-                │                          (Session Windowing)  (Storage Write API - UPSERT on session_id)
-                │                                    │
-                │                                    │ (Failed Inserts)
-                └──────────────────┬─────────────────┘
-                                   ▼
-                      BigQuery: Deadletter Table (`deadletter`)
+```mermaid
+flowchart TD
+    PubSub["Pub/Sub Ingestion<br/>(<code>ClickstreamPubSubReader</code>)"] --> JsonToEvents["Parse JSON to Events<br/>(<code>JsonToEvents</code>)"]
+
+    JsonToEvents -- "Valid Events (SUCCESS_TAG)" --> BigTable["Cloud Bigtable Enrichment<br/>(<code>BigTableEnrichment</code>)"]
+    JsonToEvents -- "Parse Errors (ERROR_TAG)" --> DLQ["BigQuery: Deadletter Table<br/>(<code>deadletter</code>)"]
+
+    BigTable --> BQRaw["BigQuery: Enriched Raw Events (<code>wikipedia</code>)<br/>(Storage Write API - Append)"]
+    BigTable --> Session["Session Analytics<br/>(<code>SessionAnalytics</code>)"]
+
+    Session --> BQSessions["BigQuery: User Sessions (<code>sessions</code>)<br/>(Storage Write API - UPSERT on session_id)"]
+
+    BQRaw -. "Failed Storage API Inserts" .-> DLQ
+    BQSessions -. "Failed Storage API Inserts" .-> DLQ
 ```
 
 ### Key Stages

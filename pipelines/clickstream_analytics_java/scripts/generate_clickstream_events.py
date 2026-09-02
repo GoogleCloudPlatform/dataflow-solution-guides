@@ -7,17 +7,29 @@ import os
 import random
 import sys
 import time
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from google.cloud import pubsub_v1
 
 
 PAGE_GRAPH = {
-    "Main_Page": ["Artificial_intelligence", "Earth", "Google_Cloud_Platform", "Physics"],
-    "Artificial_intelligence": ["Machine_learning", "Deep_learning", "Computer_vision", "Main_Page"],
-    "Machine_learning": ["Cloud_Dataflow", "BigQuery", "Artificial_intelligence", "Statistics"],
-    "Cloud_Dataflow": ["Apache_Beam", "BigQuery", "Cloud_Bigtable", "Google_Cloud_Platform"],
-    "Apache_Beam": ["Cloud_Dataflow", "Flink", "Spark", "Google_Cloud_Platform"],
-    "Google_Cloud_Platform": ["BigQuery", "Cloud_Bigtable", "Cloud_Dataflow", "Main_Page"],
+    "Main_Page": [
+        "Artificial_intelligence", "Earth", "Google_Cloud_Platform", "Physics"
+    ],
+    "Artificial_intelligence": [
+        "Machine_learning", "Deep_learning", "Computer_vision", "Main_Page"
+    ],
+    "Machine_learning": [
+        "Cloud_Dataflow", "BigQuery", "Artificial_intelligence", "Statistics"
+    ],
+    "Cloud_Dataflow": [
+        "Apache_Beam", "BigQuery", "Cloud_Bigtable", "Google_Cloud_Platform"
+    ],
+    "Apache_Beam": [
+        "Cloud_Dataflow", "Flink", "Spark", "Google_Cloud_Platform"
+    ],
+    "Google_Cloud_Platform": [
+        "BigQuery", "Cloud_Bigtable", "Cloud_Dataflow", "Main_Page"
+    ],
     "BigQuery": ["Cloud_Bigtable", "SQL", "Google_Cloud_Platform", "Main_Page"],
     "Cloud_Bigtable": ["NoSQL", "BigQuery", "Cloud_Dataflow", "Main_Page"],
     "Earth": ["Physics", "Solar_System", "Main_Page"],

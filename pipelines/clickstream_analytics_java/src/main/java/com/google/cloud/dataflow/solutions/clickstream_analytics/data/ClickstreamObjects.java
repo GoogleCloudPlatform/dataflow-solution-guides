@@ -30,7 +30,24 @@ public final class ClickstreamObjects {
 
     private ClickstreamObjects() {}
 
-    /** Represents a raw or enriched clickstream event. */
+    /**
+     * Represents a raw or enriched clickstream event.
+     *
+     * <p>All fields are marked {@link Nullable} for the following reasons:
+     *
+     * <ul>
+     *   <li><strong>Beam Schema Inference</strong>: This class serves as the schema source for
+     *       {@code JsonToRow.withExceptionReporting(eventSchema)}. Non-nullable fields would cause
+     *       incoming JSON payloads lacking optional fields to fail parsing and route to DLQ.
+     *   <li><strong>Downstream Enrichment</strong>: {@code category} and {@code enriched_data} do
+     *       not exist in raw Pub/Sub JSON; they are populated downstream by Cloud Bigtable.
+     *   <li><strong>Entry Pages & Anonymous Sessions</strong>: {@code prev} is null for initial
+     *       landing pages without referrers, {@code user_id} can be null for anonymous sessions,
+     *       and {@code timestamp} can be omitted to fall back to the Pub/Sub message timestamp.
+     *   <li><strong>BigQuery Table Schema</strong>: Matches the target BigQuery {@code wikipedia}
+     *       table definition where all columns are {@code NULLABLE}.
+     * </ul>
+     */
     @DefaultSchema(AutoValueSchema.class)
     @AutoValue
     public abstract static class ClickstreamEvent implements Serializable {
@@ -116,7 +133,13 @@ public final class ClickstreamObjects {
         }
     }
 
-    /** Represents an aggregated user browsing session. */
+    /**
+     * Represents an aggregated user browsing session.
+     *
+     * <p>{@code sessionId} is non-nullable as it serves as the BigQuery primary key for Storage
+     * Write API UPSERT mutations. Aggregated summary fields are {@link Nullable} matching the
+     * BigQuery {@code sessions} table schema.
+     */
     @DefaultSchema(AutoValueSchema.class)
     @AutoValue
     public abstract static class UserSession implements Serializable {

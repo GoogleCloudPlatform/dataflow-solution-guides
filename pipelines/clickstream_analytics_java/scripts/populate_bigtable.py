@@ -129,7 +129,8 @@ def populate_bigtable(
     print(f"Created table '{table_id}' with column family '{column_family_id}'.")
 
   print(
-      f"Populating table '{table_id}' on instance '{instance_id}' with {len(SAMPLE_ARTICLES)} sample rows..."
+      f"Populating table '{table_id}' on instance '{instance_id}' "
+      f"with {len(SAMPLE_ARTICLES)} sample rows..."
   )
 
   rows = []
