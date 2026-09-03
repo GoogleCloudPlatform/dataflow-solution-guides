@@ -13,8 +13,16 @@ For the full version of this solution guide, please refer to:
 
 ## Assets included in this repository
 
-- [Terraform code to deploy infrastructure for Clickstream Analytics](../terraform/clickstream_analytics/)
-- [Sample pipeline in Java for clickstream analytics with Dataflow](../pipelines/clickstream_analytics_java/)
+- [Terraform code to deploy infrastructure for Clickstream Analytics](../terraform/clickstream_analytics/): Provisions Pub/Sub, Cloud Bigtable instance/table, BigQuery dataset with `wikipedia` (raw events), `sessions` (primary key constrained for upserts), and `deadletter` tables, plus IAM service accounts.
+- [Java Apache Beam streaming pipeline for clickstream analytics with Dataflow](../pipelines/clickstream_analytics_java/):
+  - Strongly typed event schemas using Google **AutoValue**, AutoBuilder, and Beam Schemas.
+  - Low-latency enrichment via **Cloud Bigtable** v2 client.
+  - User session windowing with configurable inactivity gap duration (`--sessionGapDurationMinutes`).
+  - Dual BigQuery sinks: append-only for enriched events, and Storage Write API **UPSERTs** for session aggregations.
+  - Unified dead-letter queue (DLQ) capturing parse/validation errors and BigQuery write failures.
+  - Dataflow **Streaming Engine** execution (`--enableStreamingEngine`) for offloading session window state and low-latency processing.
+  - Reference data seeder (`scripts/populate_bigtable.py`) and synthetic streaming generator (`scripts/generate_clickstream_events.py`).
+  - End-to-end verification runbook: [Testing & Verification Guide](../pipelines/clickstream_analytics_java/README.md#end-to-end-cloud-deployment--testing-runbook).
 
 ## Technical benefits
 
