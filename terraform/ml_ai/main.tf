@@ -26,7 +26,7 @@ data "google_project" "project" {
 
 // Artifact Registry repository for custom Dataflow GPU worker containers
 module "registry_docker" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v58.0.0"
   project_id = var.project_id
   location   = var.region
   name       = "dataflow-containers"
@@ -54,7 +54,7 @@ module "registry_docker" {
 // Optional GCS Bucket for staging data and model weights
 module "buckets" {
   count         = var.create_bucket ? 1 : 0
-  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v57.0.0"
+  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v58.0.0"
   project_id    = var.project_id
   name          = local.bucket_name
   location      = var.region
@@ -64,7 +64,7 @@ module "buckets" {
 
 // Pub/Sub Topics and Subscriptions
 module "input_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v58.0.0"
   project_id = var.project_id
   name       = "messages"
   subscriptions = {
@@ -73,7 +73,7 @@ module "input_topic" {
 }
 
 module "output_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v58.0.0"
   project_id = var.project_id
   name       = "predictions"
   subscriptions = {
@@ -83,7 +83,7 @@ module "output_topic" {
 
 // Dedicated Dataflow Worker Service Account
 module "dataflow_sa" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v58.0.0"
   project_id = var.project_id
   name       = local.dataflow_service_account
   iam_project_roles = {

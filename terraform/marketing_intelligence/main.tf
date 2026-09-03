@@ -29,7 +29,7 @@ data "google_project" "project" {
 
 // Artifact Registry repository for custom Dataflow worker containers
 module "registry_docker" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v58.0.0"
   project_id = var.project_id
   location   = var.region
   name       = "dataflow-containers"
@@ -57,7 +57,7 @@ module "registry_docker" {
 // Optional GCS Bucket for staging data and scripts
 module "buckets" {
   count         = var.create_bucket ? 1 : 0
-  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v57.0.0"
+  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v58.0.0"
   project_id    = var.project_id
   name          = local.bucket_name
   location      = var.region
@@ -67,7 +67,7 @@ module "buckets" {
 
 // Pub/Sub input topic and subscription
 module "input_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v58.0.0"
   project_id = var.project_id
   name       = "dataflow-solutions-guide-market-intelligence-input"
   subscriptions = {
@@ -77,7 +77,7 @@ module "input_topic" {
 
 // Pub/Sub output topic and subscription for real-time coupon/discount activations
 module "output_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v58.0.0"
   project_id = var.project_id
   name       = "dataflow-solutions-guide-market-intelligence-output"
   subscriptions = {
@@ -107,7 +107,7 @@ resource "google_firestore_database" "database" {
 
 // BigQuery dataset for prediction persistence
 module "output_dataset" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v58.0.0"
   project_id = var.project_id
   id         = local.bigquery_dataset
   location   = var.region
@@ -124,7 +124,7 @@ module "output_dataset" {
 
 // Dedicated Dataflow Worker Service Account
 module "dataflow_sa" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v58.0.0"
   project_id = var.project_id
   name       = local.dataflow_service_account
   iam_project_roles = {
