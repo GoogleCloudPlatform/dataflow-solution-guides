@@ -48,9 +48,8 @@ public class ETLIntegration {
         PCollection<PubsubMessage> msgs =
                 p.apply("Read topic", PubsubIO.readMessages().fromTopic(options.getPubsubTopic()));
 
-        TaxiEventProcessor.ParsingOutput<TaxiObjects.TaxiEvent> parsed =
+        PCollection<TaxiObjects.TaxiEvent> taxiEvents =
                 msgs.apply("Parse", TaxiEventProcessor.FromPubsubMessage.parse());
-        PCollection<TaxiObjects.TaxiEvent> taxiEvents = parsed.getParsedData();
 
         taxiEvents.apply(
                 "Write",

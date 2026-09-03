@@ -34,9 +34,7 @@ public class SchemaUtils {
         } catch (NoSuchSchemaException e) {
             LOG.error(e.getMessage());
             throw new IllegalArgumentException(
-                    String.format(
-                            "Could not find schema for %s",
-                            TaxiObjects.TaxiEvent.class.getCanonicalName()));
+                    String.format("Could not find schema for %s", classType.getCanonicalName()));
         }
 
         return schema;
