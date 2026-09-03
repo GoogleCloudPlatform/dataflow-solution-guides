@@ -6,7 +6,6 @@ elif [ -n "$NETWORK" ]; then
 fi
 
 ./gradlew run -Pargs="
-  --pipeline=PUBSUB_TO_SPANNER \
   --streaming \
   --enableStreamingEngine \
   --autoscalingAlgorithm=THROUGHPUT_BASED \
