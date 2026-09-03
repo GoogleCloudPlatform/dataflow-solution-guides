@@ -74,7 +74,7 @@ public class Spanner {
     private static class EventToMutationDoFn extends DoFn<TaxiObjects.TaxiEvent, Mutation> {
         private final String tableName;
 
-        public EventToMutationDoFn(String tableName) {
+        EventToMutationDoFn(String tableName) {
             this.tableName = tableName;
         }
 

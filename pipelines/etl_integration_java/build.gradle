@@ -41,11 +41,9 @@ ext {
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
   autoValueVersion = '1.11.1'
-  autoServiceVersion = '1.1.1'
   errorProneCoreVersion = '2.50.0'
 
   googleJavaFormat = '1.36.1'
-  confluentRepoURL = "https://packages.confluent.io/maven"
 }
 
 repositories {
@@ -53,10 +51,6 @@ repositories {
 
   maven {  // Apache Snapshots repository
     url "https://repository.apache.org/content/repositories/snapshots/"
-  }
-
-  maven {  // For Kafka required packages for Beam Google Cloud IO pkgs
-    url confluentRepoURL
   }
 }
 
@@ -89,25 +83,17 @@ dependencies {
   implementation "org.apache.beam:beam-runners-google-cloud-dataflow-java:${beamVersion}"
   implementation "org.apache.beam:beam-sdks-java-io-google-cloud-platform:${beamVersion}"
 
-
   implementation "org.slf4j:slf4j-jdk14:${slf4jVersion}"
 
   implementation "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
   annotationProcessor "com.google.auto.value:auto-value:${autoValueVersion}"
-
-  implementation "com.google.auto.service:auto-service-annotations:${autoServiceVersion}"
-  annotationProcessor "com.google.auto.service:auto-service:${autoServiceVersion}"
 
   // Tests dependencies.
   testImplementation "junit:junit:${junitVersion}"
   testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
   testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
 
-  implementation 'org.checkerframework:checker-qual:4.2.3'
   errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
-
-  // Google Java format for Gradle
-  implementation "com.google.googlejavaformat:google-java-format:${googleJavaFormat}"
 }
 
 // Package a self-contained jar file.
