@@ -32,28 +32,28 @@ public class TaxiObjects {
         public abstract String getRideId();
 
         @SchemaFieldName("point_idx")
-        public abstract Integer getPointIdx();
+        public abstract int getPointIdx();
 
         @SchemaFieldName("latitude")
-        public abstract Double getLatitude();
+        public abstract double getLatitude();
 
         @SchemaFieldName("longitude")
-        public abstract Double getLongitude();
+        public abstract double getLongitude();
 
         @SchemaFieldName("timestamp")
         public abstract String getTimeStamp();
 
         @SchemaFieldName("meter_reading")
-        public abstract Double getMeterReading();
+        public abstract double getMeterReading();
 
         @SchemaFieldName("meter_increment")
-        public abstract Double getMeterIncrement();
+        public abstract double getMeterIncrement();
 
         @SchemaFieldName("ride_status")
         public abstract String getRideStatus();
 
         @SchemaFieldName("passenger_count")
-        public abstract Integer getPassengerCount();
+        public abstract int getPassengerCount();
 
         public static Builder builder() {
             return new AutoValue_TaxiObjects_TaxiEvent.Builder();
@@ -63,21 +63,21 @@ public class TaxiObjects {
         public abstract static class Builder {
             public abstract Builder setRideId(String value);
 
-            public abstract Builder setPointIdx(Integer value);
+            public abstract Builder setPointIdx(int value);
 
-            public abstract Builder setLatitude(Double latitude);
+            public abstract Builder setLatitude(double latitude);
 
-            public abstract Builder setLongitude(Double longitude);
+            public abstract Builder setLongitude(double longitude);
 
             public abstract Builder setTimeStamp(String value);
 
-            public abstract Builder setMeterReading(Double value);
+            public abstract Builder setMeterReading(double value);
 
-            public abstract Builder setMeterIncrement(Double value);
+            public abstract Builder setMeterIncrement(double value);
 
             public abstract Builder setRideStatus(String value);
 
-            public abstract Builder setPassengerCount(Integer value);
+            public abstract Builder setPassengerCount(int value);
 
             public abstract TaxiEvent build();
         }

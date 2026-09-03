@@ -68,14 +68,14 @@ public class TaxiEventProcessorTest implements Serializable {
                             TaxiEvent event = events.iterator().next();
                             assertNotNull(event);
                             assertEquals("ride-123", event.getRideId());
-                            assertEquals(Integer.valueOf(5), event.getPointIdx());
-                            assertEquals(Double.valueOf(40.7128), event.getLatitude());
-                            assertEquals(Double.valueOf(-74.0060), event.getLongitude());
+                            assertEquals(5, event.getPointIdx());
+                            assertEquals(40.7128, event.getLatitude(), 0.0001);
+                            assertEquals(-74.0060, event.getLongitude(), 0.0001);
                             assertEquals("2026-09-01T12:00:00Z", event.getTimeStamp());
-                            assertEquals(Double.valueOf(12.5), event.getMeterReading());
-                            assertEquals(Double.valueOf(0.05), event.getMeterIncrement());
+                            assertEquals(12.5, event.getMeterReading(), 0.0001);
+                            assertEquals(0.05, event.getMeterIncrement(), 0.0001);
                             assertEquals("enroute", event.getRideStatus());
-                            assertEquals(Integer.valueOf(2), event.getPassengerCount());
+                            assertEquals(2, event.getPassengerCount());
                             return null;
                         });
 
@@ -132,7 +132,7 @@ public class TaxiEventProcessorTest implements Serializable {
                             TaxiEvent event = events.iterator().next();
                             assertNotNull(event);
                             assertEquals("ride-456", event.getRideId());
-                            assertEquals(Integer.valueOf(10), event.getPointIdx());
+                            assertEquals(10, event.getPointIdx());
                             return null;
                         });
 
