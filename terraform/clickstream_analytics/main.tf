@@ -89,7 +89,7 @@ resource "google_bigtable_table" "wikipedia" {
 
 // BigQuery dataset for processed clickstream and deadletter data
 module "dataset" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v58.0.0"
   project_id = var.project_id
   id         = local.bigquery_dataset
   location   = var.region
@@ -180,7 +180,7 @@ resource "google_bigquery_table" "deadletter" {
 // Optional GCS Bucket for staging & temp location
 module "buckets" {
   count         = var.create_bucket ? 1 : 0
-  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v57.0.0"
+  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v58.0.0"
   project_id    = var.project_id
   name          = local.bucket_name
   location      = var.region
@@ -190,7 +190,7 @@ module "buckets" {
 
 // Pub/Sub input topic and subscription
 module "input_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v58.0.0"
   project_id = var.project_id
   name       = local.pubsub_topic
   subscriptions = {
@@ -204,7 +204,7 @@ module "input_topic" {
 
 // Dedicated Dataflow Worker Service Account
 module "dataflow_sa" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v58.0.0"
   project_id = var.project_id
   name       = local.dataflow_service_account
   iam_project_roles = {

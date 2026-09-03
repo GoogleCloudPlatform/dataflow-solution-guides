@@ -27,7 +27,7 @@ locals {
 
 // Dedicated Dataflow Worker Service Account
 module "dataflow_sa" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v58.0.0"
   project_id = var.project_id
   name       = local.dataflow_service_account
   iam_project_roles = {
@@ -43,7 +43,7 @@ module "dataflow_sa" {
 // Optional GCS Bucket for staging & temp location
 module "buckets" {
   count         = var.create_bucket ? 1 : 0
-  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v57.0.0"
+  source        = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v58.0.0"
   project_id    = var.project_id
   name          = local.bucket_name
   location      = var.region
@@ -57,7 +57,7 @@ data "google_project" "project" {
 
 // Pub/Sub topic to receive all logs for Splunk replication
 module "logging_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v58.0.0"
   project_id = var.project_id
   name       = local.pubsub_logging_topic
   subscriptions = {
@@ -67,7 +67,7 @@ module "logging_topic" {
 
 // Pub/Sub topic to receive deadletter logs
 module "deadletter_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v58.0.0"
   project_id = var.project_id
   name       = local.pubsub_deadletter_topic
   subscriptions = {
@@ -100,7 +100,7 @@ resource "google_logging_project_sink" "my_logging_sink" {
 
 // Splunk HEC token in Secret Manager
 module "splunk_token_secret" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/secret-manager?ref=v57.0.0"
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/secret-manager?ref=v58.0.0"
   project_id = var.project_id
   secrets = {
     splunk-hec-token = {
