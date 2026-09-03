@@ -8,7 +8,7 @@
 [MAIN]
 
 # Files or directories to be skipped. They should be base names, not paths.
-ignore=third_party
+ignore=third_party,.venv,venv,.gradle,build,bin
 
 # Files or directories matching the regex patterns are skipped. The regex
 # matches against base names, not paths.

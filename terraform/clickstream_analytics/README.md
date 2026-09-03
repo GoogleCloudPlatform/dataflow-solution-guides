@@ -14,8 +14,10 @@ The scripts will create the following application-level resources:
 | **Pub/Sub topic** | `dataflow-clickstream-input` | The input Pub/Sub topic for streaming clickstream events. |
 | **Pub/Sub subscription** | `dataflow-clickstream-input-sub` | The subscription to the input topic consumed by the Dataflow streaming pipeline. |
 | **Bigtable Instance** | `clickstream-analytics` | Cloud Bigtable instance to store enrichment metadata for incoming clickstream messages. |
-| **BigQuery Dataset** | `clickstream_analytics` | BigQuery dataset where processed records and dead-letter tables reside. |
-| **BigQuery Table** | `wikipedia` | Stores processed clickstream records from the Dataflow job. |
+| **Bigtable Table** | `wikipedia` | Cloud Bigtable table with column family `cf` for real-time metadata lookup and hydration. |
+| **BigQuery Dataset** | `clickstream_analytics` | BigQuery dataset where processed records, session aggregations, and dead-letter tables reside. |
+| **BigQuery Table** | `wikipedia` | Stores real-time enriched clickstream events from the Dataflow job. |
+| **BigQuery Table** | `sessions` | Stores aggregated user browsing sessions written with BigQuery Storage Write API UPSERTs (primary key: `session_id`). |
 | **BigQuery Table** | `deadletter` | Stores failed/unparseable records with full payload and error stacktrace for debugging. |
 | **Service account** | `clickstream-dataflow-sa` (configurable) | Dedicated Dataflow worker service account with least-privilege roles (`roles/storage.objectAdmin`, `roles/dataflow.worker`, `roles/monitoring.metricWriter`, `roles/pubsub.editor`, `roles/bigtable.reader`, `roles/bigquery.dataEditor`, `roles/bigquery.jobUser`). |
 | **GCS Bucket** *(Optional)* | `var.bucket_name` or `var.project_id` | Optional regional standard GCS bucket for Dataflow temp/staging files (created when `create_bucket = true`). |

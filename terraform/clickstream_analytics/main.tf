@@ -18,9 +18,10 @@ locals {
   pubsub_subscription      = "dataflow-clickstream-input-sub"
   bigtable_instance        = "clickstream-analytics"
   bigtable_zone            = "${var.region}-a"
-  bigtable_lookup_key      = "bigtable-lookup-key"
+  bigtable_lookup_key      = "curr"
   bigquery_dataset         = "clickstream_analytics"
   bigquery_table           = "wikipedia"
+  bigquery_sessions_table  = "sessions"
   bigquery_deadletter      = "deadletter"
   bucket_name              = var.bucket_name != null ? var.bucket_name : var.project_id
   worker_type              = "n2-standard-4"
@@ -70,6 +71,22 @@ resource "google_bigtable_instance" "clickstream_analytics" {
   ]
 }
 
+// Cloud Bigtable table for clickstream metadata enrichment
+resource "google_bigtable_table" "wikipedia" {
+  name                = local.bigquery_table
+  instance_name       = google_bigtable_instance.clickstream_analytics.name
+  project             = var.project_id
+  deletion_protection = var.destroy_all_resources ? "UNPROTECTED" : "PROTECTED"
+
+  column_family {
+    family = "cf"
+  }
+
+  depends_on = [
+    google_bigtable_instance.clickstream_analytics
+  ]
+}
+
 // BigQuery dataset for processed clickstream and deadletter data
 module "dataset" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v57.0.0"
@@ -92,7 +109,7 @@ module "dataset" {
   ]
 }
 
-// BigQuery destination table for processed wikipedia clickstream data
+// BigQuery destination table for processed wikipedia clickstream data (enriched events)
 resource "google_bigquery_table" "wikipedia" {
   project             = var.project_id
   dataset_id          = module.dataset.dataset_id
@@ -104,6 +121,37 @@ resource "google_bigquery_table" "wikipedia" {
     { name = "curr", type = "STRING", mode = "NULLABLE" },
     { name = "type", type = "STRING", mode = "NULLABLE" },
     { name = "n", type = "INTEGER", mode = "NULLABLE" },
+    { name = "user_id", type = "STRING", mode = "NULLABLE" },
+    { name = "timestamp", type = "TIMESTAMP", mode = "NULLABLE" },
+    { name = "category", type = "STRING", mode = "NULLABLE" },
+    { name = "enriched_data", type = "STRING", mode = "NULLABLE" }
+  ])
+}
+
+// BigQuery destination table for aggregated user browsing sessions (written with Storage Write API UPSERTs)
+resource "google_bigquery_table" "sessions" {
+  project             = var.project_id
+  dataset_id          = module.dataset.dataset_id
+  table_id            = local.bigquery_sessions_table
+  deletion_protection = !var.destroy_all_resources
+
+  table_constraints {
+    primary_key {
+      columns = ["session_id"]
+    }
+  }
+
+  schema = jsonencode([
+    { name = "session_id", type = "STRING", mode = "REQUIRED" },
+    { name = "user_id", type = "STRING", mode = "NULLABLE" },
+    { name = "session_start", type = "TIMESTAMP", mode = "NULLABLE" },
+    { name = "session_end", type = "TIMESTAMP", mode = "NULLABLE" },
+    { name = "duration_seconds", type = "FLOAT", mode = "NULLABLE" },
+    { name = "event_count", type = "INTEGER", mode = "NULLABLE" },
+    { name = "first_page", type = "STRING", mode = "NULLABLE" },
+    { name = "last_page", type = "STRING", mode = "NULLABLE" },
+    { name = "unique_pages_count", type = "INTEGER", mode = "NULLABLE" },
+    { name = "total_views", type = "INTEGER", mode = "NULLABLE" }
   ])
 }
 
@@ -198,6 +246,7 @@ export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 
 export BQ_DATASET=${module.dataset.dataset_id}
 export BQ_TABLE=${google_bigquery_table.wikipedia.table_id}
+export BQ_SESSIONS_TABLE=${google_bigquery_table.sessions.table_id}
 export BQ_DEADLETTER_TABLE=${google_bigquery_table.deadletter.table_id}
 
 export TOPIC=${module.input_topic.id}
