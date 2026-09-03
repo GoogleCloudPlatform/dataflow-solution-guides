@@ -68,7 +68,7 @@ dependencies {
   testImplementation "junit:junit:${junitVersion}"
   testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
   testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
-  testImplementation "org.mockito:mockito-core:4.11.0"
+  testImplementation "org.mockito:mockito-core:5.23.0"
   errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
 }
 
