@@ -32,7 +32,7 @@ This pipeline is part of the [Dataflow IoT Analytics Solution Guide](../../use_c
 
 ## Prerequisites
 
-- Python 3.13 or 3.14
+- Python 3.14
 - Google Cloud SDK (`gcloud`)
 - Access to a Google Cloud Project with Billing and Dataflow APIs enabled
 - Provisioned infrastructure via `terraform/iot_analytics`
