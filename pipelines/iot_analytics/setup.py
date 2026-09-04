@@ -25,7 +25,7 @@ with open("requirements.txt", encoding="utf-8") as f:
   ]
 
 setup(
-    name="IoT Dataflow Analytics Pipeline",
+    name="iot_analytics_pipeline",
     version="0.1",
     packages=find_packages(),
     install_requires=requirements,
