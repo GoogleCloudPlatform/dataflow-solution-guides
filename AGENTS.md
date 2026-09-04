@@ -29,7 +29,7 @@ dataflow-solution-guides/
 │   ├── anomaly_detection/    # Pub/Sub, BigQuery, Vertex AI endpoints, VPC
 │   ├── marketing_intelligence/ # Pub/Sub topics, Firestore, BigQuery dataset, Artifact Registry, Service Account
 │   ├── clickstream_analytics/  # Bigtable instance, Pub/Sub, BigQuery, Service Account
-│   ├── iot_analytics/        # Bigtable, Pub/Sub, GCS, VPC
+│   ├── iot_analytics/        # Bigtable, Pub/Sub, BigQuery, Artifact Registry, Service Account
 │   └── log_replication_splunk/ # Pub/Sub, Secret Manager, Service Account, Optional Splunk VM
 │
 ├── pipelines/                # Apache Beam streaming pipeline implementations

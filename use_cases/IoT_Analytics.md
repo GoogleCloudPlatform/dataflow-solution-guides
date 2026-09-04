@@ -8,7 +8,7 @@ Organizations employ Internet of Things (IoT) sensors to monitor their productio
 - [IoT Analytics Solution Guide & Architecture (PDF)](./guides/iot_analytics_dataflow_guide.pdf)
 
 ## Assets included in this repository
-- Terraform code to deploy a project for IoT Analytics (WORK IN PROGRESS)
+- Terraform code to deploy infrastructure for IoT Analytics (WORK IN PROGRESS)
 - Sample pipeline in Python for deploying IoT analytics (WORK IN PROGRESS)
 
 ## Technical benefits
