@@ -23,7 +23,7 @@ This skill provides step-by-step execution workflows for deploying, running, ver
 | **Anomaly Detection** | `terraform/anomaly_detection` | `pipelines/anomaly_detection` | `./scripts/02_run_dataflow.sh` | Pub/Sub `events` topic | BigQuery `anomalies` table |
 | **Marketing Intelligence** | `terraform/marketing_intelligence` | `pipelines/marketing_intelligence` | `./scripts/02_run_dataflow.sh` | Pub/Sub user activity stream | BigQuery marketing attribution tables |
 | **Clickstream Analytics** | `terraform/clickstream_analytics` | `pipelines/clickstream_analytics_java` | `./scripts/01_launch_pipeline.sh` | Pub/Sub events | Cloud Bigtable & BigQuery analytics table |
-| **IoT Analytics** | `terraform/iot_analytics` | `pipelines/iot_analytics` | `./scripts/02_submit_job.sh` | `python scripts/publish_on_pubsub.py` | Cloud Bigtable & GCS output |
+| **IoT Analytics** | `terraform/iot_analytics` | `pipelines/iot_analytics` | `./scripts/02_submit_job.sh` | `python scripts/publish_on_pubsub.py` | BigQuery `iot.maintenance_analytics` & Pub/Sub `maintenance-alerts` |
 | **Log Replication** | `terraform/log_replication_splunk` | `pipelines/log_replication_splunk` | `./scripts/01_launch_ps_to_splunk.sh` | Pub/Sub logging topic | Splunk HTTP Event Collector (HEC) |
 
 ---
@@ -154,9 +154,13 @@ source scripts/00_set_environment.sh
 cd terraform/iot_analytics
 terraform init && terraform apply -auto-approve
 
-# 2. Launch Pipeline & Simulator
+# 2. Build Container & Seed Metadata
 cd ../../pipelines/iot_analytics
 source scripts/00_set_environment.sh
+./scripts/01_cloud_build_and_push.sh
+python scripts/create_and_populate_bigtable.py
+
+# 3. Launch Pipeline & Simulator
 ./scripts/02_submit_job.sh
 python scripts/publish_on_pubsub.py
 ```
