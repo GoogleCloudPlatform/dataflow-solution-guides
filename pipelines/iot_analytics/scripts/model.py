@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -12,70 +12,95 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Creates model for IoT Analytics Solution Dataflow Solution guide.
+Trains and exports Scikit-Learn predictive maintenance model for IoT Analytics.
 """
 
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
+import argparse
+from datetime import datetime, timedelta, timezone
+import os
 import pickle
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 
 
-def create_sample_data(num_samples):
+def create_sample_data(num_samples: int) -> pd.DataFrame:
+  """Generates synthetic vehicle telemetry and maintenance status records."""
+  np.random.seed(42)
+  now = datetime.now(timezone.utc)
   data = {
       "vehicle_id": [],
       "max_temperature": [],
       "max_vibration": [],
       "last_service_date": [],
-      "needs_maintenance": []
+      "days_since_last_service": [],
+      "needs_maintenance": [],
   }
 
   for i in range(num_samples):
     vehicle_id = str(1000 + i)
     max_temperature = np.random.randint(50, 100)
-    max_vibration = np.random.uniform(0, 1)
-    last_service_date = datetime.now() - timedelta(
-        days=np.random.randint(0, 365))
+    max_vibration = round(float(np.random.uniform(0.1, 0.8)), 3)
+    days_ago = np.random.randint(10, 365)
+    last_service_date = now - timedelta(days=days_ago)
     last_service_date_str = last_service_date.strftime("%Y-%m-%d")
 
-    needs_maintenance = (max_temperature > 75) or (max_vibration > 0.5) or (
-        last_service_date < datetime.now() - timedelta(days=180))
+    needs_maintenance = int((max_temperature > 75) or (max_vibration > 0.50) or
+                            (days_ago > 180))
 
     data["vehicle_id"].append(vehicle_id)
     data["max_temperature"].append(max_temperature)
     data["max_vibration"].append(max_vibration)
     data["last_service_date"].append(last_service_date_str)
+    data["days_since_last_service"].append(float(days_ago))
     data["needs_maintenance"].append(needs_maintenance)
 
   return pd.DataFrame(data)
 
 
-# Create a sample dataset with 100 samples
-df = create_sample_data(100)
-print(df.head(n=10).to_markdown())
+def train_and_export_model(output_path: str = "maintenance_model.pkl"):
+  """Trains the Scikit-Learn classification model and exports the serialized artifact."""
+  df = create_sample_data(500)
+  print(f"Generated {len(df)} training samples:")
+  print(df.head(n=5).to_markdown())
 
-# Convert the last_service_date to a datetime object
-df["last_service_date"] = pd.to_datetime(df["last_service_date"])
+  x = df[["max_temperature", "max_vibration",
+          "days_since_last_service"]].to_numpy(dtype=np.float32)
+  y = df["needs_maintenance"].to_numpy(dtype=int)
 
-# Features and target variable
-X = df[["max_temperature", "max_vibration", "last_service_date"]]
-y = df["needs_maintenance"].astype(int)
+  x_train, x_test, y_train, y_test = train_test_split(
+      x, y, test_size=0.2, random_state=42)
 
-# Convert last_service_date to numeric for modeling
-X["last_service_date"] = (X["last_service_date"] -
-                          X["last_service_date"].min()).dt.days
+  model = LogisticRegression(random_state=42)
+  model.fit(x_train, y_train)
 
-# Split the dataset
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42)
+  accuracy = model.score(x_test, y_test)
+  print(f"Model test accuracy: {accuracy:.4f}")
 
-# Create and train the model
-model = LogisticRegression()
-model.fit(X_train, y_train)
+  # Ensure destination directory exists
+  os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+  with open(output_path, "wb") as f:
+    pickle.dump(model, f)
+  print(f"Successfully serialized model artifact to: {output_path}")
 
-# Save the model to a local file
-with open("maintenance_model.pkl", "wb") as f:
-  print("Added Model")
-  pickle.dump(model, f)
+  # Also write to pipeline root directory if running from scripts/
+  script_dir = os.path.dirname(os.path.abspath(__file__))
+  pipeline_dir = os.path.dirname(script_dir)
+  root_model_path = os.path.join(pipeline_dir, "maintenance_model.pkl")
+  if os.path.abspath(output_path) != os.path.abspath(root_model_path):
+    with open(root_model_path, "wb") as f:
+      pickle.dump(model, f)
+    print(f"Also copied model artifact to pipeline root: {root_model_path}")
+
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser(
+      description="Train IoT Predictive Maintenance Model")
+  parser.add_argument(
+      "--output_path",
+      default="maintenance_model.pkl",
+      help="Target file path for the serialized model artifact",
+  )
+  args = parser.parse_args()
+  train_and_export_model(args.output_path)

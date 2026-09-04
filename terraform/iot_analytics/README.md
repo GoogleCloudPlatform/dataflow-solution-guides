@@ -13,6 +13,8 @@ The scripts will create the following application-level resources:
 | :--- | :---: | :--- |
 | **Pub/Sub topic** | `maintenance-data` (configurable) | The input Pub/Sub topic for streaming vehicle telemetry events. |
 | **Pub/Sub subscription** | `maintenance-data-sub` | The subscription to the input topic. |
+| **Pub/Sub alert topic** | `maintenance-alerts` (configurable) | The output Pub/Sub topic for real-time predictive maintenance alerts. |
+| **Pub/Sub alert subscription** | `maintenance-alerts-sub` | Downstream subscription to receive predictive maintenance notifications. |
 | **Bigtable Instance** | `iot-analytics` | Cloud Bigtable instance to store vehicle maintenance enrichment metadata. |
 | **Bigtable Table** | `maintenance_data` | Cloud Bigtable table with column family `maintenance` for real-time metadata lookup. |
 | **BigQuery Dataset** | `iot` | BigQuery dataset where processed records and inference results reside. |
@@ -33,6 +35,7 @@ This deployment accepts the following configuration variables:
 | `bucket_name` | `string` | `null` | Optional GCS bucket name for Dataflow temp/staging files. Defaults to `project_id` if not specified. |
 | `service_account_name` | `string` | `"iot-analytics-sa"` | Name of the dedicated Dataflow worker service account to create. |
 | `pubsub_topic` | `string` | `"maintenance-data"` | Name for the input Pub/Sub topic. |
+| `pubsub_alert_topic` | `string` | `"maintenance-alerts"` | Name for the output Pub/Sub topic for real-time predictive maintenance alerts. |
 | `create_bucket` | `bool` | `false` | Set to `true` to provision a new GCS bucket, or `false` to reuse an existing bucket. |
 | `destroy_all_resources` | `bool` | `true` | When `true`, enables deletion of Bigtable instances and BigQuery dataset contents on `terraform destroy`. For production environments, set to `false`. |
 

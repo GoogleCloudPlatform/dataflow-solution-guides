@@ -52,6 +52,12 @@ variable "pubsub_topic" {
   default     = "maintenance-data"
 }
 
+variable "pubsub_alert_topic" {
+  description = "Name for the real-time Pub/Sub alert topic."
+  type        = string
+  default     = "maintenance-alerts"
+}
+
 variable "destroy_all_resources" {
   description = "Destroy all resources when calling tf destroy. Use false for production deployments. For test environments, set to true to remove all resources."
   type        = bool

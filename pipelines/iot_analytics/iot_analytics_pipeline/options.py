@@ -44,4 +44,30 @@ class MyPipelineOptions(PipelineOptions):
         dest='bigtable_table_id',
         help='Enter BigTable Table Id')
     parser.add_argument(
-        '--row_key', dest='row_key', help='Enter BigTable row key')
+        '--subscription',
+        dest='subscription',
+        default=None,
+        help='Pub/sub subscription name :"projects/your_project_id/subscriptions/sub_name"'
+    )
+    parser.add_argument(
+        '--alert_topic',
+        dest='alert_topic',
+        default=None,
+        help='Pub/sub topic name to publish maintenance alerts to')
+    parser.add_argument(
+        '--model_path',
+        dest='model_path',
+        default='maintenance_model.pkl',
+        help='Path to serialized Scikit-Learn model artifact (local path or GCS URI)'
+    )
+    parser.add_argument(
+        '--window_size_seconds',
+        dest='window_size_seconds',
+        type=int,
+        default=60,
+        help='Window size in seconds for vehicle telemetry aggregation')
+    parser.add_argument(
+        '--row_key',
+        dest='row_key',
+        default='vehicle_id',
+        help='Enter BigTable row key')

@@ -25,6 +25,11 @@ elif [ -n "$NETWORK" ]; then
   SUBNET_OPT="--subnetwork=$NETWORK"
 fi
 
+ALERT_OPT=""
+if [ -n "$ALERT_TOPIC_ID" ]; then
+  ALERT_OPT="--alert_topic=$ALERT_TOPIC_ID"
+fi
+
 python3 -m main \
   --streaming \
   --runner=DataflowRunner \
@@ -36,9 +41,12 @@ python3 -m main \
   --service_account_email=$SERVICE_ACCOUNT \
   $SUBNET_OPT \
   --no_use_public_ips \
+  --machine_type=${MACHINE_TYPE:-n2-standard-4} \
   --sdk_container_image=$CONTAINER_URI \
   --max_workers=$MAX_DATAFLOW_WORKERS \
   --topic=$TOPIC_ID \
+  $ALERT_OPT \
+  --model_path=${MODEL_FILE_PATH:-maintenance_model.pkl} \
   --dataset=$DATASET \
   --table=$TABLE \
   --bigtable_instance_id=${BIGTABLE_INSTANCE_ID:-$INSTANCE_ID} \

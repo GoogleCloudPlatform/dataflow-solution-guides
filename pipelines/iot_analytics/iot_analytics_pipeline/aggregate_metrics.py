@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -12,40 +12,34 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Pipeline of the IoT Analytics Dataflow Solution guide.
+AggregateMetrics DoFn for IoT Analytics Dataflow Solution guide.
 """
-import apache_beam as beam
-from apache_beam.transforms.userstate import BagStateSpec, CombiningValueStateSpec, TimerSpec, on_timer
-from apache_beam.transforms.timeutil import TimeDomain
-from apache_beam import coders
-from apache_beam.utils.timestamp import Timestamp
 from typing import Tuple
+import apache_beam as beam
+from apache_beam import coders
+from apache_beam.transforms.timeutil import TimeDomain
+from apache_beam.transforms.userstate import CombiningValueStateSpec, TimerSpec, on_timer
+from apache_beam.utils.timestamp import Timestamp
 from .parse_timestamp import VehicleStateEvent
 
 
 class AggregateMetrics(beam.DoFn):
-  """
-    This DoFn performs stateful aggregation of vehicle metrics over a 1-hour window.
-    """
+  """Stateful aggregation of vehicle telemetry metrics over a sliding or fixed window."""
 
-  # State specifications
-  VEHICLE_EVENTS_BAG = BagStateSpec(
-      "vehicle_events_bag", coders.registry.get_coder(VehicleStateEvent))
+  # State specifications (no unbounded bag state)
   MAX_TIMESTAMP = CombiningValueStateSpec(
       "max_timestamp_seen", coders.IterableCoder(coders.TimestampCoder()),
       lambda elements: max(elements, default=Timestamp(0)))
   MAX_TEMPERATURE = CombiningValueStateSpec(
-      "max_temperature", coders.IterableCoder(coders.FloatCoder()),
+      "max_temperature", coders.IterableCoder(coders.VarIntCoder()),
       lambda elements: max(elements, default=0))
   MAX_VIBRATION = CombiningValueStateSpec(
       "max_vibration", coders.IterableCoder(coders.FloatCoder()),
-      lambda elements: max(elements, default=0))
+      lambda elements: max(elements, default=0.0))
   SUM_MILEAGE = CombiningValueStateSpec(
-      "sum_mileage", coders.IterableCoder(coders.FloatCoder()),
-      lambda elements: sum(i for i in elements))
+      "sum_mileage", coders.IterableCoder(coders.VarIntCoder()), sum)
   COUNT_MILEAGE = CombiningValueStateSpec(
-      "count_mileage", coders.IterableCoder(coders.FloatCoder()),
-      lambda elements: sum(1 for _ in elements))
+      "count_mileage", coders.IterableCoder(coders.VarIntCoder()), sum)
 
   # Timer for window expiration
   WINDOW_TIMER = TimerSpec("window_timer", TimeDomain.WATERMARK)
@@ -54,17 +48,12 @@ class AggregateMetrics(beam.DoFn):
               element: Tuple[str, VehicleStateEvent],
               timestamp=beam.DoFn.TimestampParam,
               window=beam.DoFn.WindowParam,
-              vehicle_events_bag=beam.DoFn.StateParam(VEHICLE_EVENTS_BAG),
               max_timestamp_seen=beam.DoFn.StateParam(MAX_TIMESTAMP),
               max_temperature=beam.DoFn.StateParam(MAX_TEMPERATURE),
               max_vibration=beam.DoFn.StateParam(MAX_VIBRATION),
               sum_mileage=beam.DoFn.StateParam(SUM_MILEAGE),
               count_mileage=beam.DoFn.StateParam(COUNT_MILEAGE),
               window_timer=beam.DoFn.TimerParam(WINDOW_TIMER)):
-
-    # Add event to bag state
-    vehicle_events_bag.add(element[1])  # Add the VehicleStateEvent object
-
     # Update state with current event's values
     max_timestamp_seen.add(timestamp)
     max_temperature.add(element[1].temperature)
@@ -84,22 +73,20 @@ class AggregateMetrics(beam.DoFn):
       max_vibration=beam.DoFn.StateParam(MAX_VIBRATION),
       sum_mileage=beam.DoFn.StateParam(SUM_MILEAGE),
       count_mileage=beam.DoFn.StateParam(COUNT_MILEAGE)):
-    # Calculate average mileage
-    avg_mileage = sum_mileage.read() / count_mileage.read(
-    ) if count_mileage.read() > 0 else 0.0
+    cnt = count_mileage.read()
+    avg_mileage = (sum_mileage.read() / cnt) if cnt > 0 else 0.0
 
-    # Create output Row object
+    # Output Row object with aggregated values
     output_row = beam.Row(
-        vehicle_id=vehicle_id,
+        vehicle_id=str(vehicle_id),
         max_timestamp=max_timestamp_seen.read(),
-        max_temperature=max_temperature.read(),
-        max_vibration=max_vibration.read(),
+        max_temperature=int(max_temperature.read()),
+        max_vibration=float(max_vibration.read()),
         avg_mileage=int(avg_mileage))
 
-    # Output the aggregated metrics
     yield output_row
 
-    # Clear state
+    # Clean up state
     max_timestamp_seen.clear()
     max_temperature.clear()
     max_vibration.clear()
