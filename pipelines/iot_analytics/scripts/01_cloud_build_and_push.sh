@@ -19,7 +19,7 @@ PIPELINE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PIPELINE_DIR"
 
 gcloud builds submit \
-  --project=${PROJECT_ID:-$PROJECT} \
+  --project=$PROJECT_ID \
   --region=$REGION \
   --default-buckets-behavior=regional-user-owned-bucket \
   --substitutions _TAG=$CONTAINER_URI \

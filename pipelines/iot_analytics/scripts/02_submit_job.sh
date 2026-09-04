@@ -28,8 +28,8 @@ fi
 python3 -m main \
   --streaming \
   --runner=DataflowRunner \
-  --project=${PROJECT_ID:-$PROJECT} \
-  --project_id=${PROJECT_ID:-$PROJECT} \
+  --project=$PROJECT_ID \
+  --project_id=$PROJECT_ID \
   --temp_location=${TEMP_LOCATION:-gs://$PROJECT_ID/tmp} \
   --region=$REGION \
   --save_main_session \
