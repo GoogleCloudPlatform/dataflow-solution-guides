@@ -20,10 +20,14 @@ import datetime
 import pandas as pd
 import os
 
-# Get Env variables
-current_directory = os.getcwd()
-VEHICLE_DATA_PATH = os.environ.get("VEHICLE_DATA_PATH")
-MAINTENANCE_DATA_PATH = os.environ.get("MAINTENANCE_DATA_PATH")
+# Get Env variables with sensible defaults
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_VEHICLE_PATH = os.path.join(SCRIPT_DIR, "vehicle_data.jsonl")
+DEFAULT_MAINTENANCE_PATH = os.path.join(SCRIPT_DIR, "maintenance_data.jsonl")
+
+VEHICLE_DATA_PATH = os.environ.get("VEHICLE_DATA_PATH") or DEFAULT_VEHICLE_PATH
+MAINTENANCE_DATA_PATH = os.environ.get(
+    "MAINTENANCE_DATA_PATH") or DEFAULT_MAINTENANCE_PATH
 
 
 # Function to generate random vehicle data

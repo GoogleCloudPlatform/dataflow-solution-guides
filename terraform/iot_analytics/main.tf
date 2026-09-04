@@ -13,17 +13,19 @@
 #  limitations under the License.
 
 locals {
-  dataflow_service_account = var.service_account_name != null ? var.service_account_name : "iot-analytics-sa"
-  pubsub_topic             = var.pubsub_topic != null ? var.pubsub_topic : "maintenance-data"
-  pubsub_subscription      = "${local.pubsub_topic}-sub"
-  bigtable_instance        = "iot-analytics"
-  bigtable_zone            = "${var.region}-a"
-  bigtable_table           = "maintenance_data"
-  bigtable_lookup_key      = "vehicle_id"
-  bigquery_dataset         = "iot"
-  bigquery_table           = "maintenance_analytics"
-  bucket_name              = var.bucket_name != null ? var.bucket_name : var.project_id
-  max_dataflow_workers     = 3
+  dataflow_service_account  = var.service_account_name != null ? var.service_account_name : "iot-analytics-sa"
+  pubsub_topic              = var.pubsub_topic != null ? var.pubsub_topic : "maintenance-data"
+  pubsub_subscription       = "${local.pubsub_topic}-sub"
+  pubsub_alert_topic        = var.pubsub_alert_topic != null ? var.pubsub_alert_topic : "maintenance-alerts"
+  pubsub_alert_subscription = "${local.pubsub_alert_topic}-sub"
+  bigtable_instance         = "iot-analytics"
+  bigtable_zone             = "${var.region}-a"
+  bigtable_table            = "maintenance_data"
+  bigtable_lookup_key       = "vehicle_id"
+  bigquery_dataset          = "iot"
+  bigquery_table            = "maintenance_analytics"
+  bucket_name               = var.bucket_name != null ? var.bucket_name : var.project_id
+  max_dataflow_workers      = 3
 }
 
 data "google_project" "project" {
@@ -205,6 +207,20 @@ module "input_topic" {
   ]
 }
 
+// Pub/Sub output alert topic and subscription for real-time maintenance alerts
+module "alert_topic" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v58.0.0"
+  project_id = var.project_id
+  name       = local.pubsub_alert_topic
+  subscriptions = {
+    (local.pubsub_alert_subscription) = {}
+  }
+
+  depends_on = [
+    google_project_service.pubsub
+  ]
+}
+
 // Dedicated Dataflow Worker Service Account
 module "dataflow_sa" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v58.0.0"
@@ -259,6 +275,8 @@ export ROW_KEY=${local.bigtable_lookup_key}
 
 export PUBSUB_TOPIC_ID=${local.pubsub_topic}
 export TOPIC_ID=projects/$PROJECT_ID/topics/$PUBSUB_TOPIC_ID
+export ALERT_TOPIC_ID=projects/$PROJECT_ID/topics/${local.pubsub_alert_topic}
+export ALERT_SUBSCRIPTION_ID=projects/$PROJECT_ID/subscriptions/${local.pubsub_alert_subscription}
 
 export DATASET=${module.dataset.dataset_id}
 export TABLE=${google_bigquery_table.maintenance_analytics.table_id}

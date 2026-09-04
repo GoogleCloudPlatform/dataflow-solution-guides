@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +13,23 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# Runs the pipeline locally with DirectRunner for development and testing
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PIPELINE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$PIPELINE_DIR"
 
-gcloud builds submit \
-  --project=$PROJECT_ID \
-  --region=$REGION \
-  --default-buckets-behavior=regional-user-owned-bucket \
-  --substitutions _TAG=$CONTAINER_URI \
-  .
+python3 -m main \
+  --runner=DirectRunner \
+  --project_id=${PROJECT_ID:-local-test-project} \
+  --temp_location=/tmp/dataflow-temp \
+  --topic=${TOPIC_ID:-projects/local-test-project/topics/maintenance-data} \
+  --alert_topic=${ALERT_TOPIC_ID:-projects/local-test-project/topics/maintenance-alerts} \
+  --model_path=${MODEL_FILE_PATH:-maintenance_model.pkl} \
+  --dataset=${DATASET:-iot} \
+  --table=${TABLE:-maintenance_analytics} \
+  --bigtable_instance_id=${BIGTABLE_INSTANCE_ID:-iot-analytics} \
+  --bigtable_table_id=${BIGTABLE_TABLE_ID:-maintenance_data} \
+  --row_key=vehicle_id \
+  --window_size_seconds=10

@@ -1,8 +1,7 @@
 apache-beam[gcp]==2.76.0
+google-cloud-bigtable
+google-cloud-pubsub
+numpy
 pandas
 scikit-learn
-## Below dependencies are required if you have to run script /
-google-cloud-bigtable
-pandas
-google-cloud-pubsub
 tabulate

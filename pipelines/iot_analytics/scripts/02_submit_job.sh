@@ -25,7 +25,19 @@ elif [ -n "$NETWORK" ]; then
   SUBNET_OPT="--subnetwork=$NETWORK"
 fi
 
-python3 -m main \
+ALERT_OPT=""
+if [ -n "$ALERT_TOPIC_ID" ]; then
+  ALERT_OPT="--alert_topic=$ALERT_TOPIC_ID"
+fi
+
+MODEL_PATH="${MODEL_PATH:-/workspace/maintenance_model.pkl}"
+
+PYTHON_CMD="python"
+if [ -f "$PIPELINE_DIR/.venv/bin/python" ]; then
+  PYTHON_CMD="$PIPELINE_DIR/.venv/bin/python"
+fi
+
+$PYTHON_CMD -m main \
   --streaming \
   --runner=DataflowRunner \
   --project=$PROJECT_ID \
@@ -36,9 +48,15 @@ python3 -m main \
   --service_account_email=$SERVICE_ACCOUNT \
   $SUBNET_OPT \
   --no_use_public_ips \
+  --experiments=use_runner_v2 \
+  --experiments=no_use_multiple_sdk_containers \
+  --machine_type=${MACHINE_TYPE:-n2-standard-4} \
   --sdk_container_image=$CONTAINER_URI \
-  --max_workers=$MAX_DATAFLOW_WORKERS \
+  --num_workers=1 \
+  --max_num_workers=${MAX_DATAFLOW_WORKERS:-3} \
   --topic=$TOPIC_ID \
+  $ALERT_OPT \
+  --model_path=$MODEL_PATH \
   --dataset=$DATASET \
   --table=$TABLE \
   --bigtable_instance_id=${BIGTABLE_INSTANCE_ID:-$INSTANCE_ID} \
