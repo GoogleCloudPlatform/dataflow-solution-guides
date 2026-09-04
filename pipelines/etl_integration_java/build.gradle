@@ -37,7 +37,7 @@ ext {
 
   beamVersion = "2.76.0"
 
-  slf4jVersion = "2.0.18"
+  slf4jVersion = "2.0.19"
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
   autoValueVersion = '1.11.1'
