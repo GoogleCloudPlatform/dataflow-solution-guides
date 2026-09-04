@@ -14,7 +14,7 @@ This directory contains Terraform infrastructure definitions for each solution g
 | `anomaly_detection/` | Pub/Sub, BigQuery, Vertex AI Endpoint, VPC, Subnet | `pipelines/anomaly_detection/` |
 | `marketing_intelligence/` | Pub/Sub Topics (`input`, `output`), Cloud Firestore (Native Mode), BigQuery Dataset, Artifact Registry, Service Account | `pipelines/marketing_intelligence/` |
 | `clickstream_analytics/` | Cloud Bigtable (Instance & Table), Pub/Sub Topic, BigQuery Dataset, Service Account | `pipelines/clickstream_analytics_java/` |
-| `iot_analytics/` | Cloud Bigtable, Pub/Sub, GCS Bucket, VPC, Subnet | `pipelines/iot_analytics/` |
+| `iot_analytics/` | Cloud Bigtable (Instance & Table), BigQuery Dataset & Table, Pub/Sub Topic, Artifact Registry, Service Account | `pipelines/iot_analytics/` |
 | `log_replication_splunk/` | Pub/Sub Topics (`all-logs`, `deadletter-topic`), Cloud Logging Sink, Secret Manager (Splunk HEC token), Service Account, Optional Splunk Demo VM | `pipelines/log_replication_splunk/` |
 
 ---

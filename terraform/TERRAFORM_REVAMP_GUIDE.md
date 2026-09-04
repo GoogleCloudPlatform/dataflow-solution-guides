@@ -325,7 +325,7 @@ pylint --rcfile ../pylintrc .
 | 3 | **`clickstream_analytics/`** *(Done)* | Cloud Bigtable (Instance & Table), Pub/Sub Topic, BigQuery Dataset & Tables | `clickstream-dataflow-sa` | `pipelines/clickstream_analytics_java/` |
 | 4 | **`anomaly_detection/`** | Pub/Sub Topic, BigQuery Dataset, Vertex AI Endpoint | `anomaly-detection-sa` | `pipelines/anomaly_detection/` |
 | 5 | **`marketing_intelligence/`** *(Done)* | Pub/Sub Topics, BigQuery Dataset, Firestore Native, Artifact Registry | `marketing-intel-sa` | `pipelines/marketing_intelligence/` |
-| 6 | **`iot_analytics/`** | Cloud Bigtable, Pub/Sub Topics, GCS Bucket | `iot-analytics-sa` | `pipelines/iot_analytics/` |
+| 6 | **`iot_analytics/`** *(Done)* | Cloud Bigtable (Instance & Table), BigQuery Dataset & Table, Pub/Sub Topics, Artifact Registry, Service Account | `iot-analytics-sa` | `pipelines/iot_analytics/` |
 | 7 | **`ml_ai/`** *(Done)* | Pub/Sub Topics (`messages`, `predictions`), Artifact Registry, GCS Bucket | `ml-ai-dataflow-sa` | `pipelines/ml_ai_python/` |
 | 8 | **`log_replication_splunk/`** *(Done)* | Pub/Sub Topic, Secret Manager (Splunk HEC token), Optional Splunk Demo VM | `splunk-replication-sa` | `pipelines/log_replication_splunk/` |
 
