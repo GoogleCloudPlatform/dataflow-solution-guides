@@ -11,7 +11,7 @@ This directory contains Apache Beam streaming pipeline implementations in **Pyth
 | `ml_ai_python/` | Python | `RunInference`, Gemma 4, vLLM, NVIDIA L4 GPU | [GenAI_ML.md](../use_cases/GenAI_ML.md) |
 | `etl_integration_java/` | Java | Pub/Sub to Cloud Spanner, Spanner Change Streams to BigQuery | [ETL_integration.md](../use_cases/ETL_integration.md) |
 | `cdp/` | Python | Multi-topic Pub/Sub streaming join, BigQuery streaming insert | [CDP.md](../use_cases/CDP.md) |
-| `anomaly_detection/` | Python | Vertex AI Endpoint prediction, Pub/Sub, BigQuery | [Anomaly_Detection.md](../use_cases/Anomaly_Detection.md) |
+| `anomaly_detection/` | Python | External Vertex AI endpoint prediction, Pub/Sub; Bigtable/BigQuery reserved for extensions | [Anomaly_Detection.md](../use_cases/Anomaly_Detection.md) |
 | `marketing_intelligence/` | Python | Firestore enrichment, Scikit-Learn RunInference, BigQuery, Pub/Sub | [Marketing_Intelligence.md](../use_cases/Marketing_Intelligence.md) |
 | `clickstream_analytics_java/` | Java | Cloud Bigtable enrichment / hydration lookup, BigQueryIO | [Clickstream_Analytics.md](../use_cases/Clickstream_Analytics.md) |
 | `iot_analytics/` | Python | Sensor telemetry aggregation, Bigtable hydration, Vertex AI | [IoT_Analytics.md](../use_cases/IoT_Analytics.md) |
@@ -113,3 +113,7 @@ For pipelines leveraging custom dependencies or machine learning models on GPU w
 - **Service Accounts**: Always specify a dedicated service account via `--service_account_email` or `--serviceAccount`.
 - **Worker Scaling**: Set conservative bounds (`--num_workers=1`, `--max_num_workers=...`) for demo and development environments.
 - **Streaming Engine**: Enable streaming engine with `--enableStreamingEngine` (or `--experiments=enable_streaming_engine`) for low-latency streaming pipelines.
+
+### Anomaly detection deployment
+
+Anomaly detection uses an existing project and network, an existing bucket by default, and a user-supplied Vertex AI endpoint with a deployed model. Source generated `scripts/00_set_variables.sh`, set `MODEL_ENDPOINT` (optional `MODEL_LOCATION`, default `REGION`), then run the build and launch scripts. Input is `transactions` via `transactions-sub`; output is `detections`. `SUBNETWORK` is optional with legacy `NETWORK` fallback. Existing networks must provide Private Google Access, worker TCP 12345/12346 communication and NAT where needed.

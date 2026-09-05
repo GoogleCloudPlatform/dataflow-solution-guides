@@ -40,3 +40,11 @@ applications. Several unique capabilities make Dataflow the leading choice:
   - **Scalable infrastructure**: Pipeline scale up and down to meet the resourcing requirements of your pipeline.
     Powered by battle-tested backends in Shuffle & Streaming Engine, Dataflow is fit to support virtually pipelines
     of any size, with minimal tuning needed.
+
+## Deployment contract
+
+The Terraform configuration manages application resources in an existing project and network: Pub/Sub `transactions` and `detections` with subscriptions, Artifact Registry, a dedicated worker account, Bigtable, BigQuery, and an optional staging bucket. Existing bucket reuse is the default. Bigtable and BigQuery are reserved for extensions to the current Pub/Sub-to-Vertex-AI-to-Pub/Sub graph.
+
+Supply `MODEL_ENDPOINT` for an existing Vertex AI endpoint with a deployed model in the deployment project; `MODEL_LOCATION` defaults to the Dataflow region. Terraform does not manage this endpoint. Source the generated `scripts/00_set_variables.sh`, build the container, then run the restored launch script as described in the pipeline README.
+
+The existing network must provide Private Google Access, Dataflow worker communication on TCP 12345/12346, and NAT where internet access is required. Local and Shared VPC subnets are supported, with private worker IPs.

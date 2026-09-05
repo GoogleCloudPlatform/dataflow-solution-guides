@@ -26,7 +26,7 @@ dataflow-solution-guides/
 │   ├── ml_ai/                # Pub/Sub topics, Artifact Registry, GCS bucket, Service Account
 │   ├── etl_integration/      # Spanner instance/database/change stream, BigQuery, Service Account
 │   ├── cdp/                  # Pub/Sub topics, BigQuery dataset/tables, VPC
-│   ├── anomaly_detection/    # Pub/Sub, BigQuery, Vertex AI endpoints, VPC
+│   ├── anomaly_detection/    # Pub/Sub, Bigtable, BigQuery, Artifact Registry, optional GCS, Service Account (external Vertex AI endpoint)
 │   ├── marketing_intelligence/ # Pub/Sub topics, Firestore, BigQuery dataset, Artifact Registry, Service Account
 │   ├── clickstream_analytics/  # Bigtable instance, Pub/Sub, BigQuery, Service Account
 │   ├── iot_analytics/        # Bigtable, Pub/Sub, BigQuery, Artifact Registry, Service Account
@@ -194,3 +194,7 @@ The repository includes specialized workspace skills located in `.agents/skills/
 - **`dataflow-troubleshooting`**: Diagnostic playbooks for resolving common Dataflow worker, IAM, quota, networking, and serialization errors.
 - **`pr-review`**: Procedures for reviewing Pull Requests, monitoring CI builds, verifying security guardrails and code style policies, approving, merging, or providing corrective feedback.
 
+
+### Anomaly detection deployment
+
+Anomaly detection uses an existing project and network, an existing bucket by default, and a user-supplied Vertex AI endpoint with a deployed model. Source generated `scripts/00_set_variables.sh`, set `MODEL_ENDPOINT` (optional `MODEL_LOCATION`, default `REGION`), then run the build and launch scripts. Input is `transactions` via `transactions-sub`; output is `detections`. `SUBNETWORK` is optional with legacy `NETWORK` fallback. Existing networks must provide Private Google Access, worker TCP 12345/12346 communication and NAT where needed.
