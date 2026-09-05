@@ -1,4 +1,4 @@
 yapf==0.43.0
-pylint==4.0.5
+pylint==4.0.8
 pytest==9.0.2
 setuptools>=78
