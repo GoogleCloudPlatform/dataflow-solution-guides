@@ -14,6 +14,14 @@
 #  limitations under the License.
 
 set -euo pipefail
+
+python_version=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || true)
+if [[ "$python_version" != "3.14" ]]; then
+  echo "Error: Python 3.14 is required to launch Dataflow, but active python is '$python_version'." >&2
+  echo "Please activate your Python 3.14 virtual environment (e.g. 'source .venv/bin/activate')." >&2
+  exit 1
+fi
+
 : "${MODEL_ENDPOINT:?Set MODEL_ENDPOINT to an existing Vertex AI endpoint ID with a deployed model}"
 : "${PROJECT:?Source scripts/00_set_variables.sh first}"
 : "${REGION:?REGION is required}"
@@ -28,7 +36,7 @@ if [[ -n "$subnet" ]]; then
   subnet_args+=(--subnetwork="$subnet")
 fi
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-python3.14 main.py \
+python main.py \
   --runner=DataflowRunner \
   --project="$PROJECT" \
   --region="$REGION" \

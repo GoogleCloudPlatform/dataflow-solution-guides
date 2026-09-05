@@ -38,7 +38,7 @@ if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     --entrypoint python \
     anomaly-serving-check /verify_model.py /model
 else
-  PYTHON_BIN="python3.14"
+  PYTHON_BIN="python"
   if [[ -n "${VIRTUAL_ENV:-}" && -x "${VIRTUAL_ENV}/bin/python" ]]; then
     PYTHON_BIN="${VIRTUAL_ENV}/bin/python"
   elif [[ -x "$PWD/.venv/bin/python" ]]; then

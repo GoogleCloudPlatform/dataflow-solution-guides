@@ -23,7 +23,7 @@ gcloud builds submit --quiet --project="$PROJECT" --region="$REGION" \
 mkdir -p .deployment
 gcloud artifacts docker images describe "$SERVING_CONTAINER_URI" \
   --quiet --project="$PROJECT" --format=json > .deployment/serving-image.json
-python3.14 - <<'PY'
+python - <<'PY'
 import json
 from pathlib import Path
 import shlex

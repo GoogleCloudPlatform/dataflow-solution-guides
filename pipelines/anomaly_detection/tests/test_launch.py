@@ -30,9 +30,12 @@ class LaunchTest(unittest.TestCase):
           subnet=subnet,
           network=network), tempfile.TemporaryDirectory() as directory:
         capture = Path(directory) / 'args.txt'
-        executable = Path(directory) / 'python3.14'
+        executable = Path(directory) / 'python'
         executable.write_text(
-            '#!/bin/bash\nprintf "%s\\n" "$@" > "$CAPTURE"\n', encoding='utf-8')
+            '#!/bin/bash\n'
+            'if [[ "$1" == "-c" ]]; then echo "3.14"; exit 0; fi\n'
+            'printf "%s\\n" "$@" > "$CAPTURE"\n',
+            encoding='utf-8')
         executable.chmod(0o755)
         environment = os.environ | dict(
             PATH=directory + os.pathsep + os.environ['PATH'],
@@ -69,3 +72,31 @@ class LaunchTest(unittest.TestCase):
         ]
         self.assertEqual(subnet_flags,
                          [f'--subnetwork={expected}'] if expected else [])
+
+  def test_rejects_non_314_python(self):
+    script = Path(__file__).resolve().parents[1] / 'scripts/02_run_dataflow.sh'
+    with tempfile.TemporaryDirectory() as directory:
+      executable = Path(directory) / 'python'
+      executable.write_text(
+          '#!/bin/bash\n'
+          'if [[ "$1" == "-c" ]]; then echo "3.12"; exit 0; fi\n'
+          'exit 0\n',
+          encoding='utf-8')
+      executable.chmod(0o755)
+      environment = os.environ | dict(
+          PATH=directory + os.pathsep + os.environ['PATH'],
+          PROJECT='test-project',
+          REGION='us-central1',
+          MODEL_ENDPOINT='123',
+          TEMP_LOCATION='gs://bucket/tmp',
+          SERVICE_ACCOUNT='worker@test-project.iam.gserviceaccount.com',
+          CONTAINER_URI='image:tag',
+          INPUT_SUBSCRIPTION='input',
+          OUTPUT_TOPIC='output')
+      result = subprocess.run(['bash', str(script)],
+                              env=environment,
+                              capture_output=True,
+                              text=True,
+                              check=False)
+      self.assertNotEqual(result.returncode, 0)
+      self.assertIn('Python 3.14 is required', result.stderr)
