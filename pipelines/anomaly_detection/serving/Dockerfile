@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,15 +11,18 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+FROM python:3.14-slim
+WORKDIR /app
 
-steps:
-  - name: 'gcr.io/kaniko-project/executor:latest'
-    args:
-      - --destination=${_TAG}
-      - --cache=true
-substitutions:
-  _TAG: unset
-options:
-  substitutionOption: 'ALLOW_LOOSE'
-  automapSubstitutions: true
-  machineType: E2_HIGHCPU_8
+COPY serving/requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY serving/predict_server.py predict_server.py
+
+ENV AIP_HTTP_PORT=8080
+ENV AIP_HEALTH_ROUTE=/health
+ENV AIP_PREDICT_ROUTE=/predict
+
+EXPOSE 8080
+
+ENTRYPOINT ["python", "predict_server.py"]

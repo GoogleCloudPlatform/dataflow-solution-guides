@@ -1,0 +1,9 @@
+.deployment/
+scripts/03_endpoint_environment.sh
+model/
+.venv/
+dist/
+build/
+*.egg-info/
+scripts/00_set_variables.sh
+*.joblib

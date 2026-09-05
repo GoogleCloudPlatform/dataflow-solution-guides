@@ -58,3 +58,28 @@ variable "service_account_name" {
   default     = "anomaly-detection-sa"
   nullable    = false
 }
+
+variable "training_service_account_name" {
+  description = "Dedicated Vertex AI custom training service account ID."
+  type        = string
+  default     = "anomaly-training-sa"
+  nullable    = false
+}
+
+variable "machine_type" {
+  description = "Dataflow worker machine type."
+  type        = string
+  default     = "n1-standard-2"
+}
+
+variable "training_machine_type" {
+  description = "Vertex AI training machine type."
+  type        = string
+  default     = "n1-standard-4"
+}
+
+variable "endpoint_machine_type" {
+  description = "Vertex AI prediction endpoint machine type."
+  type        = string
+  default     = "n1-standard-2"
+}

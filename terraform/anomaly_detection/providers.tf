@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -12,14 +12,5 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-steps:
-  - name: 'gcr.io/kaniko-project/executor:latest'
-    args:
-      - --destination=${_TAG}
-      - --cache=true
-substitutions:
-  _TAG: unset
-options:
-  substitutionOption: 'ALLOW_LOOSE'
-  automapSubstitutions: true
-  machineType: E2_HIGHCPU_8
+provider "google" {}
+provider "google-beta" {}

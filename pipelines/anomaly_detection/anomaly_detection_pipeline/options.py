@@ -1,4 +1,4 @@
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,21 +11,17 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""
-Options class for the Anomaly Detection pipeline.
-"""
-
-from argparse import ArgumentParser
-
+"""Anomaly detection options; project is provided by GoogleCloudOptions."""
 from apache_beam.options.pipeline_options import PipelineOptions
 
 
 class MyPipelineOptions(PipelineOptions):
 
   @classmethod
-  def _add_argparse_args(cls, parser: ArgumentParser):
-    parser.add_argument("--messages_subscription", type=str)
-    parser.add_argument("--model_endpoint", type=str)
-    parser.add_argument("--project", type=str)
-    parser.add_argument("--location", type=str)
-    parser.add_argument("--responses_topic", type=str)
+  def _add_argparse_args(cls, parser):
+    for name in ('messages_subscription', 'model_endpoint', 'location',
+                 'responses_topic', 'error_topic', 'bigtable_instance',
+                 'bigquery_table'):
+      parser.add_argument('--' + name, required=True)
+    parser.add_argument('--bigtable_table', default='customer_profiles')
+    parser.add_argument('--bigtable_column_family', default='profile')

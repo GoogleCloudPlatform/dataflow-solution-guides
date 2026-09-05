@@ -14,6 +14,14 @@
 #  limitations under the License.
 
 set -euo pipefail
+
+python_version=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || true)
+if [[ "$python_version" != "3.14" ]]; then
+  echo "Error: Python 3.14 is required to launch Dataflow, but active python is '$python_version'." >&2
+  echo "Please activate your Python 3.14 virtual environment (e.g. 'source .venv/bin/activate')." >&2
+  exit 1
+fi
+
 : "${MODEL_ENDPOINT:?Set MODEL_ENDPOINT to an existing Vertex AI endpoint ID with a deployed model}"
 : "${PROJECT:?Source scripts/00_set_variables.sh first}"
 : "${REGION:?REGION is required}"
@@ -37,12 +45,19 @@ python main.py \
   --sdk_container_image="$CONTAINER_URI" \
   --sdk_location=container \
   --streaming \
-  --no_use_public_ip \
+  --save_main_session \
+  --setup_file=./setup.py \
+  --no_use_public_ips \
   --max_num_workers="${MAX_DATAFLOW_WORKERS:?MAX_DATAFLOW_WORKERS is required}" \
   --disk_size_gb="${DISK_SIZE_GB:?DISK_SIZE_GB is required}" \
   --machine_type="${MACHINE_TYPE:?MACHINE_TYPE is required}" \
   --messages_subscription="$INPUT_SUBSCRIPTION" \
   --responses_topic="$OUTPUT_TOPIC" \
+  --error_topic="${ERROR_TOPIC:?ERROR_TOPIC is required}" \
+  --bigtable_instance="${BIGTABLE_INSTANCE:?BIGTABLE_INSTANCE is required}" \
+  --bigtable_table="${BIGTABLE_TABLE:-customer_profiles}" \
+  --bigtable_column_family="${BIGTABLE_COLUMN_FAMILY:-profile}" \
+  --bigquery_table="${BIGQUERY_TABLE:?BIGQUERY_TABLE is required}" \
   --model_endpoint="$MODEL_ENDPOINT" \
   --location="${MODEL_LOCATION:-$REGION}" \
   "${subnet_args[@]}"

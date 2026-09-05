@@ -1,62 +1,81 @@
-# Real-time anomaly detection infrastructure
+# Anomaly detection infrastructure
 
-Deploy application resources into an **existing project and network**. Terraform does not create a project, configure billing, or manage a VPC, firewall or NAT. A Vertex AI endpoint with an already deployed model must be supplied separately at pipeline launch, in the deployment project.
+Deploy application resources into an **existing project and network** using the
+[complete walkthrough](../../use_cases/Anomaly_Detection.md). Terraform does not
+create a project, billing association, VPC, firewall or NAT. Vertex training,
+model upload and endpoint deployment are managed by the separate Python workflow;
+compatible externally supplied endpoints remain supported.
 
-## Resources
+The existing Fabric module pins remain at v58.0.0.
 
-All Fabric modules retain their v58.0.0 pins.
-
-| Resource | Name / behavior |
+| Resource | Configuration |
 |---|---|
-| Artifact Registry | `dataflow-containers`; worker reader, legacy Cloud Build account admin; keep three image versions |
-| Pub/Sub | `transactions` / `transactions-sub` input; `detections` / `detections-sub` output |
-| Bigtable | `bt-enrichment`, three-node cluster, `features` table |
-| BigQuery | `output_dataset`, located in `region` |
-| Staging bucket | Existing by default; optionally created in `region` |
-| Worker identity | `anomaly-detection-sa` by default |
+| Artifact Registry | `anomaly-detection-containers`; worker/trainer reader and legacy Cloud Build repository writer |
+| Pub/Sub | `anomaly-detection-transactions` / `anomaly-detection-transactions-sub`, `anomaly-detection-detections` / `anomaly-detection-detections-sub`, `anomaly-detection-errors` / `anomaly-detection-errors-sub` |
+| Bigtable | `anomaly-detection`, one-node cluster, `customer_profiles` with `profile` column family |
+| BigQuery | `anomaly_detection.detections`, explicit schema, daily timestamp partitions, customer/transaction clustering |
+| Bucket | Reused by default; optional creation in the chosen region |
+| Worker | `anomaly-detection-sa`, default `n1-standard-2` CPU machine |
+| Trainer | `anomaly-training-sa`, isolated artifact access beneath `anomaly-training/` |
+| Prediction role | `anomalyDetectionPredictor`, containing only `aiplatform.endpoints.predict`; workflow grants it on its endpoint |
 
-Bigtable and BigQuery are retained for extensions; the current Python pipeline only reads Pub/Sub, calls Vertex AI, and publishes detections. No model or endpoint is created here.
-
-Terraform enables Vertex AI, IAM, Compute, Storage, Dataflow, Monitoring, Cloud Build, Artifact Registry, Pub/Sub, Bigtable and BigQuery APIs. These remain enabled on destroy. Worker project roles cover Storage Object Admin, Dataflow worker, metrics writer, Pub/Sub editor, Vertex AI user (prediction), Bigtable reader and BigQuery data editor; container read access is granted on the repository.
+Worker application permissions are additive and scoped to its input subscription,
+output/error topics, profile table, detections table, bucket and image repository.
+Only Dataflow worker/metrics roles are project-scoped. Terraform grants subnet
+network-user access when `subnetwork` is supplied. The trainer does not receive
+worker or endpoint-management roles. Workflow operators need separate seeding,
+publication, model-deployment, endpoint-IAM and smoke-query permissions; see the
+walkthrough. Projects using a non-legacy Cloud Build identity must grant the
+actual execution identity source, log and repository permissions.
 
 ## Configuration
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `project_id` | Required | Existing project |
-| `region` | Required | Application and Dataflow region |
-| `zone` | `a` | Bigtable zone suffix within `region` |
-| `subnetwork` | `null` | Local path or full Shared VPC URL; omitted/empty uses Dataflow's default network |
-| `bucket_name` | `null` | Bucket name; defaults to project ID |
-| `create_bucket` | `false` | Create and manage the selected bucket |
-| `service_account_name` | `anomaly-detection-sa` | Dedicated worker account ID |
-| `destroy_all_resources` | `true` | Allow bucket contents and BigQuery contents deletion; disable Bigtable instance deletion protection |
+| `project_id` | Required | Existing billing-enabled project |
+| `region` | Required | Application, training and Dataflow region |
+| `zone` | `a` | Bigtable zone suffix |
+| `subnetwork` | `null` | Local subnet path or full Shared VPC URL; omitted uses the default network |
+| `bucket_name` | `null` | Defaults to the project ID |
+| `create_bucket` | `false` | Whether Terraform manages the bucket |
+| `service_account_name` | `anomaly-detection-sa` | Dedicated worker account |
+| `training_service_account_name` | `anomaly-training-sa` | Dedicated training account |
+| `destroy_all_resources` | `true` | Allow deletion of managed bucket/dataset contents and disable table/instance deletion protection |
 
-Use `destroy_all_resources = false` for production. This flag is not blanket protection for every resource. Existing buckets are never managed or deleted by this configuration when `create_bucket = false`. For a bucket in another project, its owner must grant the worker object access separately.
-
-The existing subnet must have Private Google Access, sufficient free IPs, and ingress/egress TCP 12345 and 12346 for Dataflow workers tagged `dataflow`. Provide Cloud NAT where workers need internet access. Workers always use private IPs. With `subnetwork` configured, Terraform grants additive subnet-level `roles/compute.networkUser` to the worker, resolving the host project from Shared VPC URLs. The Terraform caller needs subnet IAM permissions in that host project; Shared VPC attachment and any required service-agent permissions remain foundation prerequisites.
+Use `destroy_all_resources = false` for retained environments. It is not blanket
+protection for every resource. Reused buckets are never deleted by Terraform.
+The existing subnet must provide Private Google Access, enough IP addresses,
+worker TCP 12345/12346 communication and NAT where internet access is required.
+Shared VPC attachment and service-agent access remain foundation prerequisites;
+the Terraform caller needs subnet IAM permissions in the host project.
 
 ```hcl
 project_id = "YOUR_PROJECT_ID"
 region = "us-central1"
 subnetwork = "regions/us-central1/subnetworks/YOUR_SUBNET"
-# Shared VPC: https://www.googleapis.com/compute/v1/projects/HOST_PROJECT/regions/us-central1/subnetworks/YOUR_SUBNET
 bucket_name = "YOUR_EXISTING_BUCKET"
 create_bucket = false
 ```
 
-Save these values in `terraform.tfvars`, then run:
+Save as ignored `terraform.tfvars`, then:
 
 ```bash
 terraform init
+terraform fmt -check
+terraform validate
+terraform test  # mocked provider contract; Terraform 1.7+
 terraform plan -out=tfplan
 terraform apply tfplan
 ```
 
-The deployer needs permissions to enable APIs, manage application resources and IAM, and read project metadata. The pipeline submitter needs permission to act as the worker service account. Ensure the actual Cloud Build execution identity has build, staging bucket and repository push permissions; projects using a different build identity must grant those externally.
-
-Terraform generates `../../pipelines/anomaly_detection/scripts/00_set_variables.sh`. Follow the [pipeline instructions](../../pipelines/anomaly_detection/README.md) to build and launch.
+The API resources remain enabled after destroy. The generated
+`../../pipelines/anomaly_detection/scripts/00_set_variables.sh` supplies pipeline
+and workflow settings; the Python deployment writes endpoint settings separately.
+Bigtable and BigQuery are active parts of the pipeline.
 
 ## Cleanup
 
-Cancel or drain running Dataflow jobs first, then run `terraform destroy`. Application resources managed here are removed subject to their deletion controls; external project, network, endpoint and reused bucket remain externally managed.
+Stop the Dataflow job and wait for termination, then run the Python workflow's
+ownership-aware cleanup before `terraform destroy`. Terraform removes only the
+application resources it manages, subject to deletion controls. External
+endpoints, reused buckets, project and network remain externally managed.

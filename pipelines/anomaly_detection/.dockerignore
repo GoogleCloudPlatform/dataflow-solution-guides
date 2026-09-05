@@ -1,0 +1,9 @@
+.deployment
+.venv
+__pycache__
+**/__pycache__
+dist
+build
+*.egg-info
+scripts/*environment.sh
+scripts/00_set_variables.sh

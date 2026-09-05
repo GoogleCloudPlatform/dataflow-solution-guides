@@ -14,3 +14,4 @@
 
 apache-beam[gcp]==2.76.0
 
+google-cloud-aiplatform>=1.110,<2
