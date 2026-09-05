@@ -157,11 +157,6 @@ resource "google_compute_subnetwork_iam_member" "dataflow_network_user" {
   depends_on = [google_project_service.application]
 }
 
-moved {
-  from = module.buckets
-  to   = module.buckets[0]
-}
-
 resource "local_file" "variables_script" {
   filename        = "${path.module}/../../pipelines/anomaly_detection/scripts/00_set_variables.sh"
   file_permission = "0644"

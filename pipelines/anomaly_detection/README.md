@@ -29,4 +29,4 @@ The existing network must provide Private Google Access, worker communication on
 
 Publish model-compatible UTF-8 messages to `transactions`. The pipeline decodes them as strings and sends them to the model without feature engineering. Read formatted input/prediction text from `detections-sub`, subscribed to `detections`.
 
-For existing deployments, follow the infrastructure README's state migration guidance before applying the new configuration. Cancel or drain the streaming job before infrastructure cleanup.
+Cancel or drain the streaming job before infrastructure cleanup.

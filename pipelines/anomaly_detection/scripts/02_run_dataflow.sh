@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#  Copyright 2025 Google LLC
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -29,13 +29,20 @@ if [[ -n "$subnet" ]]; then
 fi
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 python main.py \
-  --runner=DataflowRunner --project="$PROJECT" --region="$REGION" \
-  --temp_location="$TEMP_LOCATION" --service_account_email="$SERVICE_ACCOUNT" \
-  --sdk_container_image="$CONTAINER_URI" --sdk_location=container \
-  --streaming --no_use_public_ip \
+  --runner=DataflowRunner \
+  --project="$PROJECT" \
+  --region="$REGION" \
+  --temp_location="$TEMP_LOCATION" \
+  --service_account_email="$SERVICE_ACCOUNT" \
+  --sdk_container_image="$CONTAINER_URI" \
+  --sdk_location=container \
+  --streaming \
+  --no_use_public_ip \
   --max_num_workers="${MAX_DATAFLOW_WORKERS:?MAX_DATAFLOW_WORKERS is required}" \
   --disk_size_gb="${DISK_SIZE_GB:?DISK_SIZE_GB is required}" \
   --machine_type="${MACHINE_TYPE:?MACHINE_TYPE is required}" \
-  --messages_subscription="$INPUT_SUBSCRIPTION" --responses_topic="$OUTPUT_TOPIC" \
-  --model_endpoint="$MODEL_ENDPOINT" --location="${MODEL_LOCATION:-$REGION}" \
+  --messages_subscription="$INPUT_SUBSCRIPTION" \
+  --responses_topic="$OUTPUT_TOPIC" \
+  --model_endpoint="$MODEL_ENDPOINT" \
+  --location="${MODEL_LOCATION:-$REGION}" \
   "${subnet_args[@]}"

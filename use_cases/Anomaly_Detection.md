@@ -47,4 +47,4 @@ The Terraform configuration manages application resources in an existing project
 
 Supply `MODEL_ENDPOINT` for an existing Vertex AI endpoint with a deployed model in the deployment project; `MODEL_LOCATION` defaults to the Dataflow region. Terraform does not manage this endpoint. Source the generated `scripts/00_set_variables.sh`, build the container, then run the restored launch script as described in the pipeline README.
 
-The existing network must provide Private Google Access, Dataflow worker communication on TCP 12345/12346, and NAT where internet access is required. Local and Shared VPC subnets are supported, with private worker IPs. Existing deployments must follow the Terraform README's state and bucket ownership migration instructions before applying.
+The existing network must provide Private Google Access, Dataflow worker communication on TCP 12345/12346, and NAT where internet access is required. Local and Shared VPC subnets are supported, with private worker IPs.

@@ -57,17 +57,6 @@ The deployer needs permissions to enable APIs, manage application resources and 
 
 Terraform generates `../../pipelines/anomaly_detection/scripts/00_set_variables.sh`. Follow the [pipeline instructions](../../pipelines/anomaly_detection/README.md) to build and launch.
 
-## Migration from the foundation-managing configuration
-
-Do not apply this refactor directly to old state: removed modules would otherwise be scheduled for destruction.
-
-1. Back up state with `terraform state pull > state-backup.json` and protect the backup as sensitive data. Record `terraform state list` and the current inputs.
-2. Transfer `module.google_cloud_project`, `module.vpc_network`, `module.firewall_rules` and `module.regional_nat` to a separately managed foundation configuration. Import the resources there and remove their old state bindings without destroying the live resources. Inspect all child bindings, including project API and IAM resources. Coordinate state ownership so two configurations never apply changes to the same resources.
-3. Decide bucket ownership. To keep the existing Terraform-managed bucket, set `create_bucket = true` and its current `bucket_name`; the moved block transfers `module.buckets` to `module.buckets[0]`. To reuse it externally with `create_bucket = false`, transfer/remove its old state bindings first. Otherwise the default would plan bucket deletion.
-4. Set `service_account_name = "my-dataflow-sa"` to preserve the old identity. Adopting the new default replaces the account; coordinate running jobs and submitter act-as permissions before changing it.
-5. Remove obsolete billing, organization, project-create, internet-access and network-prefix inputs. Set the existing subnet explicitly. Review BigQuery location changes: an existing dataset in a different location can require replacement and data migration.
-6. Initialize and inspect a saved plan. If an old local provider lock conflicts with the unchanged v58.0.0 modules, run `terraform init -upgrade` to resolve their required provider versions. Resolve any unintended deletion or replacement before applying. Existing API state bindings can be migrated/imported into the new API resources after foundation ownership is settled.
-
 ## Cleanup
 
 Cancel or drain running Dataflow jobs first, then run `terraform destroy`. Application resources managed here are removed subject to their deletion controls; external project, network, endpoint and reused bucket remain externally managed.
