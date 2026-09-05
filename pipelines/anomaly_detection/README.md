@@ -15,16 +15,16 @@ both Pub/Sub (`anomaly-detection-detections`) and BigQuery (`anomaly_detection.d
 exhausted inference failures and permanent BigQuery insertion errors are published
 to `anomaly-detection-errors`.
 
-| Component | Purpose |
-|---|---|
-| `anomaly_detection_pipeline/features.py` | Shared deterministic data and feature contract on Python 3.14 |
-| `training/` | Custom Python 3.14 / scikit-learn 1.6+ CPU training container and artifact checks |
-| `serving/` | Custom Python 3.14 / FastAPI CPU prediction serving container conforming to Vertex AI HTTP contract |
-| `anomaly_detection_pipeline/workflow.py` | Python 3.14 managed training, validation, deployment, verification and ownership-aware cleanup |
-| `anomaly_detection_pipeline/lifecycle.py` | Manifest locking, atomic journaling, interrupted-create reconciliation and endpoint IAM |
-| `anomaly_detection_pipeline/demo.py` | Profile seeding, bounded publisher and timed cloud smoke check |
-| `anomaly_detection_pipeline/pipeline.py` | Enrichment, keyed inference, Pub/Sub/BigQuery outputs and failure routing |
-| `anomaly_detection_pipeline/inference.py` | Batched predict-only Vertex client, strict response association and bounded retries |
+| Component | Execution Context | Purpose |
+|---|---|---|
+| `anomaly_detection_pipeline/features.py` | Shared contract | Shared deterministic data and feature contract on Python 3.14 |
+| `training/` | Custom Cloud Build container | Custom Python 3.14 / scikit-learn 1.6+ CPU training container and artifact checks |
+| `serving/` | Custom Cloud Build container | Custom Python 3.14 / FastAPI CPU prediction serving container conforming to Vertex AI HTTP contract |
+| `anomaly_detection_pipeline/workflow.py` | Client / Operator CLI | Python 3.14 managed training, validation, deployment, verification and ownership-aware cleanup |
+| `anomaly_detection_pipeline/lifecycle.py` | Client / Operator library | Manifest locking, atomic journaling, interrupted-create reconciliation and endpoint IAM |
+| `anomaly_detection_pipeline/demo.py` | Client / Operator harness | Profile seeding, synthetic event publisher and timed end-to-end cloud smoke check |
+| `anomaly_detection_pipeline/pipeline.py` | Dataflow worker cluster | Streaming pipeline: Bigtable enrichment, keyed inference, Pub/Sub & BigQuery outputs |
+| `anomaly_detection_pipeline/inference.py` | Dataflow worker cluster | Batched predict-only Vertex client, strict response association and bounded retries |
 
 ## Quick execution
 

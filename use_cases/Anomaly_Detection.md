@@ -195,17 +195,32 @@ are never adopted into the manifest or deleted by workflow cleanup.
 
 ## 4. Seed profiles and launch Dataflow
 
-```bash
-python -m anomaly_detection_pipeline.workflow seed
-bash scripts/02_run_dataflow.sh
-```
+The solution clearly separates the **client-side testing and demonstration harness** ([`anomaly_detection_pipeline/demo.py`](file:///home/ihr/github/dataflow-solution-guides/pipelines/anomaly_detection/anomaly_detection_pipeline/demo.py), executed via `workflow.py`) from the **remote Dataflow worker pipeline** ([`anomaly_detection_pipeline/pipeline.py`](file:///home/ihr/github/dataflow-solution-guides/pipelines/anomaly_detection/anomaly_detection_pipeline/pipeline.py)).
 
-## 4. Seed profiles and launch Dataflow
+Before launching the streaming pipeline or publishing transactions, use the client-side harness to seed Bigtable with customer reference profiles:
 
 ```bash
 python -m anomaly_detection_pipeline.workflow seed
 bash scripts/02_run_dataflow.sh
 ```
+
+### The role of `demo.py` in end-to-end testing and demonstrations
+
+The client-side harness ([`anomaly_detection_pipeline/demo.py`](file:///home/ihr/github/dataflow-solution-guides/pipelines/anomaly_detection/anomaly_detection_pipeline/demo.py)) provides three core operations exposed via `workflow.py`:
+
+1. **State seeding (`seed`)**:
+   Connects directly to Bigtable (instance `anomaly-detection`, table `customer_profiles`, family `profile`, qualifier `average_amount`) and writes 100 deterministic baseline profiles (`customer-0000` through `customer-0099`). This pre-populates the historical spending baseline needed by Dataflow workers to calculate the amount-to-average ratio.
+2. **Synthetic data generator (`publish`)**:
+   Generates a bounded batch of synthetic transactions and publishes them to `anomaly-detection-transactions`. Every 5th transaction is generated as an intentional anomaly (e.g. 10x spending spikes or anomalous locations). It outputs the generated `transaction_id`s in JSON so you can query and observe them flowing through BigQuery in real time.
+3. **Automated cloud smoke verification (`smoke`)**:
+   Executes a self-contained, automated integration test across the live pipeline:
+   - Creates dedicated temporary Pub/Sub subscriptions on both the output detections topic (`anomaly-detection-detections`) and the dead-letter error topic (`anomaly-detection-errors`).
+   - Publishes valid transactions (normal and anomalous).
+   - Injects negative test cases: a **malformed JSON** payload (missing required schema fields) and a **missing profile** transaction (customer ID not in Bigtable).
+   - Polls Pub/Sub and queries BigQuery to verify that all valid IDs arrive in both sinks and that both negative test cases are caught and routed to `anomaly-detection-errors`.
+   - Cleans up all temporary subscriptions in a `finally` block upon completion or timeout.
+
+### Dataflow streaming execution
 
 Profiles are keyed by customer ID in Bigtable instance `anomaly-detection`, table
 `customer_profiles`, column family `profile`, qualifier `average_amount`.
@@ -249,24 +264,37 @@ inference failures and BigQuery failures.
 
 ## 5. Publish and verify the complete path
 
-Wait for the Dataflow job to reach Running, then:
+Wait for the Dataflow job to reach `Running` status in the Google Cloud Console or via `gcloud dataflow jobs list`. Once running, choose between an automated end-to-end smoke test or an interactive live demonstration:
+
+### Option A: Automated end-to-end test (`smoke`)
+
+To run an automated, end-to-end validation test of the entire pipeline (including Bigtable enrichment, Vertex AI inference, BigQuery ingestion, and dead-letter queue routing):
 
 ```bash
-python -m anomaly_detection_pipeline.workflow publish --count 20 --timeout 120
 python -m anomaly_detection_pipeline.workflow smoke --count 20 --timeout 600
 ```
 
-Each bounded publication generates a unique set of transaction IDs and prints
-it. Synthetic event timestamps are deterministic, starting January 1, 2026;
-query by printed transaction IDs rather than today's partition. The smoke command
-creates its own temporary subscriptions **before** publishing, verifies every
-transaction ID appears on the detections topic and in BigQuery, and checks both
-malformed-message and missing-profile routing. It exits nonzero on timeout and
-removes its subscriptions in a `finally` block. Cleanup RPCs have a separate
-bounded allowance; abandoned subscriptions expire after one day. It does not
-consume the shared verification subscriptions or require changing worker IAM to
-force failures. Permanent archive failures and inference failures are exercised
-in the mocked local tests.
+This command:
+1. Provisions temporary, isolated subscriptions on both `anomaly-detection-detections` and `anomaly-detection-errors`.
+2. Emits 20 transactions (including intentional anomalies), plus 2 negative edge cases: malformed JSON and an unknown customer ID.
+3. Continuously checks that all 20 valid transactions arrive in Pub/Sub and BigQuery, and confirms that both negative cases are successfully routed to the error topic.
+4. Cleans up all temporary subscriptions upon completion.
+
+### Option B: Interactive live demonstration (`publish`)
+
+To demonstrate the pipeline with manual inspection, publish a bounded stream of events:
+
+```bash
+python -m anomaly_detection_pipeline.workflow publish --count 20 --timeout 120
+```
+
+Each bounded publication generates a unique set of transaction IDs and prints it:
+
+```json
+{"transaction_ids": ["9f8c12a4b5d6-txn-000", "9f8c12a4b5d6-txn-001", ...]}
+```
+
+Synthetic event timestamps are deterministic, starting January 1, 2026; query BigQuery by the printed transaction IDs rather than today's partition date.
 
 The synthetic model demonstrates service integration; it is **not a validated
 fraud detector**. Its anomalies are deliberately separable and its offline
