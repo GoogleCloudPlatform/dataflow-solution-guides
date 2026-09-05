@@ -11,7 +11,7 @@ This directory contains Terraform infrastructure definitions for each solution g
 | `ml_ai/` | Pub/Sub Topics (`messages`, `predictions`), Artifact Registry (`dataflow-containers`), GCS Bucket, Service Account | `pipelines/ml_ai_python/` |
 | `etl_integration/` | Cloud Spanner (taxis DB + Change Stream), BigQuery Dataset, Service Account | `pipelines/etl_integration_java/` |
 | `cdp/` | Pub/Sub Topics (`transactions`, `coupon-redemption`), BigQuery Dataset, VPC, Subnet | `pipelines/cdp/` |
-| `anomaly_detection/` | Pub/Sub, BigQuery, Vertex AI Endpoint, VPC, Subnet | `pipelines/anomaly_detection/` |
+| `anomaly_detection/` | Pub/Sub, Bigtable, BigQuery, Artifact Registry, optional GCS, Service Account; external Vertex AI endpoint | `pipelines/anomaly_detection/` |
 | `marketing_intelligence/` | Pub/Sub Topics (`input`, `output`), Cloud Firestore (Native Mode), BigQuery Dataset, Artifact Registry, Service Account | `pipelines/marketing_intelligence/` |
 | `clickstream_analytics/` | Cloud Bigtable (Instance & Table), Pub/Sub Topic, BigQuery Dataset, Service Account | `pipelines/clickstream_analytics_java/` |
 | `iot_analytics/` | Cloud Bigtable (Instance & Table), BigQuery Dataset & Table, Pub/Sub Topic, Artifact Registry, Service Account | `pipelines/iot_analytics/` |
@@ -86,3 +86,7 @@ terraform apply tfplan
 # Teardown resources
 terraform destroy
 ```
+
+### Anomaly detection deployment
+
+Anomaly detection uses an existing project and network, an existing bucket by default, and a user-supplied Vertex AI endpoint with a deployed model. Source generated `scripts/00_set_variables.sh`, set `MODEL_ENDPOINT` (optional `MODEL_LOCATION`, default `REGION`), then run the build and launch scripts. Input is `transactions` via `transactions-sub`; output is `detections`. `SUBNETWORK` is optional with legacy `NETWORK` fallback. Existing networks must provide Private Google Access, worker TCP 12345/12346 communication and NAT where needed. Before migrating existing state, follow `terraform/anomaly_detection/README.md` to transfer foundation and bucket ownership safely.

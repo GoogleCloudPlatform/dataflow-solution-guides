@@ -12,48 +12,19 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-variable "billing_account" {
-  description = "Billing account for the projects/resources"
-  type        = string
-  default     = null
-}
-
 variable "destroy_all_resources" {
   description = "Destroy all resources when calling tf destroy. Use false for production deployments. For test environments, set to true to remove all buckets and bigtable instances."
   type        = bool
   default     = true
 }
 
-variable "internet_access" {
-  description = "Set to true to create a NAT for Dataflow workers to access Internet."
-  type        = bool
-  default     = false
-}
-
-variable "network_prefix" {
-  description = "Prefix to be used for networks and subnetworks"
-  type        = string
-  default     = "dataflow"
-}
-
-variable "organization" {
-  description = "Organization for the project/resources"
-  type        = string
-  default     = null
-}
-
-variable "project_create" {
-  description = "True if you want to create a new project. False to reuse an existing project."
-  type        = bool
-}
-
 variable "project_id" {
-  description = "Project ID for the project/resources"
+  description = "Existing project ID for application resources"
   type        = string
 }
 
 variable "region" {
-  description = "The region for resources and networking"
+  description = "Region for application resources and Dataflow"
   type        = string
 }
 
@@ -61,4 +32,29 @@ variable "zone" {
   description = "The zone for big table. Just a single letter specifying a zone in the region. The default is zone a"
   type        = string
   default     = "a"
+}
+
+variable "subnetwork" {
+  description = "Optional local subnet path or full Shared VPC URL. Omit to use the default network."
+  type        = string
+  default     = null
+}
+
+variable "bucket_name" {
+  description = "Existing or new bucket name; defaults to project_id."
+  type        = string
+  default     = null
+}
+
+variable "create_bucket" {
+  description = "Create and manage the bucket instead of reusing an existing bucket."
+  type        = bool
+  default     = false
+}
+
+variable "service_account_name" {
+  description = "Dedicated Dataflow worker service account ID."
+  type        = string
+  default     = "anomaly-detection-sa"
+  nullable    = false
 }
