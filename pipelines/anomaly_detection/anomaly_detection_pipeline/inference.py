@@ -29,6 +29,7 @@ class VertexHandler(RemoteModelHandler):
     return {'min_batch_size': 1, 'max_batch_size': 32}
 
   def request(self, batch, model, inference_args=None):
+    del inference_args
     predictions = predict_batch(model, self.endpoint, batch)
     return [
         PredictionResult(vector, int(value), self.endpoint)

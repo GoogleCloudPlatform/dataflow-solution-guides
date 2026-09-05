@@ -28,6 +28,7 @@ setup(
     name="anomaly_detection_pipeline",
     version="0.1",
     description="Anomaly Detection example for the Dataflow Solution Guides.",
-    packages=find_packages(include=["anomaly_detection_pipeline", "anomaly_detection_pipeline.*"]),
+    packages=find_packages(
+        include=["anomaly_detection_pipeline", "anomaly_detection_pipeline.*"]),
     install_requires=requirements,
 )

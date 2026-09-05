@@ -22,6 +22,7 @@ class FakeHandler(ModelHandler):
     return None
 
   def run_inference(self, batch, model, inference_args=None):
+    del model, inference_args
     return [
         PredictionResult(value, -1 if value[0] > 4 else 1) for value in batch
     ]
@@ -34,6 +35,7 @@ class FailedHandler(FakeHandler):
   """Represent an endpoint failure after retries have been exhausted."""
 
   def run_inference(self, batch, model, inference_args=None):
+    del batch, model, inference_args
     raise ValueError('endpoint failure')
 
 
