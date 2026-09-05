@@ -28,7 +28,7 @@ if [[ -n "$subnet" ]]; then
   subnet_args+=(--subnetwork="$subnet")
 fi
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-python main.py \
+python3.14 main.py \
   --runner=DataflowRunner \
   --project="$PROJECT" \
   --region="$REGION" \
@@ -43,6 +43,11 @@ python main.py \
   --machine_type="${MACHINE_TYPE:?MACHINE_TYPE is required}" \
   --messages_subscription="$INPUT_SUBSCRIPTION" \
   --responses_topic="$OUTPUT_TOPIC" \
+  --error_topic="${ERROR_TOPIC:?ERROR_TOPIC is required}" \
+  --bigtable_instance="${BIGTABLE_INSTANCE:?BIGTABLE_INSTANCE is required}" \
+  --bigtable_table="${BIGTABLE_TABLE:-customer_profiles}" \
+  --bigtable_column_family="${BIGTABLE_COLUMN_FAMILY:-profile}" \
+  --bigquery_table="${BIGQUERY_TABLE:?BIGQUERY_TABLE is required}" \
   --model_endpoint="$MODEL_ENDPOINT" \
   --location="${MODEL_LOCATION:-$REGION}" \
   "${subnet_args[@]}"

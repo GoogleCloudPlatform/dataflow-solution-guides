@@ -20,7 +20,7 @@ This skill provides step-by-step execution workflows for deploying, running, ver
 | **GenAI & ML** | `terraform/ml_ai` | `pipelines/ml_ai_python` | `./scripts/02_run_dataflow.sh` | Pub/Sub `messages` topic | Pub/Sub `predictions-sub` subscription |
 | **ETL & Integration** | `terraform/etl_integration` | `pipelines/etl_integration_java` | `./scripts/02_run_publisher_dataflow.sh` & `./scripts/03_run_changestream_template.sh` | Pub/Sub Taxirides feed | Cloud Spanner `events` table & BigQuery `replica.events_changelog` |
 | **Customer Data Platform (CDP)** | `terraform/cdp` | `pipelines/cdp` | `./scripts/02_run_dataflow_job.sh` | `python cdp_pipeline/generate_transaction_data.py` | BigQuery `output_dataset.unified-table` |
-| **Anomaly Detection** | `terraform/anomaly_detection` | `pipelines/anomaly_detection` | `./scripts/02_run_dataflow.sh` | Pub/Sub `events` topic | BigQuery `anomalies` table |
+| **Anomaly Detection** | `terraform/anomaly_detection` | `pipelines/anomaly_detection` | `./scripts/02_run_dataflow.sh` | Pub/Sub `anomaly-detection-transactions` topic | Pub/Sub `anomaly-detection-detections`, BigQuery `anomaly_detection.detections`, errors `anomaly-detection-errors` |
 | **Marketing Intelligence** | `terraform/marketing_intelligence` | `pipelines/marketing_intelligence` | `./scripts/02_run_dataflow.sh` | Pub/Sub user activity stream | BigQuery marketing attribution tables |
 | **Clickstream Analytics** | `terraform/clickstream_analytics` | `pipelines/clickstream_analytics_java` | `./scripts/01_launch_pipeline.sh` | Pub/Sub events | Cloud Bigtable & BigQuery analytics table |
 | **IoT Analytics** | `terraform/iot_analytics` | `pipelines/iot_analytics` | `./scripts/02_submit_job.sh` | `python scripts/publish_on_pubsub.py` | BigQuery `iot.maintenance_analytics` & Pub/Sub `maintenance-alerts` |
@@ -122,19 +122,32 @@ source scripts/00_set_variables.sh
 ```
 
 ### 5. Anomaly Detection with Vertex AI
-```bash
-# 1. Terraform
-cd terraform/anomaly_detection
-terraform init && terraform apply -auto-approve
 
-# 2. Launch Pipeline
-cd ../../pipelines/anomaly_detection
-source scripts/00_set_environment.sh
-./scripts/02_run_dataflow.sh
+Follow [the executable guide](../../../use_cases/Anomaly_Detection.md) from the
+repository root. Use an existing project/network and an existing bucket by default.
+Python 3.14 is required across all components: Dataflow pipeline, local tooling,
+custom training container, and custom prediction serving container.
 
-# 3. Validate Anomalies in BigQuery
-bq query --use_legacy_sql=false 'SELECT COUNT(*) FROM dataset_name.anomalies'
-```
+After provisioning Terraform, source `scripts/00_set_variables.sh` in
+`pipelines/anomaly_detection`. Build worker, training, and serving images through the
+provided Cloud Build scripts (`scripts/01_build_and_push_container.sh`,
+`scripts/01_build_training_container.sh`, `scripts/01_build_serving_container.sh`),
+then source their environment files (`.deployment/training_environment.sh`,
+`.deployment/serving_environment.sh`). Run `python -m
+anomaly_detection_pipeline.workflow` stages `train`, `validate` and `deploy`;
+source the separate `scripts/03_endpoint_environment.sh`, then `verify`, `seed`,
+launch `scripts/02_run_dataflow.sh` and run `smoke --count 20 --timeout 600`.
+The guide contains the exact commands, identities, quotas, and non-Terraform cleanup procedures.
+
+Keep the ignored deployment manifest to resume partial runs and clean up only
+owned resources. Ambiguous creates must be reconciled before retrying. Compatible
+external `MODEL_ENDPOINT` values are supported with endpoint-level worker
+prediction access (`roles/anomalyDetectionPredictor`); never adopt or delete external
+endpoints. Workers use private IPs and CPU `n1-standard-2`. Bigtable customer profiles
+(`customer_profiles`) and BigQuery archival (`anomaly_detection.detections`) are active
+parts of the graph. Stop Dataflow, run workflow cleanup, execute any required manual
+resource deletions, then destroy Terraform. Report local/container tests separately
+from live-cloud smoke results.
 
 ### 6. Marketing Intelligence
 ```bash

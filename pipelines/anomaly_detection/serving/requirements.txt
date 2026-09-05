@@ -1,0 +1,7 @@
+scikit-learn>=1.6,<2
+numpy>=2.0,<3
+scipy>=1.15,<2
+joblib>=1.4,<2
+google-cloud-storage>=3.1,<4
+fastapi>=0.115,<1
+uvicorn[standard]>=0.34,<1

@@ -58,3 +58,10 @@ variable "service_account_name" {
   default     = "anomaly-detection-sa"
   nullable    = false
 }
+
+variable "training_service_account_name" {
+  description = "Dedicated Vertex AI custom training service account ID."
+  type        = string
+  default     = "anomaly-training-sa"
+  nullable    = false
+}

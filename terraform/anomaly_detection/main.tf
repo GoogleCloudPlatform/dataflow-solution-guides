@@ -18,9 +18,9 @@ locals {
   subnetwork               = var.subnetwork != null ? trimspace(var.subnetwork) : ""
   max_dataflow_workers     = 1
   worker_disk_size_gb      = 200
-  machine_type             = "g2-standard-4"
-  bigquery_dataset         = "output_dataset"
-  bigtable_instance        = "bt-enrichment"
+  machine_type             = "n1-standard-2"
+  bigquery_dataset         = "anomaly_detection"
+  bigtable_instance        = "anomaly-detection"
 }
 
 
@@ -45,14 +45,15 @@ module "registry_docker" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v58.0.0"
   project_id = var.project_id
   location   = var.region
-  name       = "dataflow-containers"
+  name       = "anomaly-detection-containers"
   format     = { docker = { standard = {} } }
   iam = {
-    "roles/artifactregistry.admin" = [
+    "roles/artifactregistry.writer" = [
       "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
     ]
     "roles/artifactregistry.reader" = [
-      module.dataflow_sa.iam_email
+      module.dataflow_sa.iam_email,
+      google_service_account.training.member
     ]
   }
   cleanup_policy_dry_run = false
@@ -82,9 +83,9 @@ module "input_topic" {
   depends_on = [google_project_service.application]
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v58.0.0"
   project_id = var.project_id
-  name       = "transactions"
+  name       = "anomaly-detection-transactions"
   subscriptions = {
-    transactions-sub = {}
+    anomaly-detection-transactions-sub = {}
   }
 }
 
@@ -92,9 +93,9 @@ module "output_topic" {
   depends_on = [google_project_service.application]
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/pubsub?ref=v58.0.0"
   project_id = var.project_id
-  name       = "detections"
+  name       = "anomaly-detection-detections"
   subscriptions = {
-    detections-sub = {}
+    anomaly-detection-detections-sub = {}
   }
 }
 
@@ -108,11 +109,13 @@ module "enrichment_table" {
   clusters = {
     cluster1 = {
       zone      = "${var.region}-${var.zone}"
-      num_nodes = 3
+      num_nodes = 1
     }
   }
   tables = {
-    features = {}
+    customer_profiles = {
+      column_families = { profile = {} }
+    }
   }
 }
 
@@ -134,13 +137,8 @@ module "dataflow_sa" {
   name       = local.dataflow_service_account
   iam_project_roles = {
     (var.project_id) = [
-      "roles/storage.objectAdmin",
       "roles/dataflow.worker",
       "roles/monitoring.metricWriter",
-      "roles/pubsub.editor",
-      "roles/aiplatform.user",
-      "roles/bigtable.reader",
-      "roles/bigquery.dataEditor"
     ]
   }
 }
@@ -181,9 +179,21 @@ export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 export DISK_SIZE_GB=${local.worker_disk_size_gb}
 export MACHINE_TYPE=${local.machine_type}
 
-export BIGTABLE_INSTANCE=${module.enrichment_table.id}
+export BIGTABLE_INSTANCE=${local.bigtable_instance}
+export BIGTABLE_TABLE=customer_profiles
+export BIGTABLE_COLUMN_FAMILY=profile
 export BQ_DATASET=${module.output_dataset.dataset_id}
-export INPUT_SUBSCRIPTION=projects/${var.project_id}/subscriptions/transactions-sub
-export OUTPUT_TOPIC=projects/${var.project_id}/topics/detections
+export BIGQUERY_TABLE=${var.project_id}.${module.output_dataset.dataset_id}.${google_bigquery_table.detections.table_id}
+export BUCKET=${local.bucket_name}
+export TRAINING_SERVICE_ACCOUNT=${google_service_account.training.email}
+export TRAINING_CONTAINER_URI=$REGION-docker.pkg.dev/$PROJECT/$DOCKER_REPOSITORY/anomaly-training:$DOCKER_TAG
+export SERVING_CONTAINER_URI=$REGION-docker.pkg.dev/$PROJECT/$DOCKER_REPOSITORY/anomaly-serving:$DOCKER_TAG
+export ENDPOINT_PREDICTOR_ROLE=${google_project_iam_custom_role.predictor.id}
+export INPUT_SUBSCRIPTION=projects/${var.project_id}/subscriptions/anomaly-detection-transactions-sub
+export OUTPUT_TOPIC=projects/${var.project_id}/topics/anomaly-detection-detections
+export ERROR_TOPIC=${google_pubsub_topic.errors.id}
+export INPUT_TOPIC=projects/${var.project_id}/topics/anomaly-detection-transactions
+export OUTPUT_SUBSCRIPTION=projects/${var.project_id}/subscriptions/anomaly-detection-detections-sub
+export ERROR_SUBSCRIPTION=${google_pubsub_subscription.errors.id}
 FILE
 }
