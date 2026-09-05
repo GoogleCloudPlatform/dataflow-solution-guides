@@ -26,7 +26,9 @@ COPY setup.py setup.py
 
 RUN pip install --upgrade --no-cache-dir pip \
   && pip install --no-cache-dir -r requirements.txt \
-  && pip install --no-cache-dir -e .
+  && pip install --no-cache-dir .
+
+ENV PYTHONPATH="/workspace:${PYTHONPATH:-}"
 
 # Copy files from official SDK image, including script/dependencies.
 COPY --from=apache/beam_python3.14_sdk:2.76.0 /opt/apache/beam /opt/apache/beam

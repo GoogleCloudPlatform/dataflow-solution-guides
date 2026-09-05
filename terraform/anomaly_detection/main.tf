@@ -18,7 +18,7 @@ locals {
   subnetwork               = var.subnetwork != null ? trimspace(var.subnetwork) : ""
   max_dataflow_workers     = 1
   worker_disk_size_gb      = 200
-  machine_type             = "n1-standard-2"
+  machine_type             = var.machine_type
   bigquery_dataset         = "anomaly_detection"
   bigtable_instance        = "anomaly-detection"
 }
@@ -49,7 +49,8 @@ module "registry_docker" {
   format     = { docker = { standard = {} } }
   iam = {
     "roles/artifactregistry.writer" = [
-      "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
+      "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com",
+      "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
     ]
     "roles/artifactregistry.reader" = [
       module.dataflow_sa.iam_email,
@@ -178,6 +179,8 @@ export CONTAINER_URI=$DOCKER_IMAGE:$DOCKER_TAG
 export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 export DISK_SIZE_GB=${local.worker_disk_size_gb}
 export MACHINE_TYPE=${local.machine_type}
+export TRAINING_MACHINE_TYPE=${var.training_machine_type}
+export ENDPOINT_MACHINE_TYPE=${var.endpoint_machine_type}
 
 export BIGTABLE_INSTANCE=${local.bigtable_instance}
 export BIGTABLE_TABLE=customer_profiles

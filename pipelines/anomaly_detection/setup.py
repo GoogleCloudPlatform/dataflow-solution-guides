@@ -18,12 +18,16 @@ Setup file for the Anomaly Detection pipeline.
 from setuptools import setup, find_packages
 
 with open("requirements.txt", encoding="utf-8") as f:
-  requirements = f.readlines()
+  requirements = [
+      line.strip()
+      for line in f
+      if line.strip() and not line.strip().startswith("#")
+  ]
 
 setup(
-    name="Dataflow Solution for Anomaly Detection pipelines",
+    name="anomaly_detection_pipeline",
     version="0.1",
     description="Anomaly Detection example for the Dataflow Solution Guides.",
-    packages=find_packages(),
+    packages=find_packages(include=["anomaly_detection_pipeline", "anomaly_detection_pipeline.*"]),
     install_requires=requirements,
 )

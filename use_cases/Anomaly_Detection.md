@@ -274,6 +274,44 @@ metrics do not establish production accuracy, fairness or calibration. Real use
 requires representative data, temporal evaluation, drift monitoring and an
 operational response policy.
 
+### Verifying Bigtable enrichment and prediction plausibility
+
+Query the BigQuery detections table to verify that feature enrichment and model inference are operating correctly:
+
+1. **Verify Bigtable Profile Enrichment**:
+   Confirm that `features[OFFSET(0)]` (`amount / customer_average_amount`) reflects dynamic lookups against Bigtable `customer_profiles`:
+   ```sql
+   SELECT
+     transaction_id,
+     customer_id,
+     ROUND(features[OFFSET(0)], 3) AS amount_to_avg_ratio,
+     ROUND(features[OFFSET(1)], 2) AS distance_km,
+     CAST(features[OFFSET(2)] AS INT64) AS recent_tx_count,
+     prediction,
+     is_anomaly
+   FROM `YOUR_PROJECT_ID.anomaly_detection.detections`
+   ORDER BY timestamp DESC
+   LIMIT 20;
+   ```
+   *Expected behavior*: `amount_to_avg_ratio` varies across customers and transactions, strictly matching the seeded customer profile averages from Bigtable.
+
+2. **Verify Prediction Plausibility and Feature Distribution**:
+   Inspect how the Isolation Forest model partitions feature distributions between normal transactions and anomalies:
+   ```sql
+   SELECT
+     is_anomaly,
+     prediction,
+     COUNT(*) AS transaction_count,
+     ROUND(AVG(features[OFFSET(0)]), 3) AS avg_amount_ratio,
+     ROUND(MIN(features[OFFSET(0)]), 3) AS min_amount_ratio,
+     ROUND(MAX(features[OFFSET(0)]), 3) AS max_amount_ratio,
+     ROUND(AVG(features[OFFSET(1)]), 2) AS avg_distance_km,
+     ROUND(AVG(features[OFFSET(2)]), 1) AS avg_recent_tx_count
+   FROM `YOUR_PROJECT_ID.anomaly_detection.detections`
+   GROUP BY is_anomaly, prediction;
+   ```
+   *Expected behavior*: Normal transactions (`is_anomaly = false`) cluster around typical baseline values (`amount_ratio ~ 1.0`, low distance, low recent count), whereas detected anomalies (`is_anomaly = true`) exhibit significantly higher average amount ratios, geographic distances, or transaction frequencies.
+
 ## 6. Cleanup and non-Terraform resource teardown
 
 Bigtable nodes, the deployed endpoint and streaming Dataflow workers incur

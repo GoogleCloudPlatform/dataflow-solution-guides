@@ -37,7 +37,9 @@ python3.14 main.py \
   --sdk_container_image="$CONTAINER_URI" \
   --sdk_location=container \
   --streaming \
-  --no_use_public_ip \
+  --save_main_session \
+  --setup_file=./setup.py \
+  --no_use_public_ips \
   --max_num_workers="${MAX_DATAFLOW_WORKERS:?MAX_DATAFLOW_WORKERS is required}" \
   --disk_size_gb="${DISK_SIZE_GB:?DISK_SIZE_GB is required}" \
   --machine_type="${MACHINE_TYPE:?MACHINE_TYPE is required}" \

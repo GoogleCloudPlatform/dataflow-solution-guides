@@ -65,3 +65,21 @@ variable "training_service_account_name" {
   default     = "anomaly-training-sa"
   nullable    = false
 }
+
+variable "machine_type" {
+  description = "Dataflow worker machine type."
+  type        = string
+  default     = "n1-standard-2"
+}
+
+variable "training_machine_type" {
+  description = "Vertex AI training machine type."
+  type        = string
+  default     = "n1-standard-4"
+}
+
+variable "endpoint_machine_type" {
+  description = "Vertex AI prediction endpoint machine type."
+  type        = string
+  default     = "n1-standard-2"
+}

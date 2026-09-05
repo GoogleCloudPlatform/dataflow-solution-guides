@@ -45,7 +45,7 @@ class LaunchTest(unittest.TestCase):
                        check=True,
                        capture_output=True)
         arguments = capture.read_text(encoding='utf-8').splitlines()
-        self.assertIn('--no_use_public_ip', arguments)
+        self.assertIn('--no_use_public_ips', arguments)
         self.assertIn(
             '--service_account_email=worker@test-project.iam.gserviceaccount.com',
             arguments)

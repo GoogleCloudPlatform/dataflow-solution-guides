@@ -1,4 +1,12 @@
 steps:
-- name: gcr.io/cloud-builders/docker
-  args: ['build', '-f', 'serving/Dockerfile', '-t', '${_TAG}', '.']
-images: ['${_TAG}']
+  - name: 'gcr.io/kaniko-project/executor:latest'
+    args:
+      - --dockerfile=serving/Dockerfile
+      - --destination=${_TAG}
+      - --cache=true
+substitutions:
+  _TAG: unset
+options:
+  substitutionOption: 'ALLOW_LOOSE'
+  automapSubstitutions: true
+  machineType: E2_HIGHCPU_8
