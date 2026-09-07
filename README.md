@@ -26,7 +26,7 @@ This the list of solution guides available at this moment:
 | [Marketing Intelligence](./use_cases/Marketing_Intelligence.md) |         Real-time marketing intelligence with Firestore enrichment & Scikit-Learn RunInference          | Ready :white_check_mark:  |
 |  [Clickstream Analytics](./use_cases/Clickstream_Analytics.md)  |                Real-time clickstream analytics with Bigtable enrichment / data hydration                | Ready :white_check_mark:  |
 |          [IoT Analytics](./use_cases/IoT_Analytics.md)          |    Real-time Internet of Things (IoT) analytics with Bigtable enrichment & Scikit-Learn RunInference    | Ready :white_check_mark:  |
-|      [Anomaly Detection](./use_cases/Anomaly_Detection.md)      | Real-time detection of anomalies in a stream of data leveraging GenAI with models deployed in Vertex AI |      Beta :factory:       |
+|      [Anomaly Detection](./use_cases/Anomaly_Detection.md)      |         Real-time anomaly detection with Bigtable enrichment & models deployed in Vertex AI             | Ready :white_check_mark:  |
 |          [Customer Data Platform](./use_cases/CDP.md)           |          Real-time customer data platform that unifies a customer view from different sources.          |      Beta :factory:       |
 |       [Gaming Analytics](./use_cases/gaming_analytics.md)       |               Real-time analyis of gaming data to enhance live gameplay & offer targeting               |      Beta :factory:       |
 
