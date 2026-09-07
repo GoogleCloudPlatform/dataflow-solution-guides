@@ -321,7 +321,7 @@ pylint --rcfile ../pylintrc .
 | # | Use Case / Directory | Key Application Resources to Keep | Recommended Default SA Name | Target Pipeline |
 | :- | :--- | :--- | :--- | :--- |
 | 1 | **`etl_integration/`** *(Done)* | Spanner Instance/DBs/IAM, BigQuery Dataset | `spanner-cdc-dataflow-sa` | `pipelines/etl_integration_java/` |
-| 2 | **`cdp/`** | Pub/Sub Topics (`transactions`, `coupon_redemption`), BigQuery Dataset, Artifact Registry | `cdp-dataflow-sa` | `pipelines/cdp/` |
+| 2 | **`cdp/`** *(Done)* | Pub/Sub Topics (`transactions`, `coupon_redemption`), BigQuery Dataset & Table, Artifact Registry | `cdp-dataflow-sa` | `pipelines/cdp/` |
 | 3 | **`clickstream_analytics/`** *(Done)* | Cloud Bigtable (Instance & Table), Pub/Sub Topic, BigQuery Dataset & Tables | `clickstream-dataflow-sa` | `pipelines/clickstream_analytics_java/` |
 | 4 | **`anomaly_detection/`** | Pub/Sub Topic, BigQuery Dataset, Vertex AI Endpoint | `anomaly-detection-sa` | `pipelines/anomaly_detection/` |
 | 5 | **`marketing_intelligence/`** *(Done)* | Pub/Sub Topics, BigQuery Dataset, Firestore Native, Artifact Registry | `marketing-intel-sa` | `pipelines/marketing_intelligence/` |

@@ -25,7 +25,7 @@ dataflow-solution-guides/
 ├── terraform/                # Infrastructure-as-Code using Google Cloud Foundation Fabric
 │   ├── ml_ai/                # Pub/Sub topics, Artifact Registry, GCS bucket, Service Account
 │   ├── etl_integration/      # Spanner instance/database/change stream, BigQuery, Service Account
-│   ├── cdp/                  # Pub/Sub topics, BigQuery dataset/tables, VPC
+│   ├── cdp/                  # Pub/Sub topics, BigQuery dataset/table, Artifact Registry, Service Account
 │   ├── anomaly_detection/    # Pub/Sub, Bigtable, BigQuery, Artifact Registry, optional GCS, Worker/training identities (Python-managed Vertex AI workflow)
 │   ├── marketing_intelligence/ # Pub/Sub topics, Firestore, BigQuery dataset, Artifact Registry, Service Account
 │   ├── clickstream_analytics/  # Bigtable instance, Pub/Sub, BigQuery, Service Account

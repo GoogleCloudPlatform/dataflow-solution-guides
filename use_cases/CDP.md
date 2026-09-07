@@ -9,7 +9,7 @@ Real-time Customer Data Platforms represent a powerful tool for businesses seeki
 
 ## Assets included in this repository
 
-- [Terraform code to deploy a project for Customer Data Platform](../terraform/cdp/)
+- [Terraform code to deploy infrastructure for Customer Data Platform](../terraform/cdp/)
 - [Sample pipelines in Python for Customer Data Platform](../pipelines/cdp/)
 
 ## Technical benefits
