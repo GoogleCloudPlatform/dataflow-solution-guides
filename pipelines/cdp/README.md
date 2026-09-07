@@ -1,6 +1,6 @@
 # Customer Data Platform sample pipeline (Python)
 
-This sample pipeline demonstrates how to use Dataflow to process streaming data in order to build a Customer Data Platform (CDP). It reads data from multiple streaming sources (two Pub/Sub topics: `transactions` and `coupon_redemption`), joins the records based on transaction and customer keys, and writes the unified records into a BigQuery table for downstream analytics.
+This sample pipeline demonstrates how to use Dataflow to process streaming data in order to build a Customer Data Platform (CDP). It reads data from multiple streaming sources (two Pub/Sub topics: `cdp-transactions` and `cdp-coupon-redemption`), joins the records based on transaction and customer keys, and writes the unified records into a BigQuery table for downstream analytics.
 
 This pipeline is part of the [Dataflow Customer Data Platform solution guide](../../use_cases/CDP.md).
 
@@ -12,9 +12,9 @@ The generic architecture for the CDP pipeline looks as follows:
 
 In this directory, you will find a specific implementation of the above architecture with the following stages:
 
-1. **Data ingestion:** Reads streaming records from two Pub/Sub topics (`transactions` and `coupon_redemption`).
+1. **Data ingestion:** Reads streaming records from two Pub/Sub topics (`cdp-transactions` and `cdp-coupon-redemption`).
 2. **Data preprocessing & Unification:** Windows incoming records into fixed 60-second windows and executes a `CoGroupByKey` left join to merge transactions with coupon redemptions based on `(transaction_id, household_key)`.
-3. **Output Data:** Writes unified records into the BigQuery table `output_dataset.unified_data`.
+3. **Output Data:** Writes unified records into the BigQuery table `cdp_dataset.unified_customer_data`.
 
 ## Selecting the cloud region
 
@@ -64,7 +64,7 @@ pytest tests/ -v
 
 ## Input data simulation
 
-To send test data into the pipeline, publish messages to the `transactions` and `coupon_redemption` Pub/Sub topics:
+To send test data into the pipeline, publish messages to the `cdp-transactions` and `cdp-coupon-redemption` Pub/Sub topics:
 
 ```python3
 python3 ./cdp_pipeline/generate_transaction_data.py
@@ -76,10 +76,10 @@ This script reads sample transaction and coupon data (either from the configured
 
 The unified data from the two Pub/Sub topics is stored in the BigQuery table:
 ```
-${PROJECT}.${BQ_DATASET}.${BQ_UNIFIED_TABLE}  # Default: output_dataset.unified_data
+${PROJECT}.${BQ_DATASET}.${BQ_UNIFIED_TABLE}  # Default: cdp_dataset.unified_customer_data
 ```
 
 Verify output records via `bq`:
 ```bash
-bq query --use_legacy_sql=false "SELECT * FROM \`${PROJECT}.output_dataset.unified_data\` LIMIT 10"
+bq query --use_legacy_sql=false "SELECT * FROM \`${PROJECT}.cdp_dataset.unified_customer_data\` LIMIT 10"
 ```

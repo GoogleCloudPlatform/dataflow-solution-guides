@@ -10,12 +10,12 @@ The scripts will create the following application-level resources:
 
 | Resource | Name | Description |
 | :--- | :---: | :--- |
-| **Docker registry** | `dataflow-containers` | An Artifact Registry Docker repository for the custom Dataflow container image. Cloud Build is granted admin role and the Dataflow worker service account is granted reader role. By default, the 3 latest image versions are retained. |
+| **Docker registry** | `cdp-containers` | An Artifact Registry Docker repository for the custom Dataflow container image. Cloud Build is granted admin role and the Dataflow worker service account is granted reader role. By default, the 3 latest image versions are retained. |
 | **GCS Bucket** *(Optional)* | `var.bucket_name` or `var.project_id` | Optional standard regional GCS bucket for Dataflow temp and staging files (created when `create_bucket = true`). |
-| **Pub/Sub topic** | `transactions` | The first input Pub/Sub topic for streaming customer transaction events. |
-| **Pub/Sub topic** | `coupon_redemption` | The second input Pub/Sub topic for streaming coupon redemption events. |
-| **BigQuery Dataset** | `output_dataset` | The destination BigQuery dataset for customer data unification. |
-| **BigQuery Table** | `unified_data` | The destination BigQuery table storing joined transaction and coupon redemption records. |
+| **Pub/Sub topic** | `cdp-transactions` | The first input Pub/Sub topic for streaming customer transaction events. |
+| **Pub/Sub topic** | `cdp-coupon-redemption` | The second input Pub/Sub topic for streaming coupon redemption events. |
+| **BigQuery Dataset** | `cdp_dataset` | The destination BigQuery dataset for customer data unification. |
+| **BigQuery Table** | `unified_customer_data` | The destination BigQuery table storing joined transaction and coupon redemption records. |
 | **Service Account** | `cdp-dataflow-sa` (configurable) | Dedicated Dataflow worker service account with least-privilege roles (`roles/storage.objectAdmin`, `roles/dataflow.worker`, `roles/monitoring.metricWriter`, `roles/pubsub.editor`, `roles/bigquery.dataEditor`, `roles/bigquery.jobUser`). |
 
 ## Configuration variables
@@ -27,10 +27,13 @@ The scripts will create the following application-level resources:
 | `subnetwork` | `string` | `null` | Optional subnetwork URL or path for Dataflow workers (e.g. `regions/europe-west1/subnetworks/dev-subnet` or full Shared VPC URI `https://www.googleapis.com/compute/v1/projects/HOST_PROJECT/regions/REGION/subnetworks/SUBNET_NAME`). If omitted, the default network is used. |
 | `bucket_name` | `string` | `null` | Optional GCS bucket name for Dataflow temp/staging files. Defaults to `project_id`. |
 | `service_account_name` | `string` | `"cdp-dataflow-sa"` | Dedicated Dataflow worker service account ID. |
+| `artifact_registry_name` | `string` | `"cdp-containers"` | Name of the Artifact Registry repository for custom Dataflow worker containers. |
+| `pubsub_transactions_topic` | `string` | `"cdp-transactions"` | Name of the Pub/Sub topic for streaming customer transaction events. |
+| `pubsub_coupon_redemption_topic` | `string` | `"cdp-coupon-redemption"` | Name of the Pub/Sub topic for streaming coupon redemption events. |
 | `create_bucket` | `bool` | `false` | Set to `true` to provision a new GCS bucket, or `false` to reuse an existing bucket. |
 | `destroy_all_resources` | `bool` | `true` | When `true`, enables deletion of BigQuery dataset contents and tables on `terraform destroy`. Set to `false` for production environments. |
-| `bq_dataset` | `string` | `"output_dataset"` | The BigQuery output dataset name for customer data unification. |
-| `bq_table` | `string` | `"unified_data"` | The BigQuery output table name for unified customer data. |
+| `bq_dataset` | `string` | `"cdp_dataset"` | The BigQuery output dataset name for customer data unification. |
+| `bq_table` | `string` | `"unified_customer_data"` | The BigQuery output table name for unified customer data. |
 
 ## How to deploy
 

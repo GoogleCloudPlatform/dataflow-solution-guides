@@ -20,10 +20,11 @@ locals {
   machine_type             = "e2-standard-8"
   bigquery_dataset         = var.bq_dataset
   bigquery_table           = var.bq_table
-  transactions_topic       = "transactions"
-  transactions_sub         = "transactions-sub"
-  coupon_redemption_topic  = "coupon_redemption"
-  coupon_redemption_sub    = "coupon_redemption-sub"
+  transactions_topic       = var.pubsub_transactions_topic
+  transactions_sub         = "${var.pubsub_transactions_topic}-sub"
+  coupon_redemption_topic  = var.pubsub_coupon_redemption_topic
+  coupon_redemption_sub    = "${var.pubsub_coupon_redemption_topic}-sub"
+  artifact_registry_repo   = var.artifact_registry_name
 }
 
 data "google_project" "project" {
@@ -78,7 +79,7 @@ module "registry_docker" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v58.0.0"
   project_id = var.project_id
   location   = var.region
-  name       = "dataflow-containers"
+  name       = local.artifact_registry_repo
   format     = { docker = { standard = {} } }
   iam = {
     "roles/artifactregistry.admin" = [

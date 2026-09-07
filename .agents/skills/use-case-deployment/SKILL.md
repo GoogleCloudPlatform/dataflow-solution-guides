@@ -106,7 +106,7 @@ source scripts/00_set_environment.sh
 python3 ./cdp_pipeline/generate_transaction_data.py
 
 # 4. Validate Unified BigQuery Table
-bq query --use_legacy_sql=false 'SELECT * FROM output_dataset.unified_data LIMIT 10'
+bq query --use_legacy_sql=false 'SELECT * FROM cdp_dataset.unified_customer_data LIMIT 10'
 ```
 
 ### 4. Clickstream Analytics with Bigtable (Java)

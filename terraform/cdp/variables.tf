@@ -40,6 +40,24 @@ variable "service_account_name" {
   default     = "cdp-dataflow-sa"
 }
 
+variable "artifact_registry_name" {
+  description = "Name of the Artifact Registry repository for custom Dataflow worker containers."
+  type        = string
+  default     = "cdp-containers"
+}
+
+variable "pubsub_transactions_topic" {
+  description = "Name of the Pub/Sub topic for streaming customer transaction events."
+  type        = string
+  default     = "cdp-transactions"
+}
+
+variable "pubsub_coupon_redemption_topic" {
+  description = "Name of the Pub/Sub topic for streaming coupon redemption events."
+  type        = string
+  default     = "cdp-coupon-redemption"
+}
+
 variable "create_bucket" {
   description = "Whether to create a new GCS bucket for temp/staging files. Set to false if using an existing bucket."
   type        = bool
@@ -55,11 +73,11 @@ variable "destroy_all_resources" {
 variable "bq_dataset" {
   description = "The BigQuery output dataset name for customer data unification."
   type        = string
-  default     = "output_dataset"
+  default     = "cdp_dataset"
 }
 
 variable "bq_table" {
   description = "The BigQuery output table name for unified customer data."
   type        = string
-  default     = "unified_data"
+  default     = "unified_customer_data"
 }

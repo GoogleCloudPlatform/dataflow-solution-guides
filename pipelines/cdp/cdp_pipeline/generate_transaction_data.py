@@ -29,9 +29,9 @@ async def publish_coupons_to_pubsub(project_id: str | None = None,
                                     bucket_name: str | None = None):
   project_id = project_id or os.environ.get("PROJECT", "<project_id>")
   transactions_topic_name = transactions_topic or os.environ.get(
-      "TRANSACTIONS_TOPIC", "transactions")
+      "TRANSACTIONS_TOPIC", "cdp-transactions")
   coupons_topic_name = coupons_topic or os.environ.get(
-      "COUPON_REDEMPTION_TOPIC", "coupon_redemption")
+      "COUPON_REDEMPTION_TOPIC", "cdp-coupon-redemption")
   gcs_bucket_env = os.environ.get("GCS_BUCKET", "")
   if not bucket_name and gcs_bucket_env:
     bucket_name = gcs_bucket_env.replace("gs://", "").split("/")[0]
