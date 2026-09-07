@@ -19,7 +19,7 @@ This skill provides step-by-step execution workflows for deploying, running, ver
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **GenAI & ML** | `terraform/ml_ai` | `pipelines/ml_ai_python` | `./scripts/02_run_dataflow.sh` | Pub/Sub `messages` topic | Pub/Sub `predictions-sub` subscription |
 | **ETL & Integration** | `terraform/etl_integration` | `pipelines/etl_integration_java` | `./scripts/02_run_publisher_dataflow.sh` & `./scripts/03_run_changestream_template.sh` | Pub/Sub Taxirides feed | Cloud Spanner `events` table & BigQuery `replica.events_changelog` |
-| **Customer Data Platform (CDP)** | `terraform/cdp` | `pipelines/cdp` | `./scripts/02_run_dataflow_job.sh` | `python cdp_pipeline/generate_transaction_data.py` | BigQuery `output_dataset.unified-table` |
+| **Customer Data Platform (CDP)** | `terraform/cdp` | `pipelines/cdp` | `./scripts/02_run_dataflow.sh` | `python cdp_pipeline/generate_transaction_data.py` | BigQuery `cdp_dataset.unified_customer_data` |
 | **Anomaly Detection** | `terraform/anomaly_detection` | `pipelines/anomaly_detection` | `./scripts/02_run_dataflow.sh` | Pub/Sub `anomaly-detection-transactions` topic | Pub/Sub `anomaly-detection-detections`, BigQuery `anomaly_detection.detections`, errors `anomaly-detection-errors` |
 | **Marketing Intelligence** | `terraform/marketing_intelligence` | `pipelines/marketing_intelligence` | `./scripts/02_run_dataflow.sh` | Pub/Sub user activity stream | BigQuery marketing attribution tables |
 | **Clickstream Analytics** | `terraform/clickstream_analytics` | `pipelines/clickstream_analytics_java` | `./scripts/01_launch_pipeline.sh` | Pub/Sub events | Cloud Bigtable & BigQuery analytics table |
@@ -98,15 +98,15 @@ terraform init && terraform apply -auto-approve
 
 # 2. Build Container & Launch Dataflow
 cd ../../pipelines/cdp
-source scripts/00_set_variables.sh
-./scripts/01_cloudbuild_and_push_container.sh
-./scripts/02_run_dataflow_job.sh
+source scripts/00_set_environment.sh
+./scripts/01_build_and_push_container.sh
+./scripts/02_run_dataflow.sh
 
 # 3. Generate Streaming Transactions
 python3 ./cdp_pipeline/generate_transaction_data.py
 
 # 4. Validate Unified BigQuery Table
-bq query --use_legacy_sql=false 'SELECT * FROM output_dataset.`unified-table` LIMIT 10'
+bq query --use_legacy_sql=false 'SELECT * FROM cdp_dataset.unified_customer_data LIMIT 10'
 ```
 
 ### 4. Clickstream Analytics with Bigtable (Java)

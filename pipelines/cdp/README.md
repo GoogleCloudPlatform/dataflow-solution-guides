@@ -1,95 +1,85 @@
 # Customer Data Platform sample pipeline (Python)
 
-This sample pipeline demonstrates how to use Dataflow to process the streaming data in order to build Customer Data platform. We will be reading data form multiple streaming sources, two pub-sub topics in this sample pipeline, will join the data and put it in bigquery table for analytics later on.
+This sample pipeline demonstrates how to use Dataflow to process streaming data in order to build a Customer Data Platform (CDP). It reads data from multiple streaming sources (two Pub/Sub topics: `cdp-transactions` and `cdp-coupon-redemption`), joins the records based on transaction and customer keys, and writes the unified records into a BigQuery table for downstream analytics.
 
-This pipeline is part of the [Dataflow Customer Data Platfrom solution guide](../../use_cases/cdp.md).
+This pipeline is part of the [Dataflow Customer Data Platform solution guide](../../use_cases/CDP.md).
 
 ## Architecture
 
-The generic architecture for an inference pipeline looks like as follows:
+The generic architecture for the CDP pipeline looks as follows:
 
 ![Architecture](../imgs/cdp.png)
 
-In this directory, you will find a specific implementation of the above architecture, with the 
-following stages:
+In this directory, you will find a specific implementation of the above architecture with the following stages:
 
-1. **Data ingestion:** Reads data from a Pub/Sub topic.
-2. **Data preprocessing:** The sample pipeline joins the data from two pub-sub topic based on some key fields. This is to showcase the unification of customer data from different sources to store itin one place.
-3. **Output Data:** The final processed data is then appended to the bigquery table.
+1. **Data ingestion:** Reads streaming records from two Pub/Sub topics (`cdp-transactions` and `cdp-coupon-redemption`).
+2. **Data preprocessing & Unification:** Windows incoming records into fixed 60-second windows and executes a `CoGroupByKey` left join to merge transactions with coupon redemptions based on `(transaction_id, household_key)`.
+3. **Output Data:** Writes unified records into the BigQuery table `cdp_dataset.unified_customer_data`.
 
 ## Selecting the cloud region
 
-Not all the resources may be available in all the regions. The default values included in this
-directory have been tested using `us-central1` as region.
+Not all resources may be available in all regions. The default values included in this directory have been tested using `us-central1` as region.
 
-Moreover, the file `scripts/00_set_variables.sh` specifies a machine type for the Datalow workers.
-The selected machine type, `e2-standard-8`, is the one that we used for unification of data. If that
-type is not available in your region, you can check what machines are available to use with the
-following command:
+Moreover, the environment configuration specifies `e2-standard-8` machine types for the Dataflow workers. If that type is not available in your region, check available machine types using:
 
 ```sh
 gcloud compute machine-types list --zones=<ZONE A>,<ZONE B>,...
 ```
 
-See more info about selecting the right type of machine in the following link:
+See more info about selecting the right type of machine in Google Cloud Compute Engine documentation:
 * https://cloud.google.com/compute/docs/machine-resource
 
 ## How to launch the pipeline
 
-All the scripts are located in the `scripts` directory and prepared to be launched from the top 
-sources directory.
+All scripts are located in the `scripts` directory and prepared to be launched from the `pipelines/cdp` directory.
 
-In the script `scripts/00_set_variables.sh`, define the value of the project id and the region variable:
-
-```
-export PROJECT=<YOUR PROJECT ID>
-export REGION=<YOUR CLOUD REGION>
-```
-
-Leave the rest of variables untouched, although you can override them if you prefer.
-
-After you edit the script, load those variables into the environment
+### 1. Load environment variables
+The environment configuration file `scripts/00_set_environment.sh` is generated automatically when deploying the Terraform infrastructure in `terraform/cdp/`. Load those variables into your current shell:
 
 ```sh
-source scripts/00_set_variables.sh
+source scripts/00_set_environment.sh
 ```
 
-And then run the script that builds and publishes the custom Dataflow container. This container will
-contain all the required dependencies.
+### 2. Build and publish custom container
+Build and push the custom Dataflow worker container to Artifact Registry using Cloud Build:
 
 ```sh
-./scripts/01_cloudbuild_and_push_container.sh
+./scripts/01_build_and_push_container.sh
 ```
 
-This will create a Cloud Build job that can take a few minutes to complete. Once it completes, you
-can trigger the pipeline with the following:
+### 3. Launch Dataflow streaming pipeline
+Submit the streaming pipeline job to Google Cloud Dataflow:
 
 ```sh
-./scripts/02_run_dataflow_job.sh
-```
-You can also directly run below script instead of above 3 steps.
-
-```sh
-./scripts/run.sh
+./scripts/02_run_dataflow.sh
 ```
 
 ## Automated Tests
 
-Execute unit and pipeline tests with `pytest`:
+Execute unit and pipeline transform tests with `pytest`:
 
 ```bash
 pytest tests/ -v
 ```
 
-## Input data
+## Input data simulation
 
-To send data into the pipeline, you need to publish messages in the `transactions` and `coupon-redemption` topics.
-Run the python code below to publish data to these pub-sub topics. This script is reading sample data from GCS buckets and publishing it to the pub-sub topic to create real-time streaming environment for this use case. One can update the GCS bucket location as per their environment. For reference, input files are added to folder ./input_data/.
+To send test data into the pipeline, publish messages to the `cdp-transactions` and `cdp-coupon-redemption` Pub/Sub topics:
 
 ```python3
-./cdp_pipeline/generate_transaction_data.py
+python3 ./cdp_pipeline/generate_transaction_data.py
 ```
+
+This script reads sample transaction and coupon data (either from the configured GCS bucket or from local files in `./input_data/`) and publishes simulated events to the input Pub/Sub topics.
 
 ## Output data
 
-The unified data from the two pub-sub topics is moved to the bigquery table `output_dataset.unified-table`.
+The unified data from the two Pub/Sub topics is stored in the BigQuery table:
+```
+${PROJECT}.${BQ_DATASET}.${BQ_UNIFIED_TABLE}  # Default: cdp_dataset.unified_customer_data
+```
+
+Verify output records via `bq`:
+```bash
+bq query --use_legacy_sql=false "SELECT * FROM \`${PROJECT}.cdp_dataset.unified_customer_data\` LIMIT 10"
+```

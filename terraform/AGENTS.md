@@ -10,7 +10,7 @@ This directory contains Terraform infrastructure definitions for each solution g
 | :--- | :--- | :--- |
 | `ml_ai/` | Pub/Sub Topics (`messages`, `predictions`), Artifact Registry (`dataflow-containers`), GCS Bucket, Service Account | `pipelines/ml_ai_python/` |
 | `etl_integration/` | Cloud Spanner (taxis DB + Change Stream), BigQuery Dataset, Service Account | `pipelines/etl_integration_java/` |
-| `cdp/` | Pub/Sub Topics (`transactions`, `coupon-redemption`), BigQuery Dataset, VPC, Subnet | `pipelines/cdp/` |
+| `cdp/` | Pub/Sub Topics (`cdp-transactions`, `cdp-coupon-redemption`), BigQuery Dataset (`cdp_dataset`) & Table (`unified_customer_data`), Artifact Registry (`cdp-containers`), Service Account (`cdp-dataflow-sa`) | `pipelines/cdp/` |
 | `anomaly_detection/` | Pub/Sub, Bigtable, BigQuery, Artifact Registry, optional GCS, Worker and training identities; Python-managed Vertex AI workflow | `pipelines/anomaly_detection/` |
 | `marketing_intelligence/` | Pub/Sub Topics (`input`, `output`), Cloud Firestore (Native Mode), BigQuery Dataset, Artifact Registry, Service Account | `pipelines/marketing_intelligence/` |
 | `clickstream_analytics/` | Cloud Bigtable (Instance & Table), Pub/Sub Topic, BigQuery Dataset, Service Account | `pipelines/clickstream_analytics_java/` |
