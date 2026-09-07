@@ -1,3 +1,4 @@
-pytest
-pylint
-yapf
+yapf>=0.43,<1.0
+pylint>=4.0,<5.0
+pytest>=9.0,<10.0
+setuptools>=78

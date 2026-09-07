@@ -73,6 +73,14 @@ You can also directly run below script instead of above 3 steps.
 ./scripts/run.sh
 ```
 
+## Automated Tests
+
+Execute unit and pipeline tests with `pytest`:
+
+```bash
+pytest tests/ -v
+```
+
 ## Input data
 
 To send data into the pipeline, you need to publish messages in the `transactions` and `coupon-redemption` topics.

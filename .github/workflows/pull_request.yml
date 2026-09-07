@@ -363,11 +363,11 @@ jobs:
               fi
               if [ -d "tests" ]; then
                 echo "----- Running unit tests in tests/ -----"
-                pipenv run python -m unittest discover tests
+                PYTHONPATH=. pipenv run pytest tests/ -v
               fi
               if [ -d "scripts/tests" ]; then
                 echo "----- Running unit tests in scripts/tests/ -----"
-                pipenv run python -m unittest discover scripts/tests
+                PYTHONPATH=. pipenv run pytest scripts/tests/ -v
               fi
               echo "----- Verifying Python compilation syntax -----"
               pipenv run python -m compileall -q .

@@ -30,6 +30,15 @@
         "apache/beam_python3.14_sdk"
       ],
       "groupName": "apache-beam"
+    },
+    {
+      "description": "Group Python dev tools (pytest, pylint, yapf) across all pipelines",
+      "matchPackageNames": [
+        "pytest",
+        "pylint",
+        "yapf"
+      ],
+      "groupName": "python-dev-tools"
     }
   ]
 }
