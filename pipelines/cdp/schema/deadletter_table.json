@@ -1,0 +1,24 @@
+{
+  "fields": [
+    {
+      "name": "source",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "raw_payload",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "error_message",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "timestamp",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED"
+    }
+  ]
+}

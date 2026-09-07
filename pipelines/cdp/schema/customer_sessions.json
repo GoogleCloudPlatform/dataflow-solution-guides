@@ -1,0 +1,74 @@
+{
+  "fields": [
+    {
+      "name": "session_id",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "household_key",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "session_start",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "session_end",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "session_duration_sec",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "total_transactions",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "total_items_purchased",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "total_spend",
+      "type": "FLOAT",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "total_discount",
+      "type": "FLOAT",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "coupons_redeemed_count",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "distinct_products_count",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "campaigns",
+      "type": "STRING",
+      "mode": "REPEATED"
+    },
+    {
+      "name": "stores_visited",
+      "type": "STRING",
+      "mode": "REPEATED"
+    },
+    {
+      "name": "processed_timestamp",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED"
+    }
+  ]
+}

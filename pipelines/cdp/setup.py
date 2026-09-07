@@ -25,5 +25,6 @@ setup(
     version="0.1",
     description="Customer Data Platform example for the Dataflow Solution Guides",
     packages=find_packages(),
+    include_package_data=True,
     install_requires=requirements,
 )

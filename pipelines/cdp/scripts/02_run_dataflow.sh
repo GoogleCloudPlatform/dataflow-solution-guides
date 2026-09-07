@@ -34,11 +34,30 @@ elif [ -n "$NETWORK" ]; then
   SUBNET_OPT="--subnetwork=$NETWORK"
 fi
 
+INPUT_ARGS=()
+if [ -n "$TRANSACTIONS_SUBSCRIPTION" ]; then
+  INPUT_ARGS+=(--transactions_subscription="$TRANSACTIONS_SUBSCRIPTION")
+elif [ -n "$TRANSACTIONS_TOPIC" ]; then
+  INPUT_ARGS+=(--transactions_topic="$TRANSACTIONS_TOPIC")
+fi
+
+if [ -n "$COUPON_REDEMPTION_SUBSCRIPTION" ]; then
+  INPUT_ARGS+=(--coupons_redemption_subscription="$COUPON_REDEMPTION_SUBSCRIPTION")
+elif [ -n "$COUPON_REDEMPTION_TOPIC" ]; then
+  INPUT_ARGS+=(--coupons_redemption_topic="$COUPON_REDEMPTION_TOPIC")
+fi
+
+DLQ_ARGS=()
+if [ -n "$BQ_DEADLETTER_TABLE" ]; then
+  DLQ_ARGS+=(--deadletter_table="$BQ_DEADLETTER_TABLE")
+fi
+
 echo "Submitting Customer Data Platform Dataflow pipeline..."
 python3 -m main \
   --streaming \
   --runner=DataflowRunner \
   --project="$PROJECT" \
+  --project_id="$PROJECT" \
   --temp_location="${TEMP_LOCATION:-gs://$PROJECT/tmp}" \
   --region="$REGION" \
   --save_main_session \
@@ -49,9 +68,12 @@ python3 -m main \
   --max_num_workers="$MAX_DATAFLOW_WORKERS" \
   --disk_size_gb="$DISK_SIZE_GB" \
   --machine_type="$MACHINE_TYPE" \
-  --transactions_topic="$TRANSACTIONS_TOPIC" \
-  --coupons_redemption_topic="$COUPON_REDEMPTION_TOPIC" \
+  "${INPUT_ARGS[@]}" \
   --output_dataset="$BQ_DATASET" \
   --output_table="$BQ_UNIFIED_TABLE" \
-  --project_id="$PROJECT" \
+  --output_sessions_table="${BQ_SESSIONS_TABLE:-customer_sessions}" \
+  "${DLQ_ARGS[@]}" \
+  --session_gap_seconds="${SESSION_GAP_SECONDS:-900}" \
+  --allowed_lateness_seconds="${ALLOWED_LATENESS_SECONDS:-60}" \
+  --use_storage_write_api \
   --enable_streaming_engine

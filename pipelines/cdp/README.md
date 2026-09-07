@@ -1,85 +1,108 @@
-# Customer Data Platform sample pipeline (Python)
+# Customer Data Platform Streaming Pipeline (Python)
 
-This sample pipeline demonstrates how to use Dataflow to process streaming data in order to build a Customer Data Platform (CDP). It reads data from multiple streaming sources (two Pub/Sub topics: `cdp-transactions` and `cdp-coupon-redemption`), joins the records based on transaction and customer keys, and writes the unified records into a BigQuery table for downstream analytics.
+This production-grade streaming pipeline demonstrates how to use Google Cloud Dataflow and Apache Beam to implement an end-to-end Customer Data Platform (CDP). It ingests multi-stream customer interactions from Cloud Pub/Sub (`cdp-transactions` and `cdp-coupon-redemption`), reconstructs individual customer shopping sessions using dynamic **`Sessions(gap_size)` windowing**, unifies transaction baskets with redeemed coupons, aggregates **Customer 360 session profiles**, routes malformed inputs to a **Dead-Letter Queue (DLQ)**, and streams output records to **BigQuery** using the high-performance **Storage Write API**.
 
 This pipeline is part of the [Dataflow Customer Data Platform solution guide](../../use_cases/CDP.md).
 
 ## Architecture
 
-The generic architecture for the CDP pipeline looks as follows:
+The real-time sessionization architecture operates as follows:
 
-![Architecture](../imgs/cdp.png)
+1. **Multi-Stream Ingestion**: Reads streaming events from Pub/Sub subscriptions (`cdp-transactions-sub` and `cdp-coupon-redemption-sub`) with automatic topic fallback.
+2. **Safe Deserialization & Dead-Letter Routing**: `ParseRecordDoFn` validates JSON payloads and verifies mandatory keys (`household_key`, `transaction_id`). Invalid payloads or schema violations are tagged as `errors` and routed to the dead-letter sink.
+3. **Event-Time Timestamping & Sessionization**: Records are timestamped based on `event_timestamp` and windowed into dynamic session windows via `Sessions(gap_size)` (default 15 minutes). Watermark-based late data triggers and accumulating modes ensure late events are incorporated into sessions safely.
+4. **Customer 360 Session Aggregation**: `ProcessCustomerSessionDoFn` groups interactions by `household_key`, emitting:
+   - **Granular Unified Items** (main output): Each purchased item unified with its session ID, price, quantity, store, and applied coupon/discount.
+   - **Customer 360 Session Profiles** (tagged output `sessions`): Rollup of total session spend, item count, discounts, distinct products, stores visited, and marketing campaigns engaged.
+5. **Storage Write API Dual Sinks**: High-throughput direct ingestion into BigQuery tables with deadletter error routing.
 
-In this directory, you will find a specific implementation of the above architecture with the following stages:
+## BigQuery Data Schemas
 
-1. **Data ingestion:** Reads streaming records from two Pub/Sub topics (`cdp-transactions` and `cdp-coupon-redemption`).
-2. **Data preprocessing & Unification:** Windows incoming records into fixed 60-second windows and executes a `CoGroupByKey` left join to merge transactions with coupon redemptions based on `(transaction_id, household_key)`.
-3. **Output Data:** Writes unified records into the BigQuery table `cdp_dataset.unified_customer_data`.
+The pipeline outputs into three BigQuery tables defined in `schema/`:
 
-## Selecting the cloud region
+- **`cdp_dataset.unified_customer_data`** (`schema/unified_table.json`): Granular item-level purchases enriched with session ID, store, retail discount, coupon UPC, and campaign.
+- **`cdp_dataset.customer_sessions`** (`schema/customer_sessions.json`): Aggregated Customer 360 profile per shopping session (session duration, total spend, total items, coupon count, campaigns, visited stores).
+- **`cdp_dataset.cdp_deadletter`** (`schema/deadletter_table.json`): Error records, including original payload, error reason, source topic, and timestamp.
 
-Not all resources may be available in all regions. The default values included in this directory have been tested using `us-central1` as region.
+## How to Launch the Pipeline
 
-Moreover, the environment configuration specifies `e2-standard-8` machine types for the Dataflow workers. If that type is not available in your region, check available machine types using:
+All launch scripts are located in the `scripts/` directory.
 
-```sh
-gcloud compute machine-types list --zones=<ZONE A>,<ZONE B>,...
-```
+### 1. Load Environment Variables
+The environment configuration file `scripts/00_set_environment.sh` is generated automatically when deploying the Terraform infrastructure in `terraform/cdp/`:
 
-See more info about selecting the right type of machine in Google Cloud Compute Engine documentation:
-* https://cloud.google.com/compute/docs/machine-resource
-
-## How to launch the pipeline
-
-All scripts are located in the `scripts` directory and prepared to be launched from the `pipelines/cdp` directory.
-
-### 1. Load environment variables
-The environment configuration file `scripts/00_set_environment.sh` is generated automatically when deploying the Terraform infrastructure in `terraform/cdp/`. Load those variables into your current shell:
-
-```sh
+```bash
 source scripts/00_set_environment.sh
 ```
 
-### 2. Build and publish custom container
+### 2. Run Locally with DirectRunner (Optional for Development)
+To test pipeline transforms locally with DirectRunner:
+
+```bash
+./scripts/02_run_local.sh
+```
+
+### 3. Build and Publish Custom Container
 Build and push the custom Dataflow worker container to Artifact Registry using Cloud Build:
 
-```sh
+```bash
 ./scripts/01_build_and_push_container.sh
 ```
 
-### 3. Launch Dataflow streaming pipeline
+### 4. Launch Dataflow Streaming Pipeline
 Submit the streaming pipeline job to Google Cloud Dataflow:
 
-```sh
+```bash
 ./scripts/02_run_dataflow.sh
 ```
 
-## Automated Tests
+## Automated Tests & Code Quality
 
-Execute unit and pipeline transform tests with `pytest`:
+Execute unit, DoFn, and end-to-end pipeline transform tests with `pytest`:
 
 ```bash
 pytest tests/ -v
 ```
 
-## Input data simulation
+Run code formatting and PyLint checks against Google Python style:
 
-To send test data into the pipeline, publish messages to the `cdp-transactions` and `cdp-coupon-redemption` Pub/Sub topics:
-
-```python3
-python3 ./cdp_pipeline/generate_transaction_data.py
+```bash
+yapf -i -r --style yapf cdp_pipeline tests main.py
+pylint --rcfile ../pylintrc cdp_pipeline tests main.py
 ```
 
-This script reads sample transaction and coupon data (either from the configured GCS bucket or from local files in `./input_data/`) and publishes simulated events to the input Pub/Sub topics.
+## Input Data Simulation
 
-## Output data
+To publish streaming transactions and session journeys into Pub/Sub:
 
-The unified data from the two Pub/Sub topics is stored in the BigQuery table:
+```bash
+# Continuous streaming mode (1 session journey per second)
+python3 ./cdp_pipeline/generate_transaction_data.py --continuous --interval=1.0
+
+# Batch burst mode (100 sessions)
+python3 ./cdp_pipeline/generate_transaction_data.py --count=100
+
+# Continuous mode with injected error payloads to test the DLQ
+python3 ./cdp_pipeline/generate_transaction_data.py --continuous --inject_errors
 ```
-${PROJECT}.${BQ_DATASET}.${BQ_UNIFIED_TABLE}  # Default: cdp_dataset.unified_customer_data
-```
+
+## Output Data Verification
 
 Verify output records via `bq`:
+
 ```bash
-bq query --use_legacy_sql=false "SELECT * FROM \`${PROJECT}.cdp_dataset.unified_customer_data\` LIMIT 10"
+# Inspect unified basket items
+bq query --use_legacy_sql=false \
+  "SELECT session_id, household_key, transaction_id, product_id, sales_value, coupon_upc \
+   FROM \`${PROJECT}.cdp_dataset.unified_customer_data\` LIMIT 10"
+
+# Inspect Customer 360 session rollups
+bq query --use_legacy_sql=false \
+  "SELECT session_id, household_key, total_spend, total_items_purchased, coupons_redeemed_count \
+   FROM \`${PROJECT}.cdp_dataset.customer_sessions\` LIMIT 10"
+
+# Inspect Dead-Letter Queue
+bq query --use_legacy_sql=false \
+  "SELECT source, error_message, timestamp \
+   FROM \`${PROJECT}.cdp_dataset.cdp_deadletter\` LIMIT 10"
 ```

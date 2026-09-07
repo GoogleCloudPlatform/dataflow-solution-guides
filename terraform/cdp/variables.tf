@@ -81,3 +81,15 @@ variable "bq_table" {
   type        = string
   default     = "unified_customer_data"
 }
+
+variable "bq_sessions_table" {
+  description = "The BigQuery output table name for sessionized customer 360 profiles."
+  type        = string
+  default     = "customer_sessions"
+}
+
+variable "bq_deadletter_table" {
+  description = "The BigQuery dead-letter table name for malformed or rejected records."
+  type        = string
+  default     = "cdp_deadletter"
+}

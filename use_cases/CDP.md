@@ -1,7 +1,43 @@
 # Customer Data Platform
 
 At its core, a real-time CDP is a sophisticated software solution designed to unify customer data from various sources, providing a single, comprehensive view of each individual customer. The "real-time" element is crucial: it emphasizes the ability to collect, process, and analyze customer data as events occur, enabling businesses to respond instantly to changing customer behaviors and preferences.
-Real-time Customer Data Platforms represent a powerful tool for businesses seeking to create more personalized, engaging, and effective customer experiences. By centralizing customer data and enabling real-time analysis, CDPs unlock a new level of customer understanding and responsiveness, leading to better marketing outcomes and stronger customer relationships.
+
+This reference architecture demonstrates how to ingest multi-stream customer events (transactions and coupon redemptions) from **Cloud Pub/Sub**, reconstruct customer journeys and shopping sessions via Apache Beam's dynamic **`Sessions(gap_size)` windowing**, aggregate Customer 360 session metrics, isolate invalid payloads into a **Dead-Letter Queue (DLQ)**, and write high-throughput records into **BigQuery** using the **Storage Write API**.
+
+## Architecture Overview
+
+```mermaid
+flowchart LR
+    subgraph Ingestion["Ingestion"]
+        T1["Pub/Sub: cdp-transactions"]
+        T2["Pub/Sub: cdp-coupon-redemption"]
+    end
+
+    subgraph Dataflow["Google Cloud Dataflow (Apache Beam)"]
+        P1["ParseRecordDoFn\n(Safe JSON + Validation)"]
+        DLQ_BRANCH["Dead-Letter Errors\n(Side Output)"]
+        SESS["Assign Timestamps &\nSessions(gap_size) Windowing"]
+        GBK["GroupByKey\n(by household_key)"]
+        PROC["ProcessCustomerSessionDoFn"]
+        UNIF["Unified Transactions\n(with Session ID)"]
+        C360["Customer 360 Session\nProfiles (Tagged Output)"]
+    end
+
+    subgraph Storage["Google BigQuery (Storage Write API)"]
+        BQ_UNIF["unified_customer_data\n(Granular items)"]
+        BQ_SESS["customer_sessions\n(Customer 360 aggregates)"]
+        BQ_DLQ["cdp_deadletter\n(Error audit)"]
+    end
+
+    T1 --> P1
+    T2 --> P1
+    P1 -.->|errors| DLQ_BRANCH
+    P1 -->|valid| SESS
+    DLQ_BRANCH --> BQ_DLQ
+    SESS --> GBK --> PROC
+    PROC -->|main| UNIF --> BQ_UNIF
+    PROC -.->|sessions| C360 --> BQ_SESS
+```
 
 ## Documentation
 
@@ -10,24 +46,42 @@ Real-time Customer Data Platforms represent a powerful tool for businesses seeki
 ## Assets included in this repository
 
 - [Terraform code to deploy infrastructure for Customer Data Platform](../terraform/cdp/)
-- [Sample pipelines in Python for Customer Data Platform](../pipelines/cdp/)
+- [Sample streaming pipeline in Python for Customer Data Platform](../pipelines/cdp/)
 
-## Technical benefits
+## Key Architectural Capabilities
 
-Dataflow provides enormous advantages as a platform for your Customer Data Platform use
-cases:
+- **Dynamic Event-Time Sessionization (`window.Sessions`)**:
+  - Reconstructs customer shopping journeys by dynamically grouping events that occur within an inactivity gap (default 15 minutes).
+  - Handles late-arriving data safely with watermark-based accumulating triggers and allowed lateness windows.
+- **Customer 360 Session Profile Aggregation**:
+  - Automatically calculates session metrics: total spend, basket size, coupons redeemed, distinct products purchased, stores visited, and campaigns engaged.
+- **Production Dead-Letter Queue (DLQ)**:
+  - Diverts unparseable payloads or missing key violations to a dedicated BigQuery dead-letter table without halting pipeline execution.
+- **High-Throughput Storage Write API**:
+  - Streams granular transaction items and session summaries into BigQuery using `STORAGE_WRITE_API` for immediate analytical availability.
+- **Zero Public IP Security**:
+  - Fully compliant with enterprise networking guardrails, enforcing `--no_use_public_ip` and dedicated worker service accounts.
 
-- **Real-Time Data Ingestion and Processing**: Dataflow enables the seamless and efficient movement of customer data from various sources into the CDP in real-time. This ensures that the CDP is always working with the most up-to-date information, allowing for timely insights and actions.
+## Quickstart & Verification
 
-- **Enhanced Data Transformation and Enrichment**: Dataflow pipelines can perform complex transformations on incoming data, ensuring it is clean, standardized, and formatted correctly for the CDP.
-  Additionally, dataflow can enrich customer data with additional context or attributes from external sources, leading to more complete and valuable customer profiles.
-
-- **Scalability and Flexibility**: Dataflow solutions are designed to handle large volumes of data and can scale effortlessly to accommodate growing data needs. They offer flexibility in terms of data sources, processing logic, and output destinations, making them adaptable to evolving business requirements.
-
-- **Automation and Efficiency**: Dataflow pipelines can automate data ingestion, transformation, and delivery processes, reducing manual effort and minimizing errors. This streamlines data management, freeing up resources for more strategic tasks.
-
-- **Improved Data Quality and Governance**: Dataflow enables data validation and cleansing during the ingestion process, ensuring data accuracy and consistency. Data lineage and audit capabilities within dataflow tools help track data transformations and maintain data governance standards.
-
-- **Actionable Insights and Personalization**: By feeding clean and enriched data into the CDP in real-time, dataflow enables the CDP to generate more accurate and timely insights. These insights can be used to trigger personalized marketing campaigns, recommendations, and customer interactions, leading to improved engagement and conversions.
-
-- **Omnichannel Customer Experiences**: Dataflow supports the seamless integration of customer data across various touchpoints and channels. This allows the CDP to orchestrate consistent and personalized customer experiences across the entire customer journey.
+1. **Provision Infrastructure**:
+   ```bash
+   cd terraform/cdp
+   terraform init && terraform apply
+   ```
+2. **Launch Streaming Pipeline**:
+   ```bash
+   cd ../../pipelines/cdp
+   source scripts/00_set_environment.sh
+   ./scripts/01_build_and_push_container.sh
+   ./scripts/02_run_dataflow.sh
+   ```
+3. **Generate Streaming Events**:
+   ```bash
+   python3 ./cdp_pipeline/generate_transaction_data.py --continuous --interval=1.0
+   ```
+4. **Inspect Unified Results & Customer 360 Profiles in BigQuery**:
+   ```bash
+   bq query --use_legacy_sql=false 'SELECT session_id, household_key, product_id, sales_value, coupon_upc FROM cdp_dataset.unified_customer_data LIMIT 10'
+   bq query --use_legacy_sql=false 'SELECT session_id, household_key, total_spend, total_transactions, coupons_redeemed_count FROM cdp_dataset.customer_sessions LIMIT 10'
+   ```
