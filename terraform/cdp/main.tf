@@ -149,7 +149,7 @@ module "coupon_redemption_topic" {
 }
 
 // BigQuery dataset for unified CDP data
-module "output_dataset" {
+module "cdp_dataset" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v58.0.0"
   project_id = var.project_id
   id         = local.bigquery_dataset
@@ -170,9 +170,9 @@ module "output_dataset" {
 }
 
 // BigQuery destination table for unified customer transactions and coupons
-resource "google_bigquery_table" "unified_data" {
+resource "google_bigquery_table" "unified_customer_data" {
   project             = var.project_id
-  dataset_id          = module.output_dataset.dataset_id
+  dataset_id          = module.cdp_dataset.dataset_id
   table_id            = local.bigquery_table
   deletion_protection = !var.destroy_all_resources
 
@@ -185,7 +185,7 @@ resource "google_bigquery_table" "unified_data" {
   ])
 
   depends_on = [
-    module.output_dataset
+    module.cdp_dataset
   ]
 }
 
@@ -242,8 +242,8 @@ export MAX_DATAFLOW_WORKERS=${local.max_dataflow_workers}
 export DISK_SIZE_GB=${local.worker_disk_size_gb}
 export MACHINE_TYPE=${local.machine_type}
 
-export BQ_DATASET=${module.output_dataset.dataset_id}
-export BQ_UNIFIED_TABLE=${google_bigquery_table.unified_data.table_id}
+export BQ_DATASET=${module.cdp_dataset.dataset_id}
+export BQ_UNIFIED_TABLE=${google_bigquery_table.unified_customer_data.table_id}
 export GCS_BUCKET=gs://${local.bucket_name}/assets/dataflow-solution-guide-cdp
 FILE
 }
