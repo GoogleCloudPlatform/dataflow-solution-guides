@@ -20,8 +20,16 @@ import json
 import logging
 import os
 import random
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
 from google.cloud import pubsub_v1
+
+from cdp_pipeline.models import (
+    CouponRedemption,
+    CustomerInteractionEvent,
+    EventType,
+    TransactionItem,
+)
 
 
 def get_topic_path(publisher: pubsub_v1.PublisherClient, project: str,
@@ -36,7 +44,7 @@ def generate_synthetic_session_events(
     household_key: str,
     base_tx_id: int,
     session_offset_sec: int = 0,
-) -> tuple[List[dict], List[dict]]:
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
   """Generates realistic transaction items and coupons for a customer shopping session."""
   tx_id = str(base_tx_id)
   event_time = datetime.now(
@@ -69,37 +77,64 @@ def generate_synthetic_session_events(
 
   transactions = []
   for p in selected:
+    tx_item = TransactionItem(
+        product_id=p["id"],
+        quantity=p["qty"],
+        sales_value=round(p["price"] * p["qty"], 2),
+        store_id=store_id,
+        retail_disc=0.0,
+        coupon_disc=p["disc"],
+        coupon_match_disc=0.0,
+        day=421,
+        week_no=8,
+        trans_time="1456",
+    )
+    tx_event = CustomerInteractionEvent(
+        event_type=EventType.TRANSACTION.value,
+        household_key=household_key,
+        transaction_id=tx_id,
+        event_timestamp=now_iso,
+        transaction=tx_item,
+        coupon=None,
+    )
     transactions.append({
-        "household_key": household_key,
-        "transaction_id": tx_id,
-        "product_id": p["id"],
-        "quantity": p["qty"],
-        "sales_value": round(p["price"] * p["qty"], 2),
-        "store_id": store_id,
-        "retail_disc": 0.0,
-        "coupon_disc": p["disc"],
-        "coupon_match_disc": 0.0,
-        "day": 421,
-        "week_no": 8,
-        "trans_time": "1456",
-        "event_timestamp": now_iso,
+        "household_key": tx_event.household_key,
+        "transaction_id": tx_event.transaction_id,
+        "product_id": tx_item.product_id,
+        "quantity": tx_item.quantity,
+        "sales_value": tx_item.sales_value,
+        "store_id": tx_item.store_id,
+        "retail_disc": tx_item.retail_disc,
+        "coupon_disc": tx_item.coupon_disc,
+        "coupon_match_disc": tx_item.coupon_match_disc,
+        "day": tx_item.day,
+        "week_no": tx_item.week_no,
+        "trans_time": tx_item.trans_time,
+        "event_timestamp": tx_event.event_timestamp,
     })
 
   coupons = []
   if random.random() < 0.7:  # 70% chance of coupon redemption
+    coupon_item = CouponRedemption(
+        coupon_upc=str(random.choice([10000085364, 51700010076, 10000089277])),
+        campaign=str(random.choice([2200, 18, 500])),
+        day=421,
+    )
+    cp_event = CustomerInteractionEvent(
+        event_type=EventType.COUPON.value,
+        household_key=household_key,
+        transaction_id=tx_id,
+        event_timestamp=now_iso,
+        transaction=None,
+        coupon=coupon_item,
+    )
     coupons.append({
-        "household_key":
-            household_key,
-        "transaction_id":
-            tx_id,
-        "coupon_upc":
-            str(random.choice([10000085364, 51700010076, 10000089277])),
-        "campaign":
-            str(random.choice([2200, 18, 500])),
-        "day":
-            421,
-        "event_timestamp":
-            now_iso,
+        "household_key": cp_event.household_key,
+        "transaction_id": cp_event.transaction_id,
+        "coupon_upc": coupon_item.coupon_upc,
+        "campaign": coupon_item.campaign,
+        "day": coupon_item.day,
+        "event_timestamp": cp_event.event_timestamp,
     })
 
   return transactions, coupons

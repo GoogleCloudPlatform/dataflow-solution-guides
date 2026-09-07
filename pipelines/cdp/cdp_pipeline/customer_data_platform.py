@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 import json
 import logging
 import os
-from typing import Any, Dict, Generator, Iterable, Optional, Tuple, Union
+from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 import apache_beam as beam
 from apache_beam import Pipeline, PCollection
@@ -29,6 +29,14 @@ from apache_beam.transforms.trigger import AccumulationMode, AfterCount, AfterWa
 from apache_beam.transforms.window import Sessions, TimestampedValue
 from apache_beam.utils.timestamp import Duration
 
+from cdp_pipeline.models import (
+    CouponRedemption,
+    CustomerInteractionEvent,
+    CustomerSessionProfile,
+    EventType,
+    TransactionItem,
+    UnifiedTransactionRecord,
+)
 from cdp_pipeline.options import MyPipelineOptions
 
 TAG_DEADLETTER = "errors"
@@ -251,67 +259,34 @@ def load_output_schema(
 class ParseRecordDoFn(beam.DoFn):
   """Safely decodes and validates incoming JSON messages with Dead-Letter side outputs."""
 
-  def __init__(self, record_type: str):
+  def __init__(self, record_type: Union[EventType, str]):
     super().__init__()
-    self.record_type = record_type
+    if isinstance(record_type, str):
+      self.record_type = EventType(record_type)
+    else:
+      self.record_type = record_type
     self.processed_counter = None
     self.error_counter = None
 
   def setup(self):
-    self.processed_counter = Metrics.counter(self.__class__,
-                                             f"processed_{self.record_type}")
+    self.processed_counter = Metrics.counter(
+        self.__class__, f"processed_{self.record_type.value}")
     self.error_counter = Metrics.counter(self.__class__,
-                                         f"error_{self.record_type}")
+                                         f"error_{self.record_type.value}")
 
-  def process(self, element: Union[bytes, str, Dict[str, Any]]):
-    try:
-      if isinstance(element, bytes):
-        payload_str = element.decode("utf-8")
-        data = json.loads(payload_str)
-      elif isinstance(element, str):
-        payload_str = element
-        data = json.loads(payload_str)
-      elif isinstance(element, dict):
-        payload_str = json.dumps(element)
-        data = dict(element)
-      else:
-        raise ValueError(f"Unsupported record type: {type(element)}")
-    except Exception as exc:  # pylint: disable=broad-exception-caught
+  def process(
+      self,
+      element: Union[bytes, str, Dict[str, Any]],
+  ) -> Generator[Any, None, None]:
+    event, deadletter = CustomerInteractionEvent.from_raw_payload(
+        element, self.record_type)
+    if deadletter is not None:
       self.error_counter.inc()
-      yield beam.pvalue.TaggedOutput(
-          TAG_DEADLETTER,
-          {
-              "source": self.record_type,
-              "raw_payload": str(element)[:2000],
-              "error_message": f"Malformed payload: {exc}",
-              "timestamp": datetime.now(timezone.utc).isoformat(),
-          },
-      )
+      yield beam.pvalue.TaggedOutput(TAG_DEADLETTER, deadletter.to_dict())
       return
 
-    household_key = str(data.get("household_key", "")).strip()
-    transaction_id = str(data.get("transaction_id", "")).strip()
-
-    if not household_key or not transaction_id:
-      self.error_counter.inc()
-      yield beam.pvalue.TaggedOutput(
-          TAG_DEADLETTER,
-          {
-              "source":
-                  self.record_type,
-              "raw_payload":
-                  payload_str[:2000],
-              "error_message":
-                  "Missing required household_key or transaction_id",
-              "timestamp":
-                  datetime.now(timezone.utc).isoformat(),
-          },
-      )
-      return
-
-    data["_record_type"] = self.record_type
     self.processed_counter.inc()
-    yield (household_key, data)
+    yield (event.household_key, event)
 
 
 class AssignEventTimestampDoFn(beam.DoFn):
@@ -319,19 +294,16 @@ class AssignEventTimestampDoFn(beam.DoFn):
 
   def process(
       self,
-      element: Tuple[str, Dict[str, Any]],
+      element: Tuple[str, CustomerInteractionEvent],
       timestamp=beam.DoFn.TimestampParam,
   ) -> Generator[Any, None, None]:
-    _, data = element
-    event_ts_str = data.get("event_timestamp")
+    _, event = element
+    event_ts_str = event.event_timestamp
     ts_seconds = None
     if event_ts_str:
       try:
-        if isinstance(event_ts_str, str):
-          dt = datetime.fromisoformat(event_ts_str.replace("Z", "+00:00"))
-          ts_seconds = dt.timestamp()
-        elif isinstance(event_ts_str, (int, float)):
-          ts_seconds = float(event_ts_str)
+        dt = datetime.fromisoformat(event_ts_str.replace("Z", "+00:00"))
+        ts_seconds = dt.timestamp()
       except (ValueError, TypeError):
         ts_seconds = None
 
@@ -368,12 +340,12 @@ class ProcessCustomerSessionDoFn(beam.DoFn):
 
   def process(
       self,
-      element: Tuple[str, Iterable[Dict[str, Any]]],
+      element: Tuple[str, Iterable[CustomerInteractionEvent]],
       window=beam.DoFn.WindowParam,
-  ):
-    household_key, items_iter = element
-    items = list(items_iter)
-    if not items:
+  ) -> Generator[Any, None, None]:
+    household_key, events_iter = element
+    events = list(events_iter)
+    if not events:
       return
 
     try:
@@ -399,22 +371,16 @@ class ProcessCustomerSessionDoFn(beam.DoFn):
     session_id = f"sess_{household_key}_{start_sec}"
     processed_ts = datetime.now(timezone.utc).isoformat()
 
-    transactions: list[Dict[str, Any]] = []
-    coupons_by_tx: Dict[str, list[Dict[str,
-                                       Any]]] = collections.defaultdict(list)
+    transactions: List[Tuple[str, TransactionItem, Optional[str]]] = []
+    coupons_by_tx: Dict[str,
+                        List[CouponRedemption]] = collections.defaultdict(list)
 
-    for item in items:
-      rec_type = item.get("_record_type")
-      if rec_type == "coupon":
-        tx_id = str(item.get("transaction_id", ""))
-        coupons_by_tx[tx_id].append(item)
-      elif rec_type == "transaction":
-        transactions.append(item)
-      elif "coupon_upc" in item and "product_id" not in item:
-        tx_id = str(item.get("transaction_id", ""))
-        coupons_by_tx[tx_id].append(item)
-      else:
-        transactions.append(item)
+    for ev in events:
+      if ev.transaction is not None:
+        transactions.append(
+            (ev.transaction_id, ev.transaction, ev.event_timestamp))
+      elif ev.coupon is not None:
+        coupons_by_tx[ev.transaction_id].append(ev.coupon)
 
     distinct_tx_ids = set()
     distinct_products = set()
@@ -428,83 +394,69 @@ class ProcessCustomerSessionDoFn(beam.DoFn):
     for coupon_list in coupons_by_tx.values():
       coupons_redeemed_count += len(coupon_list)
       for c in coupon_list:
-        camp = c.get("campaign")
-        if camp:
-          campaigns.add(str(camp))
+        if c.campaign:
+          campaigns.add(c.campaign)
 
-    for tx in transactions:
-      tx_id = str(tx.get("transaction_id", ""))
+    for tx_id, tx, event_ts in transactions:
       distinct_tx_ids.add(tx_id)
-      prod_id = str(tx.get("product_id", "")).strip()
-      if prod_id:
-        distinct_products.add(prod_id)
-      store_val = tx.get("store_id")
-      if store_val:
-        stores.add(str(store_val))
+      if tx.product_id:
+        distinct_products.add(tx.product_id)
+      if tx.store_id:
+        stores.add(tx.store_id)
 
-      sales = float(tx.get("sales_value", 0.0) or 0.0)
-      total_spend += sales
-      qty = int(float(tx.get("quantity", 1) or 1))
-      total_items += qty
-      ret_disc = float(tx.get("retail_disc", 0.0) or 0.0)
-      coup_disc = float(
-          tx.get("coupon_disc", tx.get("coupon_discount", 0.0)) or 0.0)
-      total_discount += (ret_disc + coup_disc)
+      total_spend += tx.sales_value
+      total_items += tx.quantity
+      total_discount += (tx.retail_disc + tx.coupon_disc)
 
       matching_coupons = coupons_by_tx.get(tx_id, [])
       if not matching_coupons:
-        coupon_iter = [None]
+        coupon_iter: List[Optional[CouponRedemption]] = [None]
       else:
         coupon_iter = matching_coupons
         self.matched_coupons_counter.inc(len(matching_coupons))
 
       for coup in coupon_iter:
-        coupon_upc = None
-        campaign = None
-        if isinstance(coup, dict):
-          coupon_upc = str(coup.get("coupon_upc", "")) or None
-          campaign = str(coup.get("campaign", "")) or None
+        coupon_upc = coup.coupon_upc if coup else None
+        campaign = coup.campaign if coup else None
 
-        day_val = tx.get("day")
-        week_val = tx.get("week_no")
-        unified_record = {
-            "session_id": session_id,
-            "transaction_id": tx_id,
-            "household_key": household_key,
-            "product_id": prod_id or None,
-            "quantity": qty,
-            "sales_value": sales,
-            "store_id": str(store_val) if store_val else None,
-            "retail_disc": ret_disc,
-            "coupon_discount": coup_disc,
-            "coupon_match_disc": float(tx.get("coupon_match_disc", 0.0) or 0.0),
-            "coupon_upc": coupon_upc,
-            "campaign": campaign,
-            "day": int(day_val) if day_val is not None else None,
-            "trans_time": str(tx.get("trans_time", "")) or None,
-            "week_no": int(week_val) if week_val is not None else None,
-            "event_timestamp": tx.get("event_timestamp") or processed_ts,
-            "processed_timestamp": processed_ts,
-        }
+        unified_record = UnifiedTransactionRecord(
+            session_id=session_id,
+            transaction_id=tx_id,
+            household_key=household_key,
+            product_id=tx.product_id,
+            quantity=tx.quantity,
+            sales_value=tx.sales_value,
+            store_id=tx.store_id,
+            retail_disc=tx.retail_disc,
+            coupon_discount=tx.coupon_disc,
+            coupon_match_disc=tx.coupon_match_disc,
+            coupon_upc=coupon_upc,
+            campaign=campaign,
+            day=tx.day,
+            trans_time=tx.trans_time,
+            week_no=tx.week_no,
+            event_timestamp=event_ts or processed_ts,
+            processed_timestamp=processed_ts,
+        )
         yield unified_record
         self.unified_items_counter.inc()
 
-    session_profile = {
-        "session_id": session_id,
-        "household_key": household_key,
-        "session_start": session_start_iso,
-        "session_end": session_end_iso,
-        "session_duration_sec": session_duration_sec,
-        "total_transactions": len(distinct_tx_ids),
-        "total_items_purchased": total_items,
-        "total_spend": round(total_spend, 2),
-        "total_discount": round(total_discount, 2),
-        "coupons_redeemed_count": coupons_redeemed_count,
-        "distinct_products_count": len(distinct_products),
-        "campaigns": sorted(list(campaigns)),
-        "stores_visited": sorted(list(stores)),
-        "processed_timestamp": processed_ts,
-    }
+    session_profile = CustomerSessionProfile(
+        session_id=session_id,
+        household_key=household_key,
+        session_start=session_start_iso,
+        session_end=session_end_iso,
+        session_duration_sec=session_duration_sec,
+        total_transactions=len(distinct_tx_ids),
+        total_items_purchased=total_items,
+        total_spend=round(total_spend, 2),
+        total_discount=round(total_discount, 2),
+        coupons_redeemed_count=coupons_redeemed_count,
+        distinct_products_count=len(distinct_products),
+        campaigns=sorted(list(campaigns)),
+        stores_visited=sorted(list(stores)),
+        processed_timestamp=processed_ts,
+    )
     yield beam.pvalue.TaggedOutput(TAG_SESSIONS, session_profile)
     self.sessions_counter.inc()
 
@@ -590,13 +542,14 @@ def build_pipeline(
   # 3. Parse and extract customer key with dead-letter side outputs
   parsed_tx_results = (
       raw_transactions
-      | "Parse Transactions" >> beam.ParDo(ParseRecordDoFn(
-          "transaction")).with_outputs(TAG_DEADLETTER, main="valid"))
+      | "Parse Transactions" >> beam.ParDo(
+          ParseRecordDoFn(EventType.TRANSACTION)).with_outputs(
+              TAG_DEADLETTER, main="valid"))
 
   parsed_coupon_results = (
       raw_coupons
-      | "Parse Coupons" >> beam.ParDo(ParseRecordDoFn("coupon")).with_outputs(
-          TAG_DEADLETTER, main="valid"))
+      | "Parse Coupons" >> beam.ParDo(ParseRecordDoFn(
+          EventType.COUPON)).with_outputs(TAG_DEADLETTER, main="valid"))
 
   valid_transactions = parsed_tx_results.valid
   valid_coupons = parsed_coupon_results.valid
@@ -664,22 +617,30 @@ def build_pipeline(
     )
 
     unified_table_spec = f"{project_id}:{dataset}.{unified_table}"
-    unified_records | "Write Unified to BigQuery" >> WriteToBigQuery(
-        table=unified_table_spec,
-        schema=unified_schema,
-        create_disposition=BigQueryDisposition.CREATE_IF_NEEDED,
-        write_disposition=BigQueryDisposition.WRITE_APPEND,
-        method=write_method,
-    )
+    (unified_records
+     | "Unified to Dict" >> beam.Map(lambda r: r.to_dict())
+     | "Write Unified to BigQuery" >> WriteToBigQuery(
+         table=unified_table_spec,
+         schema=unified_schema,
+         create_disposition=BigQueryDisposition.CREATE_IF_NEEDED,
+         write_disposition=BigQueryDisposition.WRITE_APPEND,
+         method=write_method,
+         with_auto_sharding=True if use_storage_api else False,
+         triggering_frequency=5 if use_storage_api else None,
+     ))
 
     sessions_table_spec = f"{project_id}:{dataset}.{sessions_table}"
-    customer_sessions | "Write Sessions to BigQuery" >> WriteToBigQuery(
-        table=sessions_table_spec,
-        schema=sessions_schema,
-        create_disposition=BigQueryDisposition.CREATE_IF_NEEDED,
-        write_disposition=BigQueryDisposition.WRITE_APPEND,
-        method=write_method,
-    )
+    (customer_sessions
+     | "Sessions to Dict" >> beam.Map(lambda r: r.to_dict())
+     | "Write Sessions to BigQuery" >> WriteToBigQuery(
+         table=sessions_table_spec,
+         schema=sessions_schema,
+         create_disposition=BigQueryDisposition.CREATE_IF_NEEDED,
+         write_disposition=BigQueryDisposition.WRITE_APPEND,
+         method=write_method,
+         with_auto_sharding=True if use_storage_api else False,
+         triggering_frequency=5 if use_storage_api else None,
+     ))
 
     if deadletter_table:
       deadletter_schema = load_output_schema(
@@ -688,13 +649,16 @@ def build_pipeline(
           DEFAULT_DEADLETTER_SCHEMA,
       )
       dlq_table_spec = f"{project_id}:{dataset}.{deadletter_table}"
-      all_deadletters | "Write Deadletter to BigQuery" >> WriteToBigQuery(
-          table=dlq_table_spec,
-          schema=deadletter_schema,
-          create_disposition=BigQueryDisposition.CREATE_IF_NEEDED,
-          write_disposition=BigQueryDisposition.WRITE_APPEND,
-          method=write_method,
-      )
+      (all_deadletters
+       | "Write Deadletter to BigQuery" >> WriteToBigQuery(
+           table=dlq_table_spec,
+           schema=deadletter_schema,
+           create_disposition=BigQueryDisposition.CREATE_IF_NEEDED,
+           write_disposition=BigQueryDisposition.WRITE_APPEND,
+           method=write_method,
+           with_auto_sharding=True if use_storage_api else False,
+           triggering_frequency=5 if use_storage_api else None,
+       ))
 
   return unified_records, customer_sessions, all_deadletters
 
