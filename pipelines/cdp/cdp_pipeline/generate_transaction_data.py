@@ -33,7 +33,8 @@ async def publish_coupons_to_pubsub(project_id: str | None = None,
   coupons_topic_name = coupons_topic or os.environ.get(
       "COUPON_REDEMPTION_TOPIC", "coupon_redemption")
   gcs_bucket_env = os.environ.get("GCS_BUCKET", "")
-  bucket_name = bucket_name or (gcs_bucket_env.replace("gs://", "").split("/")[0] if gcs_bucket_env else None)
+  if not bucket_name and gcs_bucket_env:
+    bucket_name = gcs_bucket_env.replace("gs://", "").split("/")[0]
 
   sample_transactions_id = [
       "27601281299", "27757099033", "28235291311", "27021203242",
@@ -48,13 +49,18 @@ async def publish_coupons_to_pubsub(project_id: str | None = None,
       os.path.dirname(current_dir), "input_data", "coupon_redempt.csv")
 
   if bucket_name:
-    trans_gcs = f"gs://{bucket_name}/assets/dataflow-solution-guide-cdp/input_data/transaction_data.csv"
-    coupons_gcs = f"gs://{bucket_name}/assets/dataflow-solution-guide-cdp/input_data/coupon_redempt.csv"
+    gcs_prefix = (
+        f"gs://{bucket_name}/assets/dataflow-solution-guide-cdp/input_data"
+    )
+    trans_gcs = f"{gcs_prefix}/transaction_data.csv"
+    coupons_gcs = f"{gcs_prefix}/coupon_redempt.csv"
     try:
       transactions_df = pd.read_csv(trans_gcs, dtype=str)
       coupons_df = pd.read_csv(coupons_gcs, dtype=str)
-    except Exception:
-      print(f"Falling back to local CSV files from {local_trans_path} and {local_coupons_path}")
+    except Exception:  # pylint: disable=broad-exception-caught
+      print(
+          f"Falling back to local CSV files from {local_trans_path} and "
+          f"{local_coupons_path}")
       transactions_df = pd.read_csv(local_trans_path, dtype=str)
       coupons_df = pd.read_csv(local_coupons_path, dtype=str)
   else:
