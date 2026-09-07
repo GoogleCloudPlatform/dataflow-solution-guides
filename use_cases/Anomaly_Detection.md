@@ -441,7 +441,9 @@ during workflow and model cleanup.
 
 ```bash
 # In pipelines/anomaly_detection with Python 3.14 activated:
-python -m unittest discover -s tests -v
+pytest tests/ -v
+pytest training/tests/ -v
+pytest serving/tests/ -v
 yapf --diff --recursive --style yapf anomaly_detection_pipeline tests training serving main.py setup.py
 pylint --rcfile ../pylintrc -j 1 anomaly_detection_pipeline tests training serving main.py setup.py
 python setup.py sdist

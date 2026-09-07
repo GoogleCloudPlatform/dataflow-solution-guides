@@ -72,6 +72,14 @@ Launch the pipeline to Dataflow:
 ./scripts/02_run_dataflow.sh
 ```
 
+## Automated Tests
+
+Execute unit and transform tests with `pytest`:
+
+```bash
+pytest tests/ -v
+```
+
 ## Input data
 
 To send data into the pipeline, publish messages to the `messages` Pub/Sub topic:

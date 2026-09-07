@@ -79,12 +79,17 @@ Every Terraform module in `terraform/<use_case>/` contains a `resource "local_fi
    ```bash
    pylint --rcfile ../pylintrc .
    ```
-3. **Packaging**:
+3. **Unit Testing**:
+   Execute unit and transform tests with `pytest`:
+   ```bash
+   pytest tests/ -v
+   ```
+4. **Packaging**:
    Validate package builds via source distribution:
    ```bash
    python setup.py sdist
    ```
-4. **Local Execution**:
+5. **Local Execution**:
    Test pipeline transforms locally with `DirectRunner` before submitting to Dataflow:
    ```bash
    python main.py --runner=DirectRunner [options...]

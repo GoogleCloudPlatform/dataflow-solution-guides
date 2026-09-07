@@ -92,9 +92,9 @@ replicas and Dataflow continue to cost money while idle.
 ## Verification
 
 ```bash
-python -m unittest discover -s tests -v
-python -m unittest discover -s training/tests -v
-python -m unittest discover -s serving/tests -v
+pytest tests/ -v
+pytest training/tests/ -v
+pytest serving/tests/ -v
 yapf --diff --recursive --style yapf anomaly_detection_pipeline tests training serving main.py setup.py
 pylint --rcfile ../pylintrc -j 1 anomaly_detection_pipeline tests training serving main.py setup.py
 python setup.py sdist

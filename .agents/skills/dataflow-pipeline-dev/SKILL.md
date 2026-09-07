@@ -43,13 +43,19 @@ pylint --rcfile ../pylintrc .
 ```
 Fix all lint errors (e.g. docstrings, naming conventions, import ordering).
 
-### Step 4: Package Validation
+### Step 4: Unit Testing with Pytest
+Run unit tests across test suites with `pytest`:
+```bash
+pytest tests/ -v
+```
+
+### Step 5: Package Validation
 Verify that the `setup.py` packages all sub-modules correctly for Dataflow workers:
 ```bash
 python setup.py sdist
 ```
 
-### Step 5: Local Execution with DirectRunner
+### Step 6: Local Execution with DirectRunner
 Test pipeline execution locally before submitting to the cloud:
 ```bash
 python main.py \
@@ -58,7 +64,7 @@ python main.py \
   --temp_location=/tmp/dataflow-temp
 ```
 
-### Step 6: Custom SDK Container Build (if required)
+### Step 7: Custom SDK Container Build (if required)
 For pipelines using GPU acceleration, custom C/Python libraries, or specialized base images (e.g. `ml_ai_python`, `anomaly_detection`, `cdp`, `iot_analytics`, `marketing_intelligence`):
 - **SDK Version Parity**: Verify that the `apache/beam_python3.13_sdk:<version>` tag in `Dockerfile` matches `requirements.txt` (`apache-beam[gcp]==<version>`).
 ```bash

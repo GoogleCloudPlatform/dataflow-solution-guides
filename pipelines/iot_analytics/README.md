@@ -65,7 +65,7 @@ You can run and test the entire pipeline locally using `DirectRunner` before sub
 
 3. **Run Unit Tests**:
    ```bash
-   pytest tests/
+   pytest tests/ -v
    ```
 
 4. **Run Locally with DirectRunner**:
