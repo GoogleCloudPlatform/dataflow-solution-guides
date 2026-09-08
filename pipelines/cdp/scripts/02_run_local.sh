@@ -29,7 +29,7 @@ cd "$PIPELINE_DIR"
 
 python3 -m main \
   --runner=DirectRunner \
-  --project_id="${PROJECT:-local-test-project}" \
+  --project="${PROJECT:-local-test-project}" \
   --temp_location=/tmp/dataflow-temp \
   --transactions_topic="${TRANSACTIONS_TOPIC:-projects/local-test-project/topics/cdp-transactions}" \
   --coupons_redemption_topic="${COUPON_REDEMPTION_TOPIC:-projects/local-test-project/topics/cdp-coupon-redemption}" \

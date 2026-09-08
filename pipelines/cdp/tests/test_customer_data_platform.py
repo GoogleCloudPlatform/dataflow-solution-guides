@@ -17,25 +17,13 @@ import json
 import unittest
 
 import apache_beam as beam
+from apache_beam.options.pipeline_options import GoogleCloudOptions
 from apache_beam.testing.test_pipeline import TestPipeline
 from apache_beam.testing.util import assert_that, equal_to
 from apache_beam.transforms.window import IntervalWindow
 from apache_beam.typehints.schemas import named_tuple_to_schema
 from apache_beam.utils.timestamp import Timestamp
 
-from cdp_pipeline.customer_data_platform import (
-    DEFAULT_DEADLETTER_SCHEMA,
-    DEFAULT_SESSIONS_SCHEMA,
-    TAG_DEADLETTER,
-    TAG_SESSIONS,
-    ParseRecordDoFn,
-    ProcessCustomerSessionDoFn,
-    build_pipeline,
-    left_join,
-    load_output_schema,
-    _unify_data,
-)
-from cdp_pipeline import customer_data_platform as facade
 from cdp_pipeline.models import (
     CouponRedemption,
     CustomerInteractionEvent,
@@ -46,6 +34,20 @@ from cdp_pipeline.models import (
     UnifiedTransactionRecord,
 )
 from cdp_pipeline.options import MyPipelineOptions
+from cdp_pipeline.parsing import (
+    AssignEventTimestampDoFn,
+    ParseRecordDoFn,
+    TAG_DEADLETTER,
+)
+from cdp_pipeline.pipeline import (
+    build_pipeline,
+    create_and_run_pipeline,
+)
+from cdp_pipeline.schemas import load_output_schema
+from cdp_pipeline.sessionization import (
+    ProcessCustomerSessionDoFn,
+    TAG_SESSIONS,
+)
 
 # Prevent pytest from treating Apache Beam's TestPipeline as a test case
 TestPipeline.__test__ = False
@@ -53,59 +55,13 @@ TestPipeline.__test__ = False
 
 class CustomerDataPlatformTest(unittest.TestCase):
 
-  def test_left_join_with_matching_coupons(self):
-    key = ("27601281299", "1")
-    transactions = [{
-        "transaction_id": "27601281299",
-        "household_key": "1",
-        "product_id": "941769",
-        "coupon_disc": "0.50",
-    }]
-    coupons = [{
-        "transaction_id": "27601281299",
-        "household_key": "1",
-        "coupon_upc": "10000085364",
-        "campaign": "2200",
-    }]
-
-    results = list(left_join((key, (transactions, coupons))))
-    self.assertEqual(len(results), 1)
-    self.assertEqual(
-        results[0],
-        {
-            "transaction_id": "27601281299",
-            "household_key": "1",
-            "coupon_upc": "10000085364",
-            "product_id": "941769",
-            "coupon_discount": "0.50",
-        },
-    )
-
-  def test_left_join_without_matching_coupons(self):
-    key = ("27601281299", "1")
-    transactions = [{
-        "transaction_id": "27601281299",
-        "household_key": "1",
-        "product_id": "941769",
-        "coupon_disc": "0",
-    }]
-    coupons = []
-
-    results = list(left_join((key, (transactions, coupons))))
-    self.assertEqual(len(results), 1)
-    self.assertEqual(
-        results[0],
-        {
-            "transaction_id": "27601281299",
-            "household_key": "1",
-            "coupon_upc": None,
-            "product_id": "941769",
-            "coupon_discount": "0",
-        },
-    )
+  def test_pipeline_options_project(self):
+    options = MyPipelineOptions(["--project=my-test-project"])
+    gcp_options = options.view_as(GoogleCloudOptions)
+    self.assertEqual(gcp_options.project, "my-test-project")
 
   def test_load_output_schema_default(self):
-    schema = load_output_schema(None)
+    schema = load_output_schema()
     self.assertIn("fields", schema)
     field_names = [field["name"] for field in schema["fields"]]
     self.assertIn("transaction_id", field_names)
@@ -117,20 +73,21 @@ class CustomerDataPlatformTest(unittest.TestCase):
     self.assertIn("campaign", field_names)
 
   def test_load_schemas_helpers(self):
-    sessions_schema = load_output_schema(None, "customer_sessions.json",
-                                         DEFAULT_SESSIONS_SCHEMA)
+    sessions_schema = load_output_schema(None, "customer_sessions.json")
     self.assertIn("fields", sessions_schema)
     session_fields = [f["name"] for f in sessions_schema["fields"]]
     self.assertIn("session_id", session_fields)
     self.assertIn("total_spend", session_fields)
     self.assertIn("total_transactions", session_fields)
 
-    dlq_schema = load_output_schema(None, "deadletter_table.json",
-                                    DEFAULT_DEADLETTER_SCHEMA)
+    dlq_schema = load_output_schema(None, "deadletter_table.json")
     self.assertIn("fields", dlq_schema)
     dlq_fields = [f["name"] for f in dlq_schema["fields"]]
     self.assertIn("error_message", dlq_fields)
     self.assertIn("raw_payload", dlq_fields)
+
+    with self.assertRaises(FileNotFoundError):
+      load_output_schema(None, "non_existent_schema.json")
 
   def test_parse_record_valid_transaction(self):
     fn = ParseRecordDoFn(EventType.TRANSACTION)
@@ -285,52 +242,6 @@ class CustomerDataPlatformTest(unittest.TestCase):
     self.assertEqual(session.distinct_products_count, 2)
     self.assertIn("fall-sale", session.campaigns)
 
-  def test_unify_data_transform(self):
-    transactions_input = [
-        (("t1", "h1"), {
-            "transaction_id": "t1",
-            "household_key": "h1",
-            "product_id": "p1",
-            "coupon_disc": "1.0",
-        }),
-        (("t2", "h2"), {
-            "transaction_id": "t2",
-            "household_key": "h2",
-            "product_id": "p2",
-            "coupon_disc": "0.0",
-        }),
-    ]
-    coupons_input = [
-        (("t1", "h1"), {
-            "transaction_id": "t1",
-            "household_key": "h1",
-            "coupon_upc": "c1",
-        }),
-    ]
-
-    expected = [
-        {
-            "transaction_id": "t1",
-            "household_key": "h1",
-            "coupon_upc": "c1",
-            "product_id": "p1",
-            "coupon_discount": "1.0",
-        },
-        {
-            "transaction_id": "t2",
-            "household_key": "h2",
-            "coupon_upc": None,
-            "product_id": "p2",
-            "coupon_discount": "0.0",
-        },
-    ]
-
-    with TestPipeline() as p:
-      tx_pcoll = p | "Create Transactions" >> beam.Create(transactions_input)
-      cp_pcoll = p | "Create Coupons" >> beam.Create(coupons_input)
-      unified = (tx_pcoll, cp_pcoll) | _unify_data()
-      assert_that(unified, equal_to(expected))
-
   def test_build_pipeline_end_to_end_in_memory(self):
     options = MyPipelineOptions(
         session_gap_seconds=10,
@@ -347,6 +258,7 @@ class CustomerDataPlatformTest(unittest.TestCase):
             "product_id": "p100",
             "quantity": 1,
             "sales_value": 5.0,
+            "event_timestamp": "2026-09-08T10:00:00Z",
         }).encode("utf-8"),
         b"MALFORMED_JSON_PAYLOAD",
     ]
@@ -356,6 +268,7 @@ class CustomerDataPlatformTest(unittest.TestCase):
             "transaction_id": "tx-1",
             "coupon_upc": "c100",
             "campaign": "summer",
+            "event_timestamp": "2026-09-08T10:00:02Z",
         }).encode("utf-8")
     ]
 
@@ -370,17 +283,6 @@ class CustomerDataPlatformTest(unittest.TestCase):
       assert_that(unified, _check_unified, label="CheckUnified")
       assert_that(sessions, _check_sessions, label="CheckSessions")
       assert_that(deadletters, _check_deadletters, label="CheckDeadletters")
-
-  def test_facade_exports_parity(self):
-    self.assertTrue(hasattr(facade, "build_pipeline"))
-    self.assertTrue(hasattr(facade, "create_and_run_pipeline"))
-    self.assertTrue(hasattr(facade, "ParseRecordDoFn"))
-    self.assertTrue(hasattr(facade, "ProcessCustomerSessionDoFn"))
-    self.assertTrue(hasattr(facade, "TAG_DEADLETTER"))
-    self.assertTrue(hasattr(facade, "TAG_SESSIONS"))
-    self.assertTrue(hasattr(facade, "DEFAULT_OUTPUT_SCHEMA"))
-    self.assertTrue(hasattr(facade, "DEFAULT_SESSIONS_SCHEMA"))
-    self.assertTrue(hasattr(facade, "DEFAULT_DEADLETTER_SCHEMA"))
 
 
 def _check_unified(records):

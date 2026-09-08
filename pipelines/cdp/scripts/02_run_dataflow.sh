@@ -57,7 +57,6 @@ python3 -m main \
   --streaming \
   --runner=DataflowRunner \
   --project="$PROJECT" \
-  --project_id="$PROJECT" \
   --temp_location="${TEMP_LOCATION:-gs://$PROJECT/tmp}" \
   --region="$REGION" \
   --save_main_session \

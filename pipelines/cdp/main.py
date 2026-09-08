@@ -34,10 +34,4 @@ if __name__ == "__main__":
   now_epoch_ms = int(time.time() * 1000)
   if not dataflow_options.job_name:
     dataflow_options.job_name = f"customer-data-platform-{now_epoch_ms}"
-  custom_options: MyPipelineOptions = pipeline_options.view_as(
-      MyPipelineOptions)
-  if not custom_options.project_id and dataflow_options.project:
-    custom_options.project_id = dataflow_options.project
-  elif custom_options.project_id and not dataflow_options.project:
-    dataflow_options.project = custom_options.project_id
-  main(custom_options)
+  main(pipeline_options.view_as(MyPipelineOptions))

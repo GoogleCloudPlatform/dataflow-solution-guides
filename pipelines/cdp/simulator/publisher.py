@@ -102,7 +102,9 @@ def main():
       description="Publish Customer Data Platform sessions and events to Pub/Sub."
   )
   parser.add_argument(
+      "--project",
       "--project_id",
+      dest="project_id",
       default=os.environ.get("PROJECT"),
       help="GCP Project ID (defaults to $PROJECT)",
   )

@@ -19,12 +19,7 @@ from apache_beam.io.gcp.bigquery import BigQueryDisposition, WriteToBigQuery
 from apache_beam.options.pipeline_options import GoogleCloudOptions
 
 from cdp_pipeline.options import MyPipelineOptions
-from cdp_pipeline.schemas import (
-    DEFAULT_DEADLETTER_SCHEMA,
-    DEFAULT_OUTPUT_SCHEMA,
-    DEFAULT_SESSIONS_SCHEMA,
-    load_output_schema,
-)
+from cdp_pipeline.schemas import load_output_schema
 
 
 def apply_bigquery_sinks(
@@ -34,9 +29,7 @@ def apply_bigquery_sinks(
     pipeline_options: MyPipelineOptions,
 ) -> None:
   """Configures BigQuery Storage Write API sinks for unified, session, and DLQ records."""
-  project_id = (
-      getattr(pipeline_options, "project_id", None) or
-      pipeline_options.view_as(GoogleCloudOptions).project)
+  project_id = pipeline_options.view_as(GoogleCloudOptions).project
   dataset = getattr(pipeline_options, "output_dataset", "cdp_dataset")
   unified_table = getattr(pipeline_options, "output_table",
                           "unified_customer_data")
@@ -55,12 +48,10 @@ def apply_bigquery_sinks(
   unified_schema = load_output_schema(
       getattr(pipeline_options, "output_schema_path", None),
       "unified_table.json",
-      DEFAULT_OUTPUT_SCHEMA,
   )
   sessions_schema = load_output_schema(
       getattr(pipeline_options, "output_sessions_schema_path", None),
       "customer_sessions.json",
-      DEFAULT_SESSIONS_SCHEMA,
   )
 
   unified_table_spec = f"{project_id}:{dataset}.{unified_table}"
@@ -93,7 +84,6 @@ def apply_bigquery_sinks(
     deadletter_schema = load_output_schema(
         getattr(pipeline_options, "deadletter_schema_path", None),
         "deadletter_table.json",
-        DEFAULT_DEADLETTER_SCHEMA,
     )
     dlq_table_spec = f"{project_id}:{dataset}.{deadletter_table}"
     (all_deadletters

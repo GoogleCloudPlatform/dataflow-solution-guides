@@ -18,7 +18,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple
 
 import apache_beam as beam
-from apache_beam import PCollection
 from apache_beam.metrics import Metrics
 
 from cdp_pipeline.models import (
@@ -171,48 +170,3 @@ class ProcessCustomerSessionDoFn(beam.DoFn):
     yield beam.pvalue.TaggedOutput(TAG_SESSIONS, session_profile)
     self.sessions_counter.inc()
 
-
-def left_join(
-    key_value_pair: Tuple[Any, Tuple[Iterable[Dict[str, Any]],
-                                     Iterable[Optional[Dict[str, Any]]]]]
-) -> Generator[Dict[str, Any], None, None]:
-  """Legacy helper performing a left join between transaction and coupon redemption records."""
-  _, values = key_value_pair
-  trans_values, coupon_redempt_values = values
-  coupon_list = list(coupon_redempt_values)
-  if not coupon_list:
-    coupon_list = [None]
-  for trans_value in trans_values:
-    if trans_value is not None:
-      for coupon_redempt_value in coupon_list:
-        coupon_upc = None
-        if isinstance(coupon_redempt_value, dict):
-          raw_upc = coupon_redempt_value.get("coupon_upc")
-          if raw_upc is not None:
-            coupon_upc = str(raw_upc)
-        unified_data = {
-            "transaction_id":
-                str(trans_value["transaction_id"]),
-            "household_key":
-                str(trans_value["household_key"]),
-            "coupon_upc":
-                coupon_upc,
-            "product_id":
-                str(trans_value["product_id"]),
-            "coupon_discount":
-                str(
-                    trans_value.get("coupon_disc",
-                                    trans_value.get("coupon_discount", "0"))),
-        }
-        yield unified_data
-
-
-@beam.ptransform_fn
-def _unify_data(
-    pcolls: Tuple[PCollection, PCollection]) -> PCollection[Dict[str, Any]]:
-  """Legacy transform combining transactions and coupons via CoGroupByKey."""
-  transactions_pcoll, coupons_redempt_pcoll = pcolls
-  unified_data = ((transactions_pcoll, coupons_redempt_pcoll)
-                  | "Combine Transactions and Coupons" >> beam.CoGroupByKey()
-                  | beam.FlatMap(left_join))
-  return unified_data

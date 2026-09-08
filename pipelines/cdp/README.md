@@ -85,7 +85,6 @@ python3 ./scripts/03_publish_events.py --count=100
 # Continuous mode with injected error payloads to test the DLQ
 python3 ./scripts/03_publish_events.py --continuous --inject_errors
 ```
-*(Legacy alias `python3 ./cdp_pipeline/generate_transaction_data.py` is also supported for backward compatibility).*
 
 ## Output Data Verification
 

@@ -48,12 +48,6 @@ class MyPipelineOptions(PipelineOptions):
         help="Pub/Sub subscription for streaming coupon redemptions.",
     )
     parser.add_argument(
-        "--project_id",
-        type=str,
-        default=None,
-        help="Google Cloud Project ID (falls back to --project if omitted).",
-    )
-    parser.add_argument(
         "--output_dataset",
         type=str,
         default="cdp_dataset",
