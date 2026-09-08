@@ -663,12 +663,8 @@ def build_pipeline(
   return unified_records, customer_sessions, all_deadletters
 
 
-def create_and_run_pipeline(
-    pipeline_options: MyPipelineOptions,
-    output_schema: Optional[Union[Dict[str, Any], str]] = None,
-):
+def create_and_run_pipeline(pipeline_options: MyPipelineOptions):
   """Launches the Customer Data Platform streaming pipeline on Dataflow or DirectRunner."""
-  del output_schema  # Handled via options or schema loader
   logging.info("Starting Customer Data Platform pipeline with options: %s",
                pipeline_options)
 
