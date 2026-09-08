@@ -52,7 +52,8 @@ flowchart LR
 
 - **Dynamic Event-Time Sessionization (`window.Sessions`)**:
   - Reconstructs customer shopping journeys by dynamically grouping events that occur within an inactivity gap (default 15 minutes).
-  - Handles late-arriving data safely with watermark-based accumulating triggers and allowed lateness windows.
+  - Handles late-arriving data safely with watermark-based accumulating triggers (`AccumulationMode.ACCUMULATING`) and allowed lateness windows.
+  - **Late Event Re-evaluation & Deduplication**: When late events (e.g. delayed coupon redemptions) arrive after the watermark passes, the accumulating trigger re-evaluates the entire session window to join late events with earlier transactions and update Customer 360 session totals. Because BigQuery sinks use `WRITE_APPEND`, late firings append updated snapshots. Downstream consumers can easily deduplicate by `session_id` or `transaction_id` using `processed_timestamp`.
 - **Customer 360 Session Profile Aggregation**:
   - Automatically calculates session metrics: total spend, basket size, coupons redeemed, distinct products purchased, stores visited, and campaigns engaged.
 - **Production Dead-Letter Queue (DLQ)**:
@@ -84,4 +85,23 @@ flowchart LR
    ```bash
    bq query --use_legacy_sql=false 'SELECT session_id, household_key, product_id, sales_value, coupon_upc FROM cdp_dataset.unified_customer_data LIMIT 10'
    bq query --use_legacy_sql=false 'SELECT session_id, household_key, total_spend, total_transactions, coupons_redeemed_count FROM cdp_dataset.customer_sessions LIMIT 10'
+   ```
+5. **Deduplicate Records Downstream in BigQuery**:
+   When late-arriving events trigger pane updates, query the latest state using BigQuery's `QUALIFY` clause:
+   ```sql
+   -- Deduplicate Customer 360 session profiles to retrieve the latest snapshot
+   SELECT *
+   FROM `cdp_dataset.customer_sessions`
+   QUALIFY ROW_NUMBER() OVER (
+     PARTITION BY session_id
+     ORDER BY processed_timestamp DESC
+   ) = 1;
+
+   -- Deduplicate granular unified basket items
+   SELECT *
+   FROM `cdp_dataset.unified_customer_data`
+   QUALIFY ROW_NUMBER() OVER (
+     PARTITION BY transaction_id, product_id, COALESCE(coupon_upc, '')
+     ORDER BY processed_timestamp DESC
+   ) = 1;
    ```

@@ -96,6 +96,11 @@ def build_pipeline(
       AfterWatermark(
           late=AfterCount(1)) if allowed_lateness_sec > 0 else AfterWatermark())
 
+  # Note: AccumulationMode.ACCUMULATING ensures late-arriving events (such as
+  # delayed coupon redemptions) can still join against prior transactions in the
+  # session and recalculate complete session aggregates. Because BigQuery sinks use
+  # WRITE_APPEND, late panes append updated records which can be deduplicated
+  # downstream in BigQuery views using processed_timestamp.
   all_events = ((valid_transactions, valid_coupons)
                 | "Merge Customer Streams" >> beam.Flatten()
                 | "Assign Timestamps" >> beam.ParDo(AssignEventTimestampDoFn())

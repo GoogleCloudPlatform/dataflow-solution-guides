@@ -106,3 +106,32 @@ bq query --use_legacy_sql=false \
   "SELECT source, error_message, timestamp \
    FROM \`${PROJECT}.cdp_dataset.cdp_deadletter\` LIMIT 10"
 ```
+
+## Handling Late Data & BigQuery Deduplication
+
+The pipeline uses `AccumulationMode.ACCUMULATING` with an `allowed_lateness` window (default 60 seconds). When an out-of-order event (such as a late coupon redemption) arrives after the session watermark has closed, Dataflow re-evaluates the session:
+1. It joins the late coupon with the earlier transactions in the session.
+2. It recalculates the updated cumulative `CustomerSessionProfile`.
+3. It appends the new records to BigQuery using `STORAGE_WRITE_API` (`WRITE_APPEND`).
+
+Because records are appended, late firings create updated versions of rows with a newer `processed_timestamp`. Downstream analytics and reporting views can deduplicate to retrieve the latest state using GoogleSQL's `QUALIFY` clause:
+
+```bash
+# Query latest Customer 360 session profiles
+bq query --use_legacy_sql=false \
+  "SELECT * \
+   FROM \`${PROJECT}.cdp_dataset.customer_sessions\` \
+   QUALIFY ROW_NUMBER() OVER ( \
+     PARTITION BY session_id \
+     ORDER BY processed_timestamp DESC \
+   ) = 1 LIMIT 10"
+
+# Query latest unified basket items
+bq query --use_legacy_sql=false \
+  "SELECT * \
+   FROM \`${PROJECT}.cdp_dataset.unified_customer_data\` \
+   QUALIFY ROW_NUMBER() OVER ( \
+     PARTITION BY transaction_id, product_id, COALESCE(coupon_upc, '') \
+     ORDER BY processed_timestamp DESC \
+   ) = 1 LIMIT 10"
+```
