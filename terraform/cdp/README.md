@@ -15,7 +15,9 @@ The scripts will create the following application-level resources:
 | **Pub/Sub topic** | `cdp-transactions` | The first input Pub/Sub topic for streaming customer transaction events. |
 | **Pub/Sub topic** | `cdp-coupon-redemption` | The second input Pub/Sub topic for streaming coupon redemption events. |
 | **BigQuery Dataset** | `cdp_dataset` | The destination BigQuery dataset for customer data unification. |
-| **BigQuery Table** | `unified_customer_data` | The destination BigQuery table storing joined transaction and coupon redemption records. |
+| **BigQuery Table** | `unified_customer_data` | The destination BigQuery table storing granular unified transaction and coupon redemption records. |
+| **BigQuery Table** | `customer_sessions` | The destination BigQuery table storing sessionized Customer 360 profile aggregations. |
+| **BigQuery Table** | `cdp_deadletter` | The dead-letter BigQuery table capturing unparseable or rejected streaming records. |
 | **Service Account** | `cdp-dataflow-sa` (configurable) | Dedicated Dataflow worker service account with least-privilege roles (`roles/storage.objectAdmin`, `roles/dataflow.worker`, `roles/monitoring.metricWriter`, `roles/pubsub.editor`, `roles/bigquery.dataEditor`, `roles/bigquery.jobUser`). |
 
 ## Configuration variables
@@ -33,7 +35,9 @@ The scripts will create the following application-level resources:
 | `create_bucket` | `bool` | `false` | Set to `true` to provision a new GCS bucket, or `false` to reuse an existing bucket. |
 | `destroy_all_resources` | `bool` | `true` | When `true`, enables deletion of BigQuery dataset contents and tables on `terraform destroy`. Set to `false` for production environments. |
 | `bq_dataset` | `string` | `"cdp_dataset"` | The BigQuery output dataset name for customer data unification. |
-| `bq_table` | `string` | `"unified_customer_data"` | The BigQuery output table name for unified customer data. |
+| `bq_table` | `string` | `"unified_customer_data"` | The BigQuery output table name for granular unified customer data. |
+| `bq_sessions_table` | `string` | `"customer_sessions"` | The BigQuery output table name for sessionized Customer 360 profiles. |
+| `bq_deadletter_table` | `string` | `"cdp_deadletter"` | The BigQuery dead-letter table name for malformed or rejected records. |
 
 ## How to deploy
 

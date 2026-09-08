@@ -1,4 +1,5 @@
-#  Copyright 2025 Google LLC
+#!/usr/bin/env python3
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,15 +12,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""CLI launcher script to publish synthetic Customer Data Platform streaming events to Pub/Sub."""
 
-steps:
-  - name: 'gcr.io/kaniko-project/executor:latest'
-    args:
-      - --destination=${_TAG}
-      - --cache=true
-substitutions:
-  _TAG: unset
-options:
-  substitutionOption: 'ALLOW_LOOSE'
-  automapSubstitutions: true
-  machineType: E2_HIGHCPU_8
+# pylint: disable=invalid-name,wrong-import-position
+
+import os
+import sys
+
+# Ensure pipelines/cdp root is on Python path
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+CDP_ROOT = os.path.dirname(CURRENT_DIR)
+if CDP_ROOT not in sys.path:
+  sys.path.insert(0, CDP_ROOT)
+
+from simulator.publisher import main
+
+if __name__ == "__main__":
+  main()

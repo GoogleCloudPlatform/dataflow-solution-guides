@@ -179,7 +179,7 @@ When assisting a user with deploying a solution guide, follow this structured 7-
      ./scripts/02_run_dataflow.sh         # (or ./scripts/01_launch_pipeline.sh)
      ```
 5. **Data Ingestion & Simulation**:
-   - Run the data generator or publisher script to produce streaming events (e.g. `python cdp_pipeline/generate_transaction_data.py` or publishing to Pub/Sub).
+   - Run the data generator or publisher script to produce streaming events (e.g. `python scripts/03_publish_events.py` or publishing to Pub/Sub).
 6. **Verification & Observability**:
    - Inspect Dataflow Job status via GCP Console or `gcloud dataflow jobs list`.
    - Query target destinations (BigQuery tables, Cloud Spanner database, Cloud Bigtable rows, Pub/Sub output subscriptions).

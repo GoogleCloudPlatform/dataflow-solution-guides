@@ -102,11 +102,13 @@ source scripts/00_set_environment.sh
 ./scripts/01_build_and_push_container.sh
 ./scripts/02_run_dataflow.sh
 
-# 3. Generate Streaming Transactions
-python3 ./cdp_pipeline/generate_transaction_data.py
+# 3. Generate Streaming Transactions & Shopping Sessions
+python3 ./cdp_pipeline/generate_transaction_data.py --continuous --interval=1.0
 
-# 4. Validate Unified BigQuery Table
-bq query --use_legacy_sql=false 'SELECT * FROM cdp_dataset.unified_customer_data LIMIT 10'
+# 4. Validate BigQuery Tables (Unified items, Customer 360 Sessions, Deadletter)
+bq query --use_legacy_sql=false 'SELECT session_id, household_key, product_id, sales_value, coupon_upc FROM cdp_dataset.unified_customer_data LIMIT 10'
+bq query --use_legacy_sql=false 'SELECT session_id, household_key, total_spend, total_items_purchased, coupons_redeemed_count FROM cdp_dataset.customer_sessions LIMIT 10'
+bq query --use_legacy_sql=false 'SELECT * FROM cdp_dataset.cdp_deadletter LIMIT 10'
 ```
 
 ### 4. Clickstream Analytics with Bigtable (Java)

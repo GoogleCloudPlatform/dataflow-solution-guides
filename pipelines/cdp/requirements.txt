@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 apache-beam[gcp]==2.76.0  # Example, use your actual versions
-## Below dependencies are required if you have to run script /cdp_pipeline/generate_transaction_data.py
+## Below dependencies are required if you run scripts/03_publish_events.py or simulator
 pandas
 fsspec
 gcsfs

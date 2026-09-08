@@ -18,12 +18,17 @@ Setup file for Customer Data Platform analytics pipeline.
 from setuptools import setup, find_packages
 
 with open("requirements.txt", encoding="utf-8") as f:
-  requirements = f.readlines()
+  requirements = [
+      line.strip()
+      for line in f
+      if line.strip() and not line.strip().startswith("#")
+  ]
 
 setup(
-    name="Dataflow Solution for Customer Data Platform",
+    name="cdp_pipeline",
     version="0.1",
     description="Customer Data Platform example for the Dataflow Solution Guides",
     packages=find_packages(),
+    include_package_data=True,
     install_requires=requirements,
 )

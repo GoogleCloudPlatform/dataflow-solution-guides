@@ -16,10 +16,18 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PIPELINE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 if [ -f "$SCRIPT_DIR/00_set_environment.sh" ]; then
   # shellcheck source=/dev/null
   source "$SCRIPT_DIR/00_set_environment.sh"
+fi
+
+python_version=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || true)
+if [[ "$python_version" != "3.14" ]]; then
+  echo "Error: Python 3.14 is required to launch Dataflow, but active python is '$python_version'." >&2
+  echo "Please activate your Python 3.14 virtual environment (e.g. 'source ~/.virtualenvs/cdp314/bin/activate')." >&2
+  exit 1
 fi
 
 : "${PROJECT:?PROJECT must be set or source 00_set_environment.sh}"
@@ -34,6 +42,26 @@ elif [ -n "$NETWORK" ]; then
   SUBNET_OPT="--subnetwork=$NETWORK"
 fi
 
+INPUT_ARGS=()
+if [ -n "$TRANSACTIONS_SUBSCRIPTION" ]; then
+  INPUT_ARGS+=(--transactions_subscription="$TRANSACTIONS_SUBSCRIPTION")
+elif [ -n "$TRANSACTIONS_TOPIC" ]; then
+  INPUT_ARGS+=(--transactions_topic="$TRANSACTIONS_TOPIC")
+fi
+
+if [ -n "$COUPON_REDEMPTION_SUBSCRIPTION" ]; then
+  INPUT_ARGS+=(--coupons_redemption_subscription="$COUPON_REDEMPTION_SUBSCRIPTION")
+elif [ -n "$COUPON_REDEMPTION_TOPIC" ]; then
+  INPUT_ARGS+=(--coupons_redemption_topic="$COUPON_REDEMPTION_TOPIC")
+fi
+
+DLQ_ARGS=()
+if [ -n "$BQ_DEADLETTER_TABLE" ]; then
+  DLQ_ARGS+=(--deadletter_table="$BQ_DEADLETTER_TABLE")
+fi
+
+cd "$PIPELINE_DIR"
+
 echo "Submitting Customer Data Platform Dataflow pipeline..."
 python3 -m main \
   --streaming \
@@ -42,16 +70,21 @@ python3 -m main \
   --temp_location="${TEMP_LOCATION:-gs://$PROJECT/tmp}" \
   --region="$REGION" \
   --save_main_session \
+  --setup_file=./setup.py \
   --service_account_email="$SERVICE_ACCOUNT" \
   $SUBNET_OPT \
   --no_use_public_ips \
   --sdk_container_image="$CONTAINER_URI" \
+  --sdk_location=container \
   --max_num_workers="$MAX_DATAFLOW_WORKERS" \
   --disk_size_gb="$DISK_SIZE_GB" \
   --machine_type="$MACHINE_TYPE" \
-  --transactions_topic="$TRANSACTIONS_TOPIC" \
-  --coupons_redemption_topic="$COUPON_REDEMPTION_TOPIC" \
+  "${INPUT_ARGS[@]}" \
   --output_dataset="$BQ_DATASET" \
   --output_table="$BQ_UNIFIED_TABLE" \
-  --project_id="$PROJECT" \
+  --output_sessions_table="${BQ_SESSIONS_TABLE:-customer_sessions}" \
+  "${DLQ_ARGS[@]}" \
+  --session_gap_seconds="${SESSION_GAP_SECONDS:-900}" \
+  --allowed_lateness_seconds="${ALLOWED_LATENESS_SECONDS:-60}" \
+  --use_storage_write_api \
   --enable_streaming_engine
