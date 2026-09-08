@@ -13,13 +13,73 @@
 #  limitations under the License.
 """BigQuery sinks using the Storage Write API with auto-sharding."""
 
+from datetime import datetime
+import time
+from typing import Any, Dict, Optional
+
 import apache_beam as beam
 from apache_beam import PCollection
 from apache_beam.io.gcp.bigquery import BigQueryDisposition, WriteToBigQuery
 from apache_beam.options.pipeline_options import GoogleCloudOptions
+from apache_beam.utils.timestamp import Timestamp
 
 from cdp_pipeline.options import MyPipelineOptions
 from cdp_pipeline.schemas import load_output_schema
+
+
+def _to_beam_timestamp(val: Any) -> Optional[Timestamp]:
+  """Converts string, numeric, or datetime timestamp into Beam Timestamp.
+
+  Required for BigQuery Storage Write API compatibility.
+  """
+  if val is None:
+    return None
+  if isinstance(val, Timestamp):
+    return val
+  if isinstance(val, (int, float)):
+    return Timestamp.of(float(val))
+  if isinstance(val, datetime):
+    return Timestamp.of(val.timestamp())
+  if isinstance(val, str):
+    try:
+      dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+      return Timestamp.of(dt.timestamp())
+    except (ValueError, TypeError):
+      return Timestamp.of(time.time())
+  return Timestamp.of(time.time())
+
+
+def _format_unified_dict(record: Any, use_storage_api: bool) -> Dict[str, Any]:
+  row = record.to_dict() if hasattr(record, "to_dict") else dict(record)
+  if use_storage_api:
+    if "event_timestamp" in row and row["event_timestamp"]:
+      row["event_timestamp"] = _to_beam_timestamp(row["event_timestamp"])
+    if "processed_timestamp" in row and row["processed_timestamp"]:
+      row["processed_timestamp"] = _to_beam_timestamp(
+          row["processed_timestamp"])
+  return row
+
+
+def _format_session_dict(record: Any, use_storage_api: bool) -> Dict[str, Any]:
+  row = record.to_dict() if hasattr(record, "to_dict") else dict(record)
+  if use_storage_api:
+    if "session_start" in row and row["session_start"]:
+      row["session_start"] = _to_beam_timestamp(row["session_start"])
+    if "session_end" in row and row["session_end"]:
+      row["session_end"] = _to_beam_timestamp(row["session_end"])
+    if "processed_timestamp" in row and row["processed_timestamp"]:
+      row["processed_timestamp"] = _to_beam_timestamp(
+          row["processed_timestamp"])
+  return row
+
+
+def _format_deadletter_dict(record: Any,
+                            use_storage_api: bool) -> Dict[str, Any]:
+  row = record.to_dict() if hasattr(record, "to_dict") else dict(record)
+  if use_storage_api:
+    if "timestamp" in row and row["timestamp"]:
+      row["timestamp"] = _to_beam_timestamp(row["timestamp"])
+  return row
 
 
 def apply_bigquery_sinks(
@@ -56,7 +116,7 @@ def apply_bigquery_sinks(
 
   unified_table_spec = f"{project_id}:{dataset}.{unified_table}"
   (unified_records
-   | "Unified to Dict" >> beam.Map(lambda r: r.to_dict())
+   | "Format Unified Rows" >> beam.Map(_format_unified_dict, use_storage_api)
    | "Write Unified to BigQuery" >> WriteToBigQuery(
        table=unified_table_spec,
        schema=unified_schema,
@@ -69,7 +129,7 @@ def apply_bigquery_sinks(
 
   sessions_table_spec = f"{project_id}:{dataset}.{sessions_table}"
   (customer_sessions
-   | "Sessions to Dict" >> beam.Map(lambda r: r.to_dict())
+   | "Format Sessions Rows" >> beam.Map(_format_session_dict, use_storage_api)
    | "Write Sessions to BigQuery" >> WriteToBigQuery(
        table=sessions_table_spec,
        schema=sessions_schema,
@@ -87,6 +147,8 @@ def apply_bigquery_sinks(
     )
     dlq_table_spec = f"{project_id}:{dataset}.{deadletter_table}"
     (all_deadletters
+     | "Format Deadletter Rows" >> beam.Map(_format_deadletter_dict,
+                                            use_storage_api)
      | "Write Deadletter to BigQuery" >> WriteToBigQuery(
          table=dlq_table_spec,
          schema=deadletter_schema,

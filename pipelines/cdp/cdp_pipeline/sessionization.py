@@ -169,4 +169,3 @@ class ProcessCustomerSessionDoFn(beam.DoFn):
     )
     yield beam.pvalue.TaggedOutput(TAG_SESSIONS, session_profile)
     self.sessions_counter.inc()
-
