@@ -19,7 +19,7 @@ import unittest
 import apache_beam as beam
 from apache_beam.options.pipeline_options import GoogleCloudOptions
 from apache_beam.testing.test_pipeline import TestPipeline
-from apache_beam.testing.util import assert_that, equal_to
+from apache_beam.testing.util import assert_that
 from apache_beam.transforms.window import IntervalWindow
 from apache_beam.typehints.schemas import named_tuple_to_schema
 from apache_beam.utils.timestamp import Timestamp
@@ -35,14 +35,10 @@ from cdp_pipeline.models import (
 )
 from cdp_pipeline.options import MyPipelineOptions
 from cdp_pipeline.parsing import (
-    AssignEventTimestampDoFn,
     ParseRecordDoFn,
     TAG_DEADLETTER,
 )
-from cdp_pipeline.pipeline import (
-    build_pipeline,
-    create_and_run_pipeline,
-)
+from cdp_pipeline.pipeline import build_pipeline
 from cdp_pipeline.schemas import load_output_schema
 from cdp_pipeline.sessionization import (
     ProcessCustomerSessionDoFn,
