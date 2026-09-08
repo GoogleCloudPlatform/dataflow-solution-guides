@@ -67,8 +67,8 @@ pytest tests/ -v
 Run code formatting and PyLint checks against Google Python style:
 
 ```bash
-yapf -i -r --style yapf cdp_pipeline tests main.py
-pylint --rcfile ../pylintrc cdp_pipeline tests main.py
+yapf -i -r --style yapf cdp_pipeline simulator scripts tests main.py
+pylint --rcfile ../pylintrc cdp_pipeline simulator scripts/03_publish_events.py tests main.py
 ```
 
 ## Input Data Simulation
@@ -77,14 +77,15 @@ To publish streaming transactions and session journeys into Pub/Sub:
 
 ```bash
 # Continuous streaming mode (1 session journey per second)
-python3 ./cdp_pipeline/generate_transaction_data.py --continuous --interval=1.0
+python3 ./scripts/03_publish_events.py --continuous --interval=1.0
 
 # Batch burst mode (100 sessions)
-python3 ./cdp_pipeline/generate_transaction_data.py --count=100
+python3 ./scripts/03_publish_events.py --count=100
 
 # Continuous mode with injected error payloads to test the DLQ
-python3 ./cdp_pipeline/generate_transaction_data.py --continuous --inject_errors
+python3 ./scripts/03_publish_events.py --continuous --inject_errors
 ```
+*(Legacy alias `python3 ./cdp_pipeline/generate_transaction_data.py` is also supported for backward compatibility).*
 
 ## Output Data Verification
 

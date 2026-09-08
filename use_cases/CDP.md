@@ -78,7 +78,7 @@ flowchart LR
    ```
 3. **Generate Streaming Events**:
    ```bash
-   python3 ./cdp_pipeline/generate_transaction_data.py --continuous --interval=1.0
+   python3 ./scripts/03_publish_events.py --continuous --interval=1.0
    ```
 4. **Inspect Unified Results & Customer 360 Profiles in BigQuery**:
    ```bash

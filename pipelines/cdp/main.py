@@ -20,7 +20,7 @@ import time
 from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions
 
 from cdp_pipeline.options import MyPipelineOptions
-from cdp_pipeline.customer_data_platform import create_and_run_pipeline
+from cdp_pipeline.pipeline import create_and_run_pipeline
 
 
 def main(options: MyPipelineOptions):

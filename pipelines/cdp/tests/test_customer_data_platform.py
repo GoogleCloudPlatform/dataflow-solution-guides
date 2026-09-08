@@ -35,6 +35,7 @@ from cdp_pipeline.customer_data_platform import (
     load_output_schema,
     _unify_data,
 )
+from cdp_pipeline import customer_data_platform as facade
 from cdp_pipeline.models import (
     CouponRedemption,
     CustomerInteractionEvent,
@@ -369,6 +370,17 @@ class CustomerDataPlatformTest(unittest.TestCase):
       assert_that(unified, _check_unified, label="CheckUnified")
       assert_that(sessions, _check_sessions, label="CheckSessions")
       assert_that(deadletters, _check_deadletters, label="CheckDeadletters")
+
+  def test_facade_exports_parity(self):
+    self.assertTrue(hasattr(facade, "build_pipeline"))
+    self.assertTrue(hasattr(facade, "create_and_run_pipeline"))
+    self.assertTrue(hasattr(facade, "ParseRecordDoFn"))
+    self.assertTrue(hasattr(facade, "ProcessCustomerSessionDoFn"))
+    self.assertTrue(hasattr(facade, "TAG_DEADLETTER"))
+    self.assertTrue(hasattr(facade, "TAG_SESSIONS"))
+    self.assertTrue(hasattr(facade, "DEFAULT_OUTPUT_SCHEMA"))
+    self.assertTrue(hasattr(facade, "DEFAULT_SESSIONS_SCHEMA"))
+    self.assertTrue(hasattr(facade, "DEFAULT_DEADLETTER_SCHEMA"))
 
 
 def _check_unified(records):
