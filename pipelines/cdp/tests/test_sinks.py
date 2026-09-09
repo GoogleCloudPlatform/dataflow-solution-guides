@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 import unittest
 
 import apache_beam as beam
+from apache_beam.testing.test_pipeline import TestPipeline
 from apache_beam.utils.timestamp import Timestamp
 
 from cdp_pipeline.models import (
@@ -32,6 +33,9 @@ from cdp_pipeline.sinks import (
     _to_beam_timestamp,
     apply_bigquery_sinks,
 )
+
+# Prevent pytest from treating Apache Beam's TestPipeline as a test case
+TestPipeline.__test__ = False
 
 
 class SinksTest(unittest.TestCase):
@@ -135,7 +139,7 @@ class SinksTest(unittest.TestCase):
     self.assertEqual(formatted_raw["timestamp"], "2026-09-08T10:00:00Z")
 
   def test_apply_bigquery_sinks_no_project_or_dataset(self):
-    p = beam.Pipeline()
+    p = TestPipeline()
     pcol = p | "Create" >> beam.Create([])
     options_no_project = MyPipelineOptions([])
     # Should safely return without error
@@ -150,7 +154,7 @@ class SinksTest(unittest.TestCase):
         "--deadletter_table=test_dlq",
         "--streaming",
     ])
-    p = beam.Pipeline(options=options)
+    p = TestPipeline(options=options)
     dummy_unified = p | "Create Unified" >> beam.Create([])
     dummy_sessions = p | "Create Sessions" >> beam.Create([])
     dummy_deadletters = p | "Create DLQ" >> beam.Create([])

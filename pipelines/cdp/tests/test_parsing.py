@@ -15,11 +15,11 @@
 
 from datetime import datetime, timezone
 import json
-from types import SimpleNamespace
 import unittest
 
 import apache_beam as beam
-from apache_beam.transforms.window import TimestampedValue
+from apache_beam.testing.test_pipeline import TestPipeline
+from apache_beam.testing.util import assert_that, equal_to
 
 from cdp_pipeline.models import (
     CustomerInteractionEvent,
@@ -31,13 +31,14 @@ from cdp_pipeline.parsing import (
     TAG_DEADLETTER,
 )
 
+# Prevent pytest from treating Apache Beam's TestPipeline as a test case
+TestPipeline.__test__ = False
+
 
 class ParsingTest(unittest.TestCase):
   """Unit tests for ParseRecordDoFn and AssignEventTimestampDoFn."""
 
   def test_parse_record_valid_transaction(self):
-    fn = ParseRecordDoFn(EventType.TRANSACTION)
-    fn.setup()
     raw = json.dumps({
         "household_key": "100",
         "transaction_id": "tx-1",
@@ -45,21 +46,28 @@ class ParsingTest(unittest.TestCase):
         "sales_value": 15.50
     }).encode("utf-8")
 
-    results = list(fn.process(raw))
-    self.assertEqual(len(results), 1)
-    hh_key, event = results[0]
-    self.assertEqual(hh_key, "100")
-    self.assertIsInstance(event, CustomerInteractionEvent)
-    self.assertEqual(event.transaction_id, "tx-1")
-    self.assertEqual(event.event_type, EventType.TRANSACTION.value)
-    self.assertIsNotNone(event.transaction)
-    self.assertEqual(event.transaction.product_id, "prod-1")
-    self.assertEqual(event.transaction.sales_value, 15.50)
-    self.assertIsNone(event.coupon)
+    with TestPipeline() as p:
+      results = (
+          p
+          | beam.Create([raw])
+          | beam.ParDo(ParseRecordDoFn(EventType.TRANSACTION)).with_outputs(
+              TAG_DEADLETTER, main="valid"))
+
+      def check_valid(elements):
+        assert len(elements) == 1
+        hh_key, event = elements[0]
+        assert hh_key == "100"
+        assert event.transaction_id == "tx-1"
+        assert event.event_type == EventType.TRANSACTION.value
+        assert event.transaction is not None
+        assert event.transaction.product_id == "prod-1"
+        assert event.transaction.sales_value == 15.50
+        assert event.coupon is None
+
+      assert_that(results.valid, check_valid)
+      assert_that(results[TAG_DEADLETTER], equal_to([]))
 
   def test_parse_record_valid_coupon(self):
-    fn = ParseRecordDoFn(EventType.COUPON)
-    fn.setup()
     raw = json.dumps({
         "household_key": "100",
         "transaction_id": "tx-1",
@@ -67,50 +75,66 @@ class ParsingTest(unittest.TestCase):
         "campaign": "camp-99"
     })
 
-    results = list(fn.process(raw))
-    self.assertEqual(len(results), 1)
-    hh_key, event = results[0]
-    self.assertEqual(hh_key, "100")
-    self.assertIsInstance(event, CustomerInteractionEvent)
-    self.assertEqual(event.transaction_id, "tx-1")
-    self.assertEqual(event.event_type, EventType.COUPON.value)
-    self.assertIsNotNone(event.coupon)
-    self.assertEqual(event.coupon.coupon_upc, "cp-1")
-    self.assertEqual(event.coupon.campaign, "camp-99")
-    self.assertIsNone(event.transaction)
+    with TestPipeline() as p:
+      results = (
+          p
+          | beam.Create([raw])
+          | beam.ParDo(ParseRecordDoFn(EventType.COUPON)).with_outputs(
+              TAG_DEADLETTER, main="valid"))
+
+      def check_valid(elements):
+        assert len(elements) == 1
+        hh_key, event = elements[0]
+        assert hh_key == "100"
+        assert event.transaction_id == "tx-1"
+        assert event.event_type == EventType.COUPON.value
+        assert event.coupon is not None
+        assert event.coupon.coupon_upc == "cp-1"
+        assert event.coupon.campaign == "camp-99"
+        assert event.transaction is None
+
+      assert_that(results.valid, check_valid)
+      assert_that(results[TAG_DEADLETTER], equal_to([]))
 
   def test_parse_record_string_event_type(self):
     fn = ParseRecordDoFn("transaction")
-    fn.setup()
     self.assertEqual(fn.record_type, EventType.TRANSACTION)
 
   def test_parse_record_malformed_json_dlq(self):
-    fn = ParseRecordDoFn("transaction")
-    fn.setup()
     bad_bytes = b"BROKEN_JSON_DATA{{{"
 
-    results = list(fn.process(bad_bytes))
-    self.assertEqual(len(results), 1)
-    tagged_output = results[0]
-    self.assertIsInstance(tagged_output, beam.pvalue.TaggedOutput)
-    self.assertEqual(tagged_output.tag, TAG_DEADLETTER)
-    self.assertIn("Malformed payload", tagged_output.value["error_message"])
+    with TestPipeline() as p:
+      results = (
+          p
+          | beam.Create([bad_bytes])
+          | beam.ParDo(ParseRecordDoFn("transaction")).with_outputs(
+              TAG_DEADLETTER, main="valid"))
+
+      def check_dlq(elements):
+        assert len(elements) == 1
+        assert "Malformed payload" in elements[0]["error_message"]
+
+      assert_that(results.valid, equal_to([]))
+      assert_that(results[TAG_DEADLETTER], check_dlq)
 
   def test_parse_record_missing_keys_dlq(self):
-    fn = ParseRecordDoFn("transaction")
-    fn.setup()
     missing_key = json.dumps({"transaction_id": "tx-1"}).encode("utf-8")
 
-    results = list(fn.process(missing_key))
-    self.assertEqual(len(results), 1)
-    tagged_output = results[0]
-    self.assertIsInstance(tagged_output, beam.pvalue.TaggedOutput)
-    self.assertEqual(tagged_output.tag, TAG_DEADLETTER)
-    self.assertIn("Missing required household_key",
-                  tagged_output.value["error_message"])
+    with TestPipeline() as p:
+      results = (
+          p
+          | beam.Create([missing_key])
+          | beam.ParDo(ParseRecordDoFn("transaction")).with_outputs(
+              TAG_DEADLETTER, main="valid"))
+
+      def check_dlq(elements):
+        assert len(elements) == 1
+        assert "Missing required household_key" in elements[0]["error_message"]
+
+      assert_that(results.valid, equal_to([]))
+      assert_that(results[TAG_DEADLETTER], check_dlq)
 
   def test_assign_event_timestamp_with_iso_string(self):
-    fn = AssignEventTimestampDoFn()
     iso_ts = "2026-09-08T10:00:00Z"
     event = CustomerInteractionEvent(
         event_type=EventType.TRANSACTION.value,
@@ -118,44 +142,41 @@ class ParsingTest(unittest.TestCase):
         transaction_id="tx-1",
         event_timestamp=iso_ts,
     )
-    results = list(fn.process(("hh-1", event)))
-    self.assertEqual(len(results), 1)
-    timestamped = results[0]
-    self.assertIsInstance(timestamped, TimestampedValue)
     expected_seconds = datetime.fromisoformat(
         "2026-09-08T10:00:00+00:00").timestamp()
-    self.assertEqual(timestamped.timestamp, expected_seconds)
-    self.assertEqual(timestamped.value, ("hh-1", event))
 
-  def test_assign_event_timestamp_fallback_to_micros(self):
-    fn = AssignEventTimestampDoFn()
-    event = CustomerInteractionEvent(
-        event_type=EventType.TRANSACTION.value,
-        household_key="hh-1",
-        transaction_id="tx-1",
-        event_timestamp=None,
-    )
-    mock_timestamp = SimpleNamespace(micros=1700000000000000)
-    results = list(fn.process(("hh-1", event), timestamp=mock_timestamp))
-    self.assertEqual(len(results), 1)
-    timestamped = results[0]
-    self.assertEqual(timestamped.timestamp, 1700000000.0)
+    with TestPipeline() as p:
+      output = (
+          p
+          | beam.Create([("hh-1", event)])
+          | beam.ParDo(AssignEventTimestampDoFn())
+          | beam.Map(lambda el, ts=beam.DoFn.TimestampParam: float(ts.micros) /
+                     1000000.0))
+
+      assert_that(output, equal_to([expected_seconds]))
 
   def test_assign_event_timestamp_fallback_to_utc_now(self):
-    fn = AssignEventTimestampDoFn()
     event = CustomerInteractionEvent(
         event_type=EventType.TRANSACTION.value,
         household_key="hh-1",
         transaction_id="tx-1",
         event_timestamp="INVALID_DATE_STRING",
     )
-    mock_timestamp = SimpleNamespace(micros=-1)
     before_ts = datetime.now(timezone.utc).timestamp()
-    results = list(fn.process(("hh-1", event), timestamp=mock_timestamp))
-    after_ts = datetime.now(timezone.utc).timestamp()
-    self.assertEqual(len(results), 1)
-    timestamped = results[0]
-    self.assertTrue(before_ts <= timestamped.timestamp <= after_ts)
+
+    with TestPipeline() as p:
+      output = (
+          p
+          | beam.Create([("hh-1", event)])
+          | beam.ParDo(AssignEventTimestampDoFn())
+          | beam.Map(lambda el, ts=beam.DoFn.TimestampParam: float(ts.micros) /
+                     1000000.0))
+
+      def check_fallback(elements):
+        assert len(elements) == 1
+        assert elements[0] >= before_ts
+
+      assert_that(output, check_fallback)
 
 
 if __name__ == "__main__":
