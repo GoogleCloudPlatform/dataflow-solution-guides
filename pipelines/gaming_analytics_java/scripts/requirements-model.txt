@@ -17,7 +17,7 @@
 # scikit-learn and numpy appear a third time as PINNED_SKLEARN_VERSION and
 # PINNED_NUMPY_VERSION in train_model.py. PinnedVersionsConsistencyTest keeps
 # all three copies in step; they move together with the Beam version.
-scikit-learn==1.7.2
+scikit-learn==1.9.1
 numpy==2.4.6
 # pandas is not used by train_model.py and is not part of the pickle. It is
 # required because apache_beam.ml.inference.sklearn_inference imports it at
