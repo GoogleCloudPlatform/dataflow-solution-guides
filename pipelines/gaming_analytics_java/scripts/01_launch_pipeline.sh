@@ -49,8 +49,9 @@ elif [ -n "${NETWORK:-}" ]; then
 fi
 
 # WORKER_MACHINE_TYPE overrides the machine type exported by Terraform. The
-# recommender shipped with this guide is CPU only, so there is no need for the
-# GPU machine type that inference_mode="gpu" selects.
+# model runs on the worker CPU, in the Python SDK harness, so a GPU machine
+# type would buy nothing; note that Runner v2 multi-language jobs run a Java
+# and a Python harness side by side, so give the workers enough memory.
 MACHINE_TYPE_OPT=""
 EFFECTIVE_MACHINE_TYPE="${WORKER_MACHINE_TYPE:-${MACHINE_TYPE:-}}"
 if [ -n "${EFFECTIVE_MACHINE_TYPE}" ]; then
@@ -67,14 +68,6 @@ if [ -n "${MAX_DATAFLOW_WORKERS:-}" ]; then
   MAX_WORKERS_OPT="--maxNumWorkers=${MAX_DATAFLOW_WORKERS}"
 fi
 
-# GPU accelerators are only attached when explicitly requested: a Java pipeline
-# running the bundled recommender does not use them, and requesting them
-# consumes GPU quota for nothing.
-ACCELERATOR_ARG=""
-if [ "${USE_GPU_ACCELERATOR:-false}" = "true" ] && [ -n "${ACCELERATOR_OPT:-}" ]; then
-  ACCELERATOR_ARG="--dataflowServiceOptions=${ACCELERATOR_OPT}"
-fi
-
 ./gradlew run -Pargs="
   --runner=DataflowRunner \
   --project=$PROJECT \
@@ -85,7 +78,6 @@ fi
   $MACHINE_TYPE_OPT \
   $DISK_OPT \
   $MAX_WORKERS_OPT \
-  $ACCELERATOR_ARG \
   --streaming \
   --enableStreamingEngine \
   --experiments=use_runner_v2 \

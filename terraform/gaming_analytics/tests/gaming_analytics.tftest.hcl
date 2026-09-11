@@ -20,20 +20,12 @@ variables {
   region     = "us-central1"
 }
 
-run "gpu_defaults" {
+run "cpu_defaults" {
   command = plan
 
   assert {
-    condition     = local.machine_type == "g2-standard-4"
-    error_message = "GPU inference must default to a G2 worker."
-  }
-  assert {
-    condition     = local.accelerator != ""
-    error_message = "GPU inference must export an accelerator service option."
-  }
-  assert {
-    condition     = length(google_project_iam_custom_role.predictor) == 0
-    error_message = "The Vertex AI predict role must not exist in GPU mode."
+    condition     = local.machine_type == "n1-standard-2"
+    error_message = "The model runs on the worker CPU, so the default worker must be a CPU machine type."
   }
   assert {
     condition     = google_bigtable_table_iam_member.worker_features.table == "player_features" && google_bigtable_table_iam_member.worker_features.role == "roles/bigtable.reader"
@@ -53,32 +45,24 @@ run "gpu_defaults" {
   }
   assert {
     condition     = !contains(local.services, "aiplatform.googleapis.com")
-    error_message = "Vertex AI must not be enabled when inference runs locally on GPUs."
+    error_message = "The pipeline scores locally with scikit-learn: Vertex AI must not be enabled."
+  }
+  assert {
+    condition     = local.worker_disk_size_gb == 50
+    error_message = "CPU workers do not need the large disk a GPU image required."
   }
 }
 
-run "vertex_mode" {
+run "explicit_machine_type" {
   command = plan
 
   variables {
-    inference_mode = "vertex"
+    machine_type = "n2-standard-4"
   }
 
   assert {
-    condition     = local.machine_type == "n1-standard-2"
-    error_message = "Vertex AI inference must use CPU workers."
-  }
-  assert {
-    condition     = local.accelerator == ""
-    error_message = "Vertex AI inference must not attach GPUs to the workers."
-  }
-  assert {
-    condition     = google_project_iam_custom_role.predictor[0].permissions == toset(["aiplatform.endpoints.predict"])
-    error_message = "Workers may only predict, never train or deploy."
-  }
-  assert {
-    condition     = contains(local.services, "aiplatform.googleapis.com")
-    error_message = "Vertex AI must be enabled when inference is remote."
+    condition     = local.machine_type == "n2-standard-4"
+    error_message = "An explicit machine type must override the default."
   }
 }
 

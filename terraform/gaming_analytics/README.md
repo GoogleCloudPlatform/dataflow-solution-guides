@@ -25,37 +25,25 @@ The scripts will create the following application-level resources:
 | **BigQuery Table** | `player_recommendations` | Scored gameplay events, day-partitioned on `event_timestamp` and clustered on `player_id`, `event_type`. |
 | **Artifact Registry** | `gaming-analytics-containers` | Docker repository hosting the custom Dataflow worker container image. |
 | **Service account** | `gaming-analytics-sa` (configurable) | Dedicated Dataflow worker identity with least-privilege roles (`roles/dataflow.worker`, `roles/monitoring.metricWriter`, `roles/storage.objectAdmin`, `roles/pubsub.editor`, `roles/bigquery.dataEditor`, `roles/bigquery.jobUser`), plus a table-scoped `roles/bigtable.reader` binding on `player_features`. |
-| **Custom IAM role** *(Vertex mode only)* | `gamingAnalyticsPredictor` | Grants only `aiplatform.endpoints.predict`, created when `inference_mode = "vertex"`. |
 | **GCS Bucket** *(Optional)* | `var.bucket_name` or `var.project_id` | Optional regional standard bucket for Dataflow temp/staging files (created when `create_bucket = true`). |
 
 This module deliberately does **not** create the project, VPC network, subnet, firewall rules or Cloud NAT. It deploys into an existing project and network (default, custom or Shared VPC).
 
-## Inference modes
+## Inference
 
-The guide supports two inference topologies. Both are covered by the `inference_mode` variable, which only changes the worker configuration exported to the pipeline and the associated IAM/API surface:
+The Java pipeline shipped with this guide scores events with a **scikit-learn** model that runs on the worker itself, inside the Python SDK harness, through the cross-language [`RunInference`](https://beam.apache.org/documentation/ml/multi-language-inference/) transform. There is no remote endpoint and no per-element network call, so this module provisions plain CPU workers: no accelerator, no `aiplatform.googleapis.com`, and no Vertex AI IAM.
 
-| Mode | Worker machine type | Accelerator | Extra resources |
-| :--- | :---: | :---: | :--- |
-| `gpu` *(default)* | `g2-standard-4` | 1 x NVIDIA L4 | none |
-| `vertex` | `n1-standard-2` | none | `aiplatform.googleapis.com`, `gamingAnalyticsPredictor` custom role |
+| | Value |
+| :--- | :--- |
+| Worker machine type | `n1-standard-2` (override with `machine_type`) |
+| Accelerator | none — scikit-learn does not use a GPU |
+| Worker disk | 50 GB |
 
 > [!NOTE]
-> No Dataflow job and no Vertex AI endpoint are created by Terraform. In `vertex` mode you deploy the endpoint separately and grant it to the worker service account.
+> A Runner v2 multi-language job runs a Java and a Python SDK harness side by side on every worker. `n1-standard-2` is sized for the guide's demo throughput; raise `machine_type` before pushing real traffic through it.
 
-> [!IMPORTANT]
-> **These modes no longer match the Java pipeline shipped in this repository.** That pipeline scores
-> events with a **scikit-learn** model running on the worker through cross-language `RunInference`.
-> scikit-learn does not use a GPU, and the pipeline never calls a Vertex AI endpoint. Concretely:
->
-> - the `gpu` default selects a `g2-standard-4` with an L4 that the pipeline will not use —
->   `scripts/01_launch_pipeline.sh` therefore does not request the accelerator unless you export
->   `USE_GPU_ACCELERATOR=true`, and `WORKER_MACHINE_TYPE` overrides the machine type;
-> - the `gamingAnalyticsPredictor` custom role created in `vertex` mode grants a permission the
->   pipeline does not exercise.
->
-> `inference_mode = "vertex"` (or an explicit `machine_type`) is currently the cheapest way to get
-> plain CPU workers. This module is kept as-is on purpose; reconciling the variable with the
-> pipeline is tracked as a follow-up.
+> [!NOTE]
+> No Dataflow job is created by Terraform. The model artifact is not created either: `pipelines/gaming_analytics_java/scripts/train_model.py` trains it and uploads it to GCS, and the pipeline is pointed at it with `MODEL_URI`.
 
 ## Configuration variables
 
@@ -65,13 +53,12 @@ This deployment accepts the following configuration variables:
 | :--- | :---: | :---: | :--- |
 | `project_id` | `string` | *(Required)* | Existing GCP project ID where resources and IAM roles will be provisioned. |
 | `region` | `string` | *(Required)* | GCP region for Bigtable, BigQuery, Pub/Sub, Artifact Registry and Dataflow resources. |
-| `zone` | `string` | `"a"` | Zone suffix used for the Bigtable cluster and GPU worker placement (e.g. `a` yields `us-central1-a`). |
+| `zone` | `string` | `"a"` | Zone suffix used for the Bigtable cluster (e.g. `a` yields `us-central1-a`). |
 | `subnetwork` | `string` | `null` | Optional subnetwork URL or path for Dataflow workers (e.g. `regions/europe-southwest1/subnetworks/dev-default` or a full Shared VPC URI). If omitted, the default network is used. |
 | `bucket_name` | `string` | `null` | Optional GCS bucket name for Dataflow temp/staging files. Defaults to `project_id` if not specified. |
 | `create_bucket` | `bool` | `false` | Set to `true` to provision a new GCS bucket, or `false` to reuse an existing one. |
 | `service_account_name` | `string` | `"gaming-analytics-sa"` | Name of the dedicated Dataflow worker service account to create. |
-| `inference_mode` | `string` | `"gpu"` | `gpu` for a local model on GPU workers, or `vertex` for a model behind a Vertex AI endpoint. |
-| `machine_type` | `string` | `null` | Overrides the worker machine type. Defaults to `g2-standard-4` (`gpu`) or `n1-standard-2` (`vertex`). |
+| `machine_type` | `string` | `null` | Overrides the worker machine type. Defaults to `n1-standard-2`. |
 | `input_topic` | `string` | `"gaming-events"` | Name for the input Pub/Sub topic. |
 | `output_topic` | `string` | `"gaming-recommendations"` | Name for the output Pub/Sub topic. |
 | `destroy_all_resources` | `bool` | `true` | When `true`, allows deletion of the Bigtable instance and BigQuery dataset contents on `terraform destroy`. Set to `false` for production. |
@@ -97,7 +84,6 @@ This deployment accepts the following configuration variables:
    bucket_name           = "YOUR_BUCKET_NAME"
    create_bucket         = false
    service_account_name  = "gaming-analytics-sa"
-   inference_mode        = "gpu"
    destroy_all_resources = true
    ```
 

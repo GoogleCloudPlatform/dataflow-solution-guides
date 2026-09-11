@@ -52,19 +52,8 @@ variable "service_account_name" {
   default     = "gaming-analytics-sa"
 }
 
-variable "inference_mode" {
-  description = "Where the recommendation model runs: 'gpu' for a local model on GPU workers, or 'vertex' for a model deployed behind a Vertex AI endpoint (CPU workers)."
-  type        = string
-  default     = "gpu"
-
-  validation {
-    condition     = contains(["gpu", "vertex"], var.inference_mode)
-    error_message = "inference_mode must be either 'gpu' or 'vertex'."
-  }
-}
-
 variable "machine_type" {
-  description = "Dataflow worker machine type. Defaults to g2-standard-4 in 'gpu' mode and n1-standard-2 in 'vertex' mode when left null."
+  description = "Dataflow worker machine type. Defaults to n1-standard-2 when left null. The model runs on the worker CPU through cross-language RunInference, so no GPU machine type is needed."
   type        = string
   default     = null
 }
