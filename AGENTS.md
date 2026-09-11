@@ -20,7 +20,8 @@ dataflow-solution-guides/
 │   ├── Marketing_Intelligence.md # Real-time marketing intelligence with Firestore & Scikit-Learn RunInference
 │   ├── Clickstream_Analytics.md  # Real-time clickstream analytics with Bigtable enrichment
 │   ├── IoT_Analytics.md      # Real-time IoT analytics with Bigtable & Scikit-Learn RunInference
-│   └── Log_replication.md    # Real-time log replication into Splunk
+│   ├── Log_replication.md    # Real-time log replication into Splunk
+│   └── Gaming_Analytics.md   # Real-time gaming analytics with Bigtable enrichment & in-game activation
 │
 ├── terraform/                # Infrastructure-as-Code using Google Cloud Foundation Fabric
 │   ├── ml_ai/                # Pub/Sub topics, Artifact Registry, GCS bucket, Service Account
@@ -30,7 +31,8 @@ dataflow-solution-guides/
 │   ├── marketing_intelligence/ # Pub/Sub topics, Firestore, BigQuery dataset, Artifact Registry, Service Account
 │   ├── clickstream_analytics/  # Bigtable instance, Pub/Sub, BigQuery, Service Account
 │   ├── iot_analytics/        # Bigtable, Pub/Sub, BigQuery, Artifact Registry, Service Account
-│   └── log_replication_splunk/ # Pub/Sub, Secret Manager, Service Account, Optional Splunk VM
+│   ├── log_replication_splunk/ # Pub/Sub, Secret Manager, Service Account, Optional Splunk VM
+│   └── gaming_analytics/     # Pub/Sub in/out/dead-letter, Bigtable feature store, BigQuery, Artifact Registry, Service Account
 │
 ├── pipelines/                # Apache Beam streaming pipeline implementations
 │   ├── ml_ai_python/         # Python: Beam RunInference with Gemma 4 using vLLM on NVIDIA L4 GPU
