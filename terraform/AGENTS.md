@@ -16,6 +16,7 @@ This directory contains Terraform infrastructure definitions for each solution g
 | `clickstream_analytics/` | Cloud Bigtable (Instance & Table), Pub/Sub Topic, BigQuery Dataset, Service Account | `pipelines/clickstream_analytics_java/` |
 | `iot_analytics/` | Cloud Bigtable (Instance & Table), BigQuery Dataset & Table, Pub/Sub Topic, Artifact Registry, Service Account | `pipelines/iot_analytics/` |
 | `log_replication_splunk/` | Pub/Sub Topics (`all-logs`, `deadletter-topic`), Cloud Logging Sink, Secret Manager (Splunk HEC token), Service Account, Optional Splunk Demo VM | `pipelines/log_replication_splunk/` |
+| `gaming_analytics/` | Pub/Sub Topics (`gaming-events`, `gaming-recommendations`, `gaming-analytics-errors`), Cloud Bigtable feature store (Instance & Table), BigQuery Dataset & Table, Artifact Registry, Service Account (`gaming-analytics-sa`) | `pipelines/gaming_analytics/` *(pipeline pending)* |
 
 ---
 
