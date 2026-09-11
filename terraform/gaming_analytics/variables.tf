@@ -53,7 +53,7 @@ variable "service_account_name" {
 }
 
 variable "machine_type" {
-  description = "Dataflow worker machine type. Defaults to n1-standard-2 when left null. The model runs on the worker CPU through cross-language RunInference, so no GPU machine type is needed."
+  description = "Dataflow worker machine type. Defaults to n2-standard-2 when left null. The model runs on the worker CPU through cross-language RunInference, so no GPU machine type is needed. Avoid the N1 family: it is not offered in newer regions such as europe-southwest1."
   type        = string
   default     = null
 }

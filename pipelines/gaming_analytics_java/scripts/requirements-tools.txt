@@ -1,0 +1,13 @@
+# Dependencies for the local helper scripts that seed the Bigtable feature
+# store and publish gameplay events. These run on the operator's workstation,
+# never on a Dataflow worker, so they are bounded rather than pinned: nothing
+# here is unpickled by the harness, so version drift is harmless.
+#
+# 02_populate_bigtable.sh and 04_publish_events.sh install these into a local
+# virtual environment under scripts/.venv automatically.
+google-cloud-pubsub>=2.18.0
+google-cloud-bigtable>=2.20.0
+# Only needed when train_model.py is run outside the container build with
+# --model_uri, to upload the artifact to Cloud Storage. The normal deployment
+# path bakes the model into the container instead and never uses this.
+google-cloud-storage>=2.14.0

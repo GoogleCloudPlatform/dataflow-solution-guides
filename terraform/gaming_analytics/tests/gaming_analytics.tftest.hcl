@@ -24,12 +24,12 @@ run "cpu_defaults" {
   command = plan
 
   assert {
-    condition     = local.machine_type == "n1-standard-2"
+    condition     = local.machine_type == "n2-standard-2"
     error_message = "The model runs on the worker CPU, so the default worker must be a CPU machine type."
   }
   assert {
-    condition     = google_bigtable_table_iam_member.worker_features.table == "player_features" && google_bigtable_table_iam_member.worker_features.role == "roles/bigtable.reader"
-    error_message = "Worker enrichment permissions must be table scoped and read only."
+    condition     = google_bigtable_instance_iam_member.worker_features.instance == "gaming-analytics" && google_bigtable_instance_iam_member.worker_features.role == "roles/bigtable.reader"
+    error_message = "Worker enrichment permissions must be read only and scoped to the feature-store instance, which is the scope bigtable.instances.ping is authorized against."
   }
   assert {
     condition     = google_bigquery_table.player_recommendations.time_partitioning[0].field == "event_timestamp"

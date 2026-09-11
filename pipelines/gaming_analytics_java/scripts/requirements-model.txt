@@ -1,0 +1,25 @@
+# Python dependencies baked into the custom Dataflow Python SDK harness
+# container. See ../Dockerfile and ../cloudbuild.yaml.
+#
+# These are pinned exactly, not bounded, and they are deliberately identical to
+# the versions that the Apache Beam 2.76.0 Python SDK harness image already
+# ships (sdks/python/container/py313/base_image_requirements.txt). Installing
+# them on top of that base image is therefore a no-op today. They are listed
+# anyway so that the contract is explicit and so that the container build fails
+# loudly if a future base image ever drifts away from them.
+#
+# The model artifact is trained and pickled inside this same image during the
+# container build, which is what makes the pickle and the runtime provably
+# version-consistent: scikit-learn does not guarantee cross-version pickle
+# compatibility.
+#
+# The same versions appear in RecommendationInference.HARNESS_REQUIREMENTS, and
+# scikit-learn and numpy appear a third time as PINNED_SKLEARN_VERSION and
+# PINNED_NUMPY_VERSION in train_model.py. PinnedVersionsConsistencyTest keeps
+# all three copies in step; they move together with the Beam version.
+scikit-learn==1.7.2
+numpy==2.4.6
+# pandas is not used by train_model.py and is not part of the pickle. It is
+# required because apache_beam.ml.inference.sklearn_inference imports it at
+# module scope inside the harness.
+pandas==2.3.3

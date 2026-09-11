@@ -20,9 +20,19 @@ locals {
   // The model runs in the Python SDK harness on the worker, through the
   // cross-language RunInference transform. scikit-learn is CPU only, so there
   // is no accelerator and no GPU machine type: see the pipeline README.
-  machine_type         = var.machine_type != null ? var.machine_type : "n1-standard-2"
+  //
+  // N2 rather than N1: the older N1 family is not offered in the newer regions
+  // (europe-southwest1, for one), where Dataflow rejects the job outright with
+  // "Unable to get machine type information for machine type n1-standard-2".
+  // N2 is available everywhere this guide is likely to be deployed.
+  machine_type         = var.machine_type != null ? var.machine_type : "n2-standard-2"
   worker_disk_size_gb  = 50
   max_dataflow_workers = 3
+
+  // Path of the pickled model inside the custom Python SDK harness container.
+  // The container build writes it here and the pipeline reads it from here, so
+  // the workers never download the artifact.
+  model_path = "/opt/gaming_analytics/recommender.pkl"
 
 
   input_subscription  = "${var.input_topic}-sub"
@@ -64,7 +74,10 @@ resource "google_project_service" "application" {
   disable_on_destroy = false
 }
 
-// Artifact Registry repository hosting the custom Dataflow worker container.
+// Artifact Registry repository hosting the custom Python SDK harness image
+// that the pipeline's cross-language RunInference step runs in. The model is
+// baked into that image at build time, so the registry is on the critical
+// path for launching the pipeline.
 module "registry_docker" {
   depends_on = [google_project_service.application]
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/artifact-registry?ref=v58.0.0"
@@ -211,14 +224,23 @@ module "dataflow_sa" {
   }
 }
 
-// Feature lookups are read-only and scoped to the enrichment table.
-resource "google_bigtable_table_iam_member" "worker_features" {
-  project       = var.project_id
-  instance_name = local.bigtable_instance
-  table         = local.bigtable_table
-  role          = "roles/bigtable.reader"
-  member        = module.dataflow_sa.iam_email
-  depends_on    = [module.feature_table]
+// Feature lookups are read-only, and scoped to the single-purpose instance
+// this module creates rather than to the whole project.
+//
+// This has to be an instance-scoped binding, not a table-scoped one. Reading
+// rows only needs `bigtable.tables.readRows` on the table, but the Bigtable
+// client also runs a channel-pool health checker that calls
+// `bigtable.instances.ping`, and that permission is authorized against the
+// *instance*. With a table-scoped binding the data reads succeed while every
+// background probe fails with PERMISSION_DENIED, which floods the worker logs
+// and makes the client recycle gRPC channels it believes are unhealthy.
+resource "google_bigtable_instance_iam_member" "worker_features" {
+  project  = var.project_id
+  instance = local.bigtable_instance
+  role     = "roles/bigtable.reader"
+  member   = module.dataflow_sa.iam_email
+
+  depends_on = [module.feature_table]
 }
 
 // Additive permission on the existing local or Shared VPC subnet.
@@ -252,6 +274,11 @@ export IMAGE_NAME=dataflow-solutions-gaming-analytics
 export DOCKER_TAG=0.1
 export DOCKER_IMAGE=$REGION-docker.pkg.dev/$PROJECT/$DOCKER_REPOSITORY/$IMAGE_NAME
 export CONTAINER_URI=$DOCKER_IMAGE:$DOCKER_TAG
+
+# Where 01_build_and_push_container.sh bakes the scikit-learn model inside the
+# harness image, and where the pipeline reads it from at run time. The two must
+# agree, so both default to this single value.
+export MODEL_PATH=${local.model_path}
 
 export MACHINE_TYPE=${local.machine_type}
 export DISK_SIZE_GB=${local.worker_disk_size_gb}

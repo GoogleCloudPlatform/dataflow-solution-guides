@@ -84,9 +84,11 @@ public interface GamingAnalyticsOptions extends PipelineOptions {
 
     @Validation.Required
     @Description(
-            "Cloud Storage URI of the pickled scikit-learn model loaded by RunInference"
-                    + " (MODEL_URI), as gs://BUCKET/OBJECT. Produce it with"
-                    + " scripts/train_model.py.")
+            "Location of the pickled scikit-learn model loaded by RunInference (MODEL_PATH)."
+                    + " Normally a path inside the custom Python SDK harness container built by"
+                    + " scripts/01_build_and_push_container.sh, which bakes the artifact in, so"
+                    + " that workers do not download it. A gs://BUCKET/OBJECT URI also works when"
+                    + " the container override is not used.")
     String getModelUri();
 
     void setModelUri(String value);

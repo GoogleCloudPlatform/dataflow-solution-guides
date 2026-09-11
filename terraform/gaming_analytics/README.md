@@ -20,11 +20,11 @@ The scripts will create the following application-level resources:
 | **Pub/Sub topic (Dead-letter)** | `gaming-analytics-errors` | Dead-letter topic for elements the pipeline cannot process. |
 | **Pub/Sub subscription (Dead-letter)** | `gaming-analytics-errors-sub` | Subscription used to inspect and reprocess failed elements. |
 | **Bigtable Instance** | `gaming-analytics` | Single-node Cloud Bigtable instance acting as the low-latency feature store. |
-| **Bigtable Table** | `player_features` | Feature table with column family `features`, used by the Beam `Enrichment` transform. |
+| **Bigtable Table** | `player_features` | Feature table with column family `features`, read by the pipeline's enrichment `DoFn` to hydrate each event with the player's stored features. |
 | **BigQuery Dataset** | `gaming_analytics` | Dataset holding the analytics output of the pipeline. |
 | **BigQuery Table** | `player_recommendations` | Scored gameplay events, day-partitioned on `event_timestamp` and clustered on `player_id`, `event_type`. |
-| **Artifact Registry** | `gaming-analytics-containers` | Docker repository hosting the custom Dataflow worker container image. |
-| **Service account** | `gaming-analytics-sa` (configurable) | Dedicated Dataflow worker identity with least-privilege roles (`roles/dataflow.worker`, `roles/monitoring.metricWriter`, `roles/storage.objectAdmin`, `roles/pubsub.editor`, `roles/bigquery.dataEditor`, `roles/bigquery.jobUser`), plus a table-scoped `roles/bigtable.reader` binding on `player_features`. |
+| **Artifact Registry** | `gaming-analytics-containers` | Docker repository hosting the custom Python SDK harness image that the pipeline's `RunInference` step runs in, built and pushed by `pipelines/gaming_analytics_java/scripts/01_build_and_push_container.sh`. Keeps the three most recent versions. |
+| **Service account** | `gaming-analytics-sa` (configurable) | Dedicated Dataflow worker identity with least-privilege roles (`roles/dataflow.worker`, `roles/monitoring.metricWriter`, `roles/storage.objectAdmin`, `roles/pubsub.editor`, `roles/bigquery.dataEditor`, `roles/bigquery.jobUser`), plus a `roles/bigtable.reader` binding scoped to the `gaming-analytics` feature-store instance. |
 | **GCS Bucket** *(Optional)* | `var.bucket_name` or `var.project_id` | Optional regional standard bucket for Dataflow temp/staging files (created when `create_bucket = true`). |
 
 This module deliberately does **not** create the project, VPC network, subnet, firewall rules or Cloud NAT. It deploys into an existing project and network (default, custom or Shared VPC).
@@ -35,15 +35,15 @@ The Java pipeline shipped with this guide scores events with a **scikit-learn** 
 
 | | Value |
 | :--- | :--- |
-| Worker machine type | `n1-standard-2` (override with `machine_type`) |
+| Worker machine type | `n2-standard-2` (override with `machine_type`) |
 | Accelerator | none — scikit-learn does not use a GPU |
 | Worker disk | 50 GB |
 
 > [!NOTE]
-> A Runner v2 multi-language job runs a Java and a Python SDK harness side by side on every worker. `n1-standard-2` is sized for the guide's demo throughput; raise `machine_type` before pushing real traffic through it.
+> A Runner v2 multi-language job runs a Java and a Python SDK harness side by side on every worker. `n2-standard-2` is sized for the guide's demo throughput; raise `machine_type` before pushing real traffic through it.
 
 > [!NOTE]
-> No Dataflow job is created by Terraform. The model artifact is not created either: `pipelines/gaming_analytics_java/scripts/train_model.py` trains it and uploads it to GCS, and the pipeline is pointed at it with `MODEL_URI`.
+> No Dataflow job is created by Terraform, and neither is the model artifact. The model is trained during the build of the custom Python SDK harness image and baked into it, so that the versions it was pickled with are by construction the versions that load it on the worker. Run `pipelines/gaming_analytics_java/scripts/01_build_and_push_container.sh` after `terraform apply` and before launching the pipeline; it publishes the image to the Artifact Registry repository above, at `CONTAINER_URI`. The pipeline reads the model from `MODEL_PATH` inside that image.
 
 ## Configuration variables
 
@@ -58,7 +58,7 @@ This deployment accepts the following configuration variables:
 | `bucket_name` | `string` | `null` | Optional GCS bucket name for Dataflow temp/staging files. Defaults to `project_id` if not specified. |
 | `create_bucket` | `bool` | `false` | Set to `true` to provision a new GCS bucket, or `false` to reuse an existing one. |
 | `service_account_name` | `string` | `"gaming-analytics-sa"` | Name of the dedicated Dataflow worker service account to create. |
-| `machine_type` | `string` | `null` | Overrides the worker machine type. Defaults to `n1-standard-2`. |
+| `machine_type` | `string` | `null` | Overrides the worker machine type. Defaults to `n2-standard-2`. The N1 family is not available in newer regions such as `europe-southwest1`. |
 | `input_topic` | `string` | `"gaming-events"` | Name for the input Pub/Sub topic. |
 | `output_topic` | `string` | `"gaming-recommendations"` | Name for the output Pub/Sub topic. |
 | `destroy_all_resources` | `bool` | `true` | When `true`, allows deletion of the Bigtable instance and BigQuery dataset contents on `terraform destroy`. Set to `false` for production. |
@@ -101,6 +101,17 @@ This deployment accepts the following configuration variables:
 4. **Access the deployed resources:**
    Terraform generates `pipelines/gaming_analytics_java/scripts/00_set_environment.sh` with all required environment variables.
 
+5. **Build the harness image and launch the pipeline:**
+   Follow the [pipeline README](../../pipelines/gaming_analytics_java/README.md). In short, from `pipelines/gaming_analytics_java`:
+
+   ```bash
+   source scripts/00_set_environment.sh
+   ./scripts/01_build_and_push_container.sh
+   ./scripts/02_populate_bigtable.sh
+   ./scripts/03_launch_pipeline.sh
+   ./scripts/04_publish_events.sh
+   ```
+
 > [!IMPORTANT]
 > If you deploy into an existing network with `--no_use_public_ips` workers, make sure Private Google Access is enabled on the subnet, that TCP ports `12345` and `12346` are allowed between workers, and that Cloud NAT is configured if the workers need internet access.
 
@@ -111,6 +122,23 @@ The Terraform code generates an environment configuration script with all variab
 ```bash
 source ../../pipelines/gaming_analytics_java/scripts/00_set_environment.sh
 ```
+
+Every script in `pipelines/gaming_analytics_java/scripts/` reads its configuration from these variables, and each one checks that the ones it needs are set before doing anything:
+
+| Variable | Value | Used by |
+| :--- | :--- | :--- |
+| `PROJECT` | Project owning every resource above. | All scripts. |
+| `REGION`, `ZONE` | Location of the resources. `REGION` also selects the Cloud Build and Dataflow regions. | `01_build_and_push_container.sh` and `03_launch_pipeline.sh` use `REGION`. |
+| `SUBNETWORK` (and `NETWORK`, its alias) | Subnetwork for the Dataflow workers, empty when `var.subnetwork` is not set. | `03_launch_pipeline.sh`. |
+| `TEMP_LOCATION` | `gs://<bucket>/tmp`, for Dataflow temp and staging files. | `03_launch_pipeline.sh`. |
+| `SERVICE_ACCOUNT` | Email of the dedicated Dataflow worker identity. | `03_launch_pipeline.sh`. |
+| `DOCKER_REPOSITORY`, `IMAGE_NAME`, `DOCKER_TAG`, `DOCKER_IMAGE`, `CONTAINER_URI` | Artifact Registry coordinates of the custom Python SDK harness image. `CONTAINER_URI` is the fully qualified `image:tag`. | `01_build_and_push_container.sh` publishes it; `03_launch_pipeline.sh` selects it with `--sdkHarnessContainerImageOverrides`. |
+| `MODEL_PATH` | `/opt/gaming_analytics/recommender.pkl`: where the container build writes the model inside the image, and where the pipeline reads it from. Both sides take this single value, so they cannot disagree. | `01_build_and_push_container.sh` and `03_launch_pipeline.sh`. |
+| `MACHINE_TYPE`, `DISK_SIZE_GB`, `MAX_DATAFLOW_WORKERS` | Worker shape and autoscaling ceiling. | `03_launch_pipeline.sh`. |
+| `INPUT_TOPIC`, `INPUT_SUBSCRIPTION`, `OUTPUT_TOPIC`, `OUTPUT_SUBSCRIPTION`, `ERROR_TOPIC`, `ERROR_SUBSCRIPTION` | Fully qualified Pub/Sub paths. | `03_launch_pipeline.sh` and `04_publish_events.sh`. |
+| `BIGTABLE_INSTANCE`, `BIGTABLE_TABLE`, `BIGTABLE_COLUMN_FAMILY` | Feature store coordinates. | `02_populate_bigtable.sh` and `03_launch_pipeline.sh`. |
+| `BQ_DATASET`, `BQ_TABLE` | Analytics destination. | `03_launch_pipeline.sh`. |
+| `BUCKET` | Bucket backing `TEMP_LOCATION`. | Ad-hoc use. |
 
 ## How to remove
 

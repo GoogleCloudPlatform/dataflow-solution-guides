@@ -111,6 +111,15 @@ public final class RecommendationBigQuerySink {
 
         @Override
         public WriteResult expand(PCollection<Recommendation> input) {
+            // STORAGE_API_AT_LEAST_ONCE appends to the default stream without
+            // offset deduplication: the cheapest and lowest-latency Storage
+            // Write API mode, and a reasonable default for an append-only
+            // analytics table. The tradeoff is that a retried bundle re-appends
+            // rows it had already written, so this table can hold duplicate
+            // scorings of the same event. Readers are expected to deduplicate
+            // on (player_id, event_timestamp, event_type). Switch to
+            // Method.STORAGE_WRITE_API if exactly-once rows are worth the extra
+            // latency and stream management.
             return input.apply(
                     "WriteRecommendationsToBQ",
                     BigQueryIO.<Recommendation>write()

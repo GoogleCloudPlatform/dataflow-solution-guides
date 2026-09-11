@@ -68,7 +68,7 @@ import org.junit.runners.JUnit4;
  * <pre>{@code
  * # 1. Produce the model artifact with the pinned package versions.
  * python3 -m venv .venv && source .venv/bin/activate
- * pip install -r scripts/requirements.txt
+ * pip install -r scripts/requirements-model.txt
  * python scripts/train_model.py --output_path=/tmp/gaming_recommender.pkl
  *
  * # 2. Run the test. PyPI must be reachable: Beam builds a virtualenv for the expansion service.

@@ -29,6 +29,7 @@ import com.google.cloud.dataflow.solutions.gaming_analytics.transform.PlayerFeat
 import com.google.cloud.dataflow.solutions.gaming_analytics.transform.RecommendationInference;
 import java.io.Serializable;
 import java.util.Arrays;
+import org.apache.beam.runners.dataflow.options.DataflowPipelineDebugOptions;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.Pipeline.PipelineVisitor;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -66,7 +67,7 @@ public class GamingAnalyticsPipelineTest implements Serializable {
         "--bigtableInstance=gaming-analytics",
         "--bigtableTable=player_features",
         "--bigQueryTable=test-project.gaming_analytics.player_recommendations",
-        "--modelUri=gs://test-bucket/models/gaming_recommender.pkl",
+        "--modelUri=/opt/gaming_analytics/recommender.pkl",
     };
 
     private static GamingAnalyticsOptions options(String... extraArgs) {
@@ -130,31 +131,33 @@ public class GamingAnalyticsPipelineTest implements Serializable {
 
     @Test
     public void testLaunchScriptArgumentsAreParseable() {
-        // scripts/01_launch_pipeline.sh builds a single multi-line -Pargs value; bash removes the
-        // backslash-newline continuations but leaves runs of spaces, and the Gradle 'run' task
-        // then splits it on a single whitespace character, so the parser receives a lot of empty
-        // tokens. This reproduces that exact tokenization to make sure the shipped launch command
-        // is accepted rather than rejected by strict parsing.
+        // scripts/03_launch_pipeline.sh builds a single multi-line -Pargs value; bash removes the
+        // backslash-newline continuations but leaves runs of spaces. The Gradle 'run' task then
+        // trims the result and splits it on runs of whitespace. This reproduces that exact
+        // tokenization, so that the shipped launch command is known to survive strict parsing.
+        String harnessImage = "europe-docker.pkg.dev/test-project/repo/harness:0.1";
         String argsProperty =
                 "\n"
                     + "  --runner=DataflowRunner   --project=test-project   --region=us-central1  "
                     + " --tempLocation=gs://test-bucket/tmp  "
                     + " --serviceAccount=sa@test-project.iam.gserviceaccount.com  "
                     + " --subnetwork=regions/us-central1/subnetworks/default  "
-                    + " --workerMachineType=n1-standard-2   --diskSizeGb=200   --maxNumWorkers=3   "
-                    + "  --experiments=use_runner_v2   --streaming   --enableStreamingEngine  "
-                    + " --usePublicIps=false  "
-                    + " --inputSubscription=projects/test-project/subscriptions/gaming-events-sub  "
-                    + " --outputTopic=projects/test-project/topics/gaming-recommendations  "
-                    + " --errorTopic=projects/test-project/topics/gaming-analytics-errors  "
-                    + " --bigtableInstance=gaming-analytics   --bigtableTable=player_features  "
-                    + " --bigtableColumnFamily=features  "
-                    + " --bigQueryTable=test-project.gaming_analytics.player_recommendations  "
-                    + " --enableEnrichment=true  "
-                    + " --modelUri=gs://test-bucket/models/gaming_recommender.pkl   ";
+                    + " --workerMachineType=n2-standard-2   --diskSizeGb=50   --maxNumWorkers=3    "
+                    + " --experiments=use_runner_v2   --streaming   --enableStreamingEngine  "
+                    + " --sdkHarnessContainerImageOverrides=.*python.*,"
+                        + harnessImage
+                        + "   --usePublicIps=false  "
+                        + " --inputSubscription=projects/test-project/subscriptions/gaming-events-sub"
+                        + "   --outputTopic=projects/test-project/topics/gaming-recommendations  "
+                        + " --errorTopic=projects/test-project/topics/gaming-analytics-errors  "
+                        + " --bigtableInstance=gaming-analytics   --bigtableTable=player_features  "
+                        + " --bigtableColumnFamily=features  "
+                        + " --bigQueryTable=test-project.gaming_analytics.player_recommendations  "
+                        + " --enableEnrichment=true  "
+                        + " --modelUri=/opt/gaming_analytics/recommender.pkl   ";
 
         GamingAnalyticsOptions parsed =
-                PipelineOptionsFactory.fromArgs(argsProperty.split("\\s"))
+                PipelineOptionsFactory.fromArgs(argsProperty.trim().split("\\s+"))
                         .withValidation()
                         .as(GamingAnalyticsOptions.class);
 
@@ -163,16 +166,25 @@ public class GamingAnalyticsPipelineTest implements Serializable {
                 parsed.getInputSubscription());
         assertEquals(
                 "test-project.gaming_analytics.player_recommendations", parsed.getBigQueryTable());
-        assertEquals("gs://test-bucket/models/gaming_recommender.pkl", parsed.getModelUri());
+        assertEquals("/opt/gaming_analytics/recommender.pkl", parsed.getModelUri());
         assertTrue(parsed.getEnableEnrichment());
 
         // Runner v2 is mandatory for multi-language pipelines. If the launch script ever stops
         // passing it, the job fails at submission with an opaque error, so assert on it here.
         assertTrue(argsProperty.contains("--experiments=use_runner_v2"));
 
+        // The override is what makes the workers run our Artifact Registry harness, which is the
+        // only image that has the model baked in at --modelUri. Without it Dataflow quietly falls
+        // back to the stock Docker Hub harness and the job fails at model load time, so assert on
+        // it explicitly: a missing override is invisible until the pipeline is already running.
+        assertEquals(
+                ".*python.*," + harnessImage,
+                parsed.as(DataflowPipelineDebugOptions.class)
+                        .getSdkHarnessContainerImageOverrides());
+
         // The options must translate into a usable, correctly configured scoring step.
         RecommendationInference inference = GamingAnalyticsPipeline.inferenceFromOptions(parsed);
-        assertEquals("gs://test-bucket/models/gaming_recommender.pkl", inference.modelUri());
+        assertEquals("/opt/gaming_analytics/recommender.pkl", inference.modelUri());
         assertNull(inference.expansionService());
     }
 

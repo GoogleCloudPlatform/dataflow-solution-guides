@@ -69,7 +69,10 @@ compileJava {
 }
 run {
   if (project.hasProperty('args')) {
-    args project.args.split('\\s')
+    // The launch scripts pass a multi-line string with backslash continuations,
+    // which collapses into runs of whitespace. Trim first and split on runs, so
+    // that no empty arguments reach PipelineOptionsFactory.
+    args project.args.trim().split('\\s+')
   }
 }
 dependencies {

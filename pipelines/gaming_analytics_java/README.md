@@ -9,7 +9,8 @@ BigQuery for analytics. Every element the pipeline cannot process is routed to a
 topic instead of being dropped.
 
 The infrastructure is provisioned by [`terraform/gaming_analytics`](../../terraform/gaming_analytics),
-which also generates the `scripts/00_set_environment.sh` file consumed by the launch script.
+which also generates the `scripts/00_set_environment.sh` file that every script in this directory
+reads.
 
 ---
 
@@ -62,6 +63,16 @@ flowchart TD
 > branch from `GamingAnalyticsPipeline` and run a second job that reads `$OUTPUT_SUBSCRIPTION` and
 > applies `RecommendationBigQuerySink` on its own.
 
+> [!IMPORTANT]
+> **The BigQuery table has at-least-once semantics.** The sink uses
+> `STORAGE_API_AT_LEAST_ONCE`, which appends to the default stream without offset deduplication.
+> It is the cheapest and lowest-latency Storage Write API mode, and it is the right default for an
+> append-only analytics table — but if a bundle is retried, the rows it had already appended are
+> appended again, so `player_recommendations` can contain duplicate scorings of the same event.
+> Deduplicate at read time on (`player_id`, `event_timestamp`, `event_type`), or switch the sink to
+> `Method.STORAGE_WRITE_API` if you need exactly-once rows and can accept the extra latency and the
+> stream management that comes with it.
+
 
 ### Inference: cross-language RunInference
 
@@ -112,37 +123,47 @@ would leave `recommendation_score` empty.
 
 > [!IMPORTANT]
 > **Dataflow Runner v2 is required.** Multi-language pipelines do not run on the original Dataflow
-> runner. `scripts/01_launch_pipeline.sh` passes `--experiments=use_runner_v2`.
+> runner. `scripts/03_launch_pipeline.sh` passes `--experiments=use_runner_v2`.
 
-> [!WARNING]
-> **Private-IP workers still need egress for the Python SDK harness image.** A Runner v2
-> multi-language job runs a second SDK harness container next to the Java one, and its image is the
-> one the expansion service returns: `apache/beam_python3.x_sdk:2.76.0`, on **Docker Hub**. Private
-> Google Access covers `gcr.io` and `*.pkg.dev`; Docker Hub is neither. With `--usePublicIps=false`
-> the job will hang in worker start-up unless you provide one of:
->
-> - a **Cloud NAT** on the worker subnetwork (simplest), or
-> - the same image **mirrored into your own Artifact Registry** and passed with
->   `--sdkContainerImage`, which removes the Docker Hub dependency entirely.
->
-> Do not "solve" this by giving the workers public IPs.
->
-> The pinned Python packages are *not* part of this problem. `withExtraPackages` makes Beam download
-> the wheels on the **submitting** machine at graph-construction time and stage them alongside the
-> job; the worker installs them from the staging bucket, which Private Google Access does cover. A
-> transient expansion service also gets its own virtualenv on that same machine, with those pins
-> `pip install`ed into it. So it is the machine you launch from that needs to reach PyPI, not the
-> workers.
+##### The Python SDK harness is a container built by this guide
+
+A Runner v2 multi-language job runs a second SDK harness container next to the Java one, and the
+Python side of `RunInference` executes inside it. This guide ships that container:
+[`Dockerfile`](Dockerfile) starts from `apache/beam_python3.13_sdk:2.76.0`, installs
+[`scripts/requirements-model.txt`](scripts/requirements-model.txt), and then **runs
+`scripts/train_model.py` as a build step**, writing the pickled model to
+`/opt/gaming_analytics/recommender.pkl`. [`cloudbuild.yaml`](cloudbuild.yaml) builds the image,
+unpickles the artifact again and asserts that it returns five propensities, and only then publishes
+to Artifact Registry. `scripts/01_build_and_push_container.sh` submits that build, and
+`scripts/03_launch_pipeline.sh` selects the result with
+`--sdkHarnessContainerImageOverrides=.*python.*,$CONTAINER_URI` — a regex that matches the Python
+harness only, leaving the Java one as Dataflow provides it.
+
+Training the model inside the image that later loads it is what makes the artifact and its runtime
+provably version-consistent: the interpreter that writes the pickle is, by construction, the one
+that reads it. scikit-learn does not guarantee pickle compatibility across versions, and a mismatch
+either fails to unpickle on the worker or, worse, silently changes the predictions. Baking the model
+in also means the workers do not download it, and that the image comes from Artifact Registry
+(`*.pkg.dev`), which Private Google Access covers, rather than from Docker Hub, which it does not.
+
+> [!NOTE]
+> That removes the Docker Hub pull, not every network requirement. When `--expansionService` is not
+> set, Beam starts a transient expansion service on the **submitting** machine at graph-construction
+> time: it builds a virtualenv there, `pip install`s Apache Beam and the pinned model packages into
+> it, and `withExtraPackages` downloads those same wheels and stages them alongside the job. The
+> workers install them from the staging bucket, which Private Google Access does cover. So the
+> machine you launch from needs to reach PyPI, and the workers need whatever egress the rest of your
+> environment requires — provide it with a **Cloud NAT** on the worker subnetwork, never by giving
+> the workers public IPs.
 
 > [!IMPORTANT]
-> **The Python package versions must match the ones the model was pickled with.** scikit-learn does
-> not guarantee pickle compatibility across versions: a mismatch either fails to unpickle or, worse,
-> silently changes the predictions. This guide pins **`scikit-learn==1.7.2`**, **`numpy==2.4.6`** and
-> **`pandas==2.3.3`** in two lists that must be changed together:
-> `RecommendationInference.HARNESS_REQUIREMENTS` (installed into the harness) and
-> `scripts/requirements.txt`. `scikit-learn` and `numpy` are mirrored a third time, as
-> `PINNED_SKLEARN_VERSION` and `PINNED_NUMPY_VERSION` in `scripts/train_model.py`, so a bump of
-> either of those two touches three files.
+> **The Python package versions are stated in three places and must move together.** This guide pins
+> **`scikit-learn==1.7.2`**, **`numpy==2.4.6`** and **`pandas==2.3.3`** in
+> `RecommendationInference.HARNESS_REQUIREMENTS` (what the cross-language transform asks for) and in
+> `scripts/requirements-model.txt` (what the harness container installs). `scikit-learn` and `numpy`
+> appear a third time as `PINNED_SKLEARN_VERSION` and `PINNED_NUMPY_VERSION` in
+> `scripts/train_model.py`, so a bump of either of those two touches three files.
+> `PinnedVersionsConsistencyTest` fails the build if they disagree.
 >
 > The pickle-compatibility argument covers `scikit-learn` and `numpy` only, which is why they are
 > also the only two enforced at training time: `check_pinned_versions()` in `scripts/train_model.py`
@@ -151,10 +172,11 @@ would leave `recommendation_score` empty.
 > harness rather than part of the pickle, and `train_model.py` never imports it. See below.
 >
 > Those three versions are not arbitrary: they are exactly what the **Beam 2.76.0 Python SDK harness
-> image already ships**, so installing them is a no-op on the stock container. When you bump
-> `beamVersion` in `build.gradle`, read the new
-> [`sdks/python/container/py3XX/base_image_requirements.txt`](https://github.com/apache/beam/tree/master/sdks/python/container)
-> and move the pins with it; retrain the model if `scikit-learn` or `numpy` moved.
+> image already ships**, so installing them on top of it is a no-op, and nothing is upgraded
+> underneath the rest of the SDK. When you bump `beamVersion` in `build.gradle`, read the new
+> [`sdks/python/container/py3XX/base_image_requirements.txt`](https://github.com/apache/beam/tree/master/sdks/python/container),
+> move the pins with it, move the base image tag in the `Dockerfile` to match, and rebuild the
+> container so that the model is retrained against the new versions.
 >
 > `pandas` is pinned for a different reason than the other two. The handler is the NumPy one and the
 > pickle contains no pandas objects, but `apache_beam.ml.inference.sklearn_inference` imports pandas
@@ -163,29 +185,44 @@ would leave `recommendation_score` empty.
 > list, so it has to be named. Its exact version matters far less than scikit-learn's; it is pinned
 > for consistency with the harness image.
 
-#### Training the model
+#### The model
+
+The model is deliberately small and explainable: 20 000 synthetic samples and a depth-8 decision
+tree, fitted on labels generated by simple, readable rules over the same features the pipeline sends
+at run time, so the recommendations stay interpretable and the guide is reproducible without a real
+dataset. The number of samples and the random seed are `--build-arg`s of the `Dockerfile`, passed
+through by `scripts/01_build_and_push_container.sh` as `TRAINING_SAMPLES` and `RANDOM_SEED`.
+
+Deploying the guide never requires training the model by hand — the container build does it. Run
+`scripts/train_model.py` yourself only to inspect the artifact, or to produce one for the opt-in
+cross-language test:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r scripts/requirements.txt
-
-# Local pickle only:
+pip install -r scripts/requirements-model.txt
 python scripts/train_model.py --output_path=/tmp/gaming_recommender.pkl
-
-# Train and upload, then point the pipeline at it:
-python scripts/train_model.py --model_uri=gs://$BUCKET/models/gaming_recommender.pkl
-export MODEL_URI=gs://$BUCKET/models/gaming_recommender.pkl
 ```
 
-The model is deliberately small and explainable: 20 000 synthetic samples and a depth-8 decision
-tree, fitted on labels generated by simple, readable rules over the same features the pipeline
-sends at run time, so the recommendations stay interpretable and the guide is reproducible without
-a real dataset.
+The script refuses to write a pickle unless the installed `scikit-learn` and `numpy` are exactly the
+pinned versions, which is why `requirements-model.txt` — the pinned list — is the one to install
+here.
+
+##### Serving the model from Cloud Storage instead
+
+`--modelUri` also accepts a `gs://BUCKET/OBJECT` URI, which `SklearnModelHandlerNumpy` downloads on
+each worker. `train_model.py --model_uri=gs://...` uploads the artifact after training it (this uses
+`google-cloud-storage`, from `scripts/requirements-tools.txt`). Point `MODEL_PATH` at the URI and
+remove the `--sdkHarnessContainerImageOverrides` line from `scripts/03_launch_pipeline.sh`, so that
+the harness image is not overridden.
+
+That variant gives up both properties above: the workers then pull the stock harness from Docker
+Hub, which Private Google Access does not cover and which therefore needs a Cloud NAT, and nothing
+guarantees any more that the versions in that harness are the ones the model was pickled with.
 
 > [!NOTE]
 > The model runs on the worker CPU: scikit-learn does not use a GPU, and the Terraform module
-> provisions plain CPU workers (`n1-standard-2` by default) with no accelerator. Bear in mind that a
+> provisions plain CPU workers (`n2-standard-2` by default) with no accelerator. Bear in mind that a
 > Runner v2 multi-language job runs a Java and a Python SDK harness side by side on every worker, so
 > if you raise the throughput, give them more room with the Terraform `machine_type` variable or by
 > exporting `WORKER_MACHINE_TYPE` before launching.
@@ -245,6 +282,8 @@ All records are AutoValue classes with Beam schemas, defined in
 ```
 pipelines/gaming_analytics_java/
 ├── build.gradle                                  # Gradle configuration (Beam 2.76, Java 25, AutoValue)
+├── Dockerfile                                    # Python SDK harness image, with the model baked in
+├── cloudbuild.yaml                               # Builds, verifies and publishes that image
 ├── src/main/java/.../gaming_analytics/
 │   ├── GamingAnalyticsPipeline.java              # Main pipeline DAG
 │   ├── options/GamingAnalyticsOptions.java       # Pipeline options
@@ -260,11 +299,26 @@ pipelines/gaming_analytics_java/
 ├── src/test/java/.../gaming_analytics/           # Unit and DirectRunner tests
 └── scripts/
     ├── 00_set_environment.sh                     # Generated by Terraform (gitignored)
-    ├── 01_launch_pipeline.sh                     # Dataflow submission wrapper
-    ├── train_model.py                            # Trains and uploads the scikit-learn model
+    ├── 01_build_and_push_container.sh            # Cloud Build submission for the harness image
+    ├── 02_populate_bigtable.sh                   # Seeds the player feature store
+    ├── 03_launch_pipeline.sh                     # Dataflow submission wrapper
+    ├── 04_publish_events.sh                      # Publishes synthetic gameplay events
+    ├── _python_env.sh                            # Sourced: creates and reuses scripts/.venv
+    ├── train_model.py                            # Trains the scikit-learn model
     ├── populate_bigtable.py                      # Seeds the player feature store
     ├── generate_gameplay_events.py               # Publishes synthetic events
-    └── requirements.txt                          # Dependencies of the Python helper scripts
+    ├── requirements-model.txt                    # Pinned; baked into the harness container
+    └── requirements-tools.txt                    # Bounded; local helper scripts only
+```
+
+The numbered scripts are the deployment sequence, and are meant to be run in order:
+
+```bash
+source scripts/00_set_environment.sh
+./scripts/01_build_and_push_container.sh
+./scripts/02_populate_bigtable.sh
+./scripts/03_launch_pipeline.sh
+./scripts/04_publish_events.sh
 ```
 
 ---
@@ -282,8 +336,16 @@ pipelines/gaming_analytics_java/
 | `--bigtableProject` | — | no | Defaults to the Dataflow project. |
 | `--bigQueryTable` | `BQ_TABLE` | yes | `PROJECT:DATASET.TABLE` or `PROJECT.DATASET.TABLE`. |
 | `--enableEnrichment` | `ENABLE_ENRICHMENT` | no (`true`) | Set to `false` to skip the Bigtable lookups. |
-| `--modelUri` | `MODEL_URI` | yes | Pickled scikit-learn model, normally `gs://BUCKET/models/gaming_recommender.pkl`. Produced by `scripts/train_model.py`. |
+| `--modelUri` | `MODEL_PATH` | yes | Location of the pickled scikit-learn model. Terraform exports `/opt/gaming_analytics/recommender.pkl`, the path the artifact occupies inside the Python SDK harness container. A `gs://BUCKET/OBJECT` URI is also accepted, in which case the harness downloads the model on every worker. |
 | `--expansionService` | — | no | `host:port` of an already running Python expansion service. When unset, Beam starts a transient one at submission time, installs the pinned `scikit-learn`, `numpy` and `pandas` versions into its virtualenv, and stages those same versions for the workers. |
+
+Two Dataflow options matter as much as the pipeline's own, and `scripts/03_launch_pipeline.sh`
+always passes both:
+
+| Option | Value | Why |
+| :--- | :--- | :--- |
+| `--experiments` | `use_runner_v2` | Multi-language pipelines only run on Runner v2. |
+| `--sdkHarnessContainerImageOverrides` | `.*python.*,$CONTAINER_URI` | Runs the harness image built in this directory instead of the stock one. The regex matches the Python harness only; the Java harness is untouched. |
 
 ---
 
@@ -294,7 +356,8 @@ pipelines/gaming_analytics_java/
 - OpenJDK 25
 - The bundled Gradle wrapper (`./gradlew`)
 - Python 3.13 or 3.14 for the helper scripts (the versions the repository CI uses)
-- Google Cloud SDK (`gcloud`, `bq`, `cbt`)
+- Google Cloud SDK (`gcloud`, `bq`, `cbt`). The harness container is built by Cloud Build, so a
+  local Docker daemon is not needed to deploy.
 
 ### Unit tests
 
@@ -315,8 +378,8 @@ prediction-decoding code on either side of it is still exercised.
 | `RecommendationBigQuerySinkTest` | Table reference normalization. |
 | `RecommendationStorageApiSchemaTest` | Encodes the BigQuery rows with the same Storage Write API encoder used at runtime, against the exact schema Terraform creates. Catches value representation mismatches (timestamps in particular) without a live table. |
 | `PubSubPublishersTest` | Message payloads and attributes. |
-| `GamingAnalyticsPipelineTest` | Full graph construction, the exact argument list `scripts/01_launch_pipeline.sh` produces, and an end-to-end DirectRunner run of the transform chain. |
-| `PinnedVersionsConsistencyTest` | Reads `scripts/requirements.txt` and `scripts/train_model.py` and fails the build if their Python version pins drift from `HARNESS_REQUIREMENTS`. That drift is otherwise invisible until a worker fails to unpickle the model. |
+| `GamingAnalyticsPipelineTest` | Full graph construction, the exact argument list `scripts/03_launch_pipeline.sh` produces — including the Python harness image override, which is invisible until a running job fails to load the model — and an end-to-end DirectRunner run of the transform chain. |
+| `PinnedVersionsConsistencyTest` | Reads `scripts/requirements-model.txt` and `scripts/train_model.py` and fails the build if their Python version pins drift from `HARNESS_REQUIREMENTS`. That drift is otherwise invisible until a worker fails to unpickle the model. |
 
 ### Cross-language integration test (opt-in)
 
@@ -326,9 +389,10 @@ virtualenv and downloads Apache Beam and the pinned model packages from PyPI. Ne
 build nor CI may depend on that.
 
 ```bash
-# 1. Produce a model to configure the transform with.
+# 1. Produce a model to configure the transform with. requirements-model.txt holds the exact
+#    versions the training script insists on, and the ones the harness runs.
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r scripts/requirements.txt
+pip install -r scripts/requirements-model.txt
 python scripts/train_model.py --output_path=/tmp/gaming_recommender.pkl
 
 # 2. Run just that test, opting in.
@@ -414,37 +478,48 @@ terraform apply tfplan
 ```bash
 cd ../../pipelines/gaming_analytics_java
 source scripts/00_set_environment.sh
-env | grep -E 'TOPIC|SUBSCRIPTION|BIGTABLE|BQ_|BUCKET|MACHINE_TYPE'
+env | grep -E 'TOPIC|SUBSCRIPTION|BIGTABLE|BQ_|BUCKET|MACHINE_TYPE|CONTAINER_URI|MODEL_PATH'
 ```
 
-### Step 3: seed the feature store
+Every remaining step reads its configuration from these variables, so keep the shell that sourced
+them.
+
+### Step 3: build the Python SDK harness container
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r scripts/requirements.txt
-python scripts/populate_bigtable.py
+./scripts/01_build_and_push_container.sh
 ```
 
-### Step 4: train and upload the model
+Cloud Build trains the model, bakes it into the image at `$MODEL_PATH`, unpickles it again to check
+that it loads and returns five propensities, and publishes the image to Artifact Registry as
+`$CONTAINER_URI`. Expect a few minutes. Re-run this step whenever `scripts/train_model.py`,
+`scripts/requirements-model.txt` or the base image tag in the `Dockerfile` changes.
+
+### Step 4: seed the feature store
 
 ```bash
-python scripts/train_model.py --model_uri=gs://$BUCKET/models/gaming_recommender.pkl
-export MODEL_URI=gs://$BUCKET/models/gaming_recommender.pkl
+./scripts/02_populate_bigtable.sh
 ```
 
-`MODEL_URI` is not exported by Terraform, and the launch script refuses to run without it.
+The wrapper creates `scripts/.venv` on first use and installs `scripts/requirements-tools.txt` into
+it, so there is no manual `pip install` step. Extra arguments are passed through to
+`populate_bigtable.py`.
+
+Seed the feature store before the events arrive, otherwise every lookup misses and the model scores
+on defaults alone.
 
 ### Step 5: launch the pipeline
 
 ```bash
-./scripts/01_launch_pipeline.sh
+./scripts/03_launch_pipeline.sh
 ```
 
 The script enforces the repository guardrails: private IPs only (`--usePublicIps=false`), the
 dedicated worker service account (`--serviceAccount=$SERVICE_ACCOUNT`), the subnetwork exported by
 Terraform, and Streaming Engine. It also passes `--experiments=use_runner_v2`, without which the
-cross-language `RunInference` cannot run.
+cross-language `RunInference` cannot run, and
+`--sdkHarnessContainerImageOverrides=.*python.*,$CONTAINER_URI`, without which the workers would run
+a Python harness that has no model at `$MODEL_PATH`.
 
 Monitor the job:
 
@@ -455,11 +530,12 @@ gcloud dataflow jobs list --status=active --region=$REGION
 ### Step 6: publish gameplay events
 
 ```bash
-python scripts/generate_gameplay_events.py --num_events=300 --rate=10 --inject_errors
+./scripts/04_publish_events.sh --num_events=300 --rate=10 --inject_errors
 ```
 
-`--inject_errors` publishes malformed payloads (invalid JSON, wrong types, missing `player_id`,
-unparseable timestamps) so that the dead-letter topic can be verified as well.
+Arguments are passed through to `generate_gameplay_events.py`; `--num_events=0` publishes
+continuously. `--inject_errors` publishes malformed payloads (invalid JSON, wrong types, missing
+`player_id`, unparseable timestamps) so that the dead-letter topic can be verified as well.
 
 ### Step 7: verify the outputs
 

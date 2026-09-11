@@ -18,9 +18,15 @@ The Java pipeline scores gameplay events with the Apache Beam
 to the Python ``SklearnModelHandlerNumpy`` model handler. That handler
 unpickles the artifact produced here inside the Python SDK harness, so the
 scikit-learn and NumPy versions used to pickle the model must match the
-versions installed in the harness. They are pinned in ``requirements.txt`` and
-mirrored in ``RecommendationInference.java``; this script refuses to run when
-the local environment does not match the pins.
+versions installed in the harness.
+
+Normally this script runs *inside* the harness container build (see
+``../Dockerfile``), which makes that match automatic: the interpreter that
+pickles the artifact is the very one that later unpickles it. The pins are
+still declared in ``requirements-model.txt`` and mirrored in
+``RecommendationInference.java``, and this script refuses to run when the
+local environment does not match them, so that running it by hand on a
+workstation cannot silently produce an unloadable artifact.
 
 The model is deliberately tiny and explainable: a depth-limited decision tree.
 It is a reference guide, not a real recommender.
@@ -104,7 +110,7 @@ def check_pinned_versions() -> None:
           "otherwise the Python SDK harness cannot unpickle it.")
     for mismatch in mismatches:
       print(f"  {mismatch}")
-    print("Install them with: pip install -r scripts/requirements.txt")
+    print("Install them with: pip install -r scripts/requirements-model.txt")
     sys.exit(1)
 
 
@@ -267,9 +273,11 @@ def main(argv: List[str]) -> None:
       sys.exit(1)
     upload_to_gcs(args.output_path, args.model_uri)
   else:
-    print("MODEL_URI is not set, so the artifact was not uploaded. The "
-          "pipeline needs a gs:// URI: the Python SDK harness reads the "
-          "model from Cloud Storage.")
+    print("No --model_uri was given, so the artifact was not uploaded to "
+          "Cloud Storage. That is the normal path: this script runs inside "
+          "the container build (see ../Dockerfile), which keeps the artifact "
+          "at the local path above and lets the Python SDK harness read it "
+          "from there without a per-worker download.")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,60 @@
+#  Copyright 2026 Google LLC
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+# Builds the custom Python SDK harness container with the recommendation model
+# baked in, and publishes it to Artifact Registry. Invoked by
+# scripts/01_build_and_push_container.sh.
+#
+# This uses kaniko rather than the usual gcr.io/cloud-builders/docker step.
+# The Docker daemon supplied by the Cloud Build worker cannot unpack the layers
+# of the apache/beam_python3.13_sdk base image: every layer downloads and its
+# checksum verifies, then extraction fails with
+#   failed to register layer: archive/tar: invalid tar header
+# which is what a daemon does when it cannot handle the layer compression
+# format. Swapping the step image does not help, because the daemon comes from
+# the build worker rather than from the step. kaniko does not use a Docker
+# daemon at all: it resolves, pulls and extracts layers itself, and pushes the
+# result directly, so it is unaffected.
+#
+# The model is verified inside the image build (see the last RUN in the
+# Dockerfile) rather than by running the finished container here. That keeps the
+# check independent of the builder, and avoids pulling the published image back
+# down through the same daemon that cannot unpack these layers.
+steps:
+  - name: 'gcr.io/kaniko-project/executor:latest'
+    id: build-and-push
+    args:
+      - --context=dir:///workspace
+      - --dockerfile=/workspace/Dockerfile
+      - --destination=${_TAG}
+      - --build-arg=MODEL_PATH=${_MODEL_PATH}
+      - --build-arg=TRAINING_SAMPLES=${_TRAINING_SAMPLES}
+      - --build-arg=RANDOM_SEED=${_RANDOM_SEED}
+      - --single-snapshot
+      - --cache=false
+
+substitutions:
+  _TAG: unset
+  _MODEL_PATH: /opt/gaming_analytics/recommender.pkl
+  _TRAINING_SAMPLES: '20000'
+  _RANDOM_SEED: '42'
+
+options:
+  substitutionOption: 'ALLOW_LOOSE'
+  automapSubstitutions: true
+  machineType: E2_HIGHCPU_8
+
+# Deliberately no top-level `images:` block: kaniko pushes the image itself, and
+# listing it here would make Cloud Build try to push it a second time through
+# the Docker daemon.

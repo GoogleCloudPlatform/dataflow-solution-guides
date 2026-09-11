@@ -125,7 +125,7 @@ public abstract class RecommendationInference
      *       and only those two, are mirrored as constants in that script and checked at training
      *       time by {@code check_pinned_versions()}. When the Beam version in {@code build.gradle}
      *       moves, re-read that requirements file and move this list, {@code
-     *       scripts/requirements.txt} and those constants with it.
+     *       scripts/requirements-model.txt} and those constants with it.
      * </ul>
      *
      * <p>{@code pandas} is in the list for a different reason: it is an import-time requirement of

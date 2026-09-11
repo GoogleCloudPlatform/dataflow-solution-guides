@@ -40,7 +40,7 @@ import org.junit.runners.JUnit4;
  * <ul>
  *   <li>{@link RecommendationInference#HARNESS_REQUIREMENTS} is what gets installed into the Python
  *       SDK harness that runs the model on the worker;
- *   <li>{@code scripts/requirements.txt} is what a developer installs locally to run {@code
+ *   <li>{@code scripts/requirements-model.txt} is what a developer installs locally to run {@code
  *       scripts/train_model.py} and the other helper scripts;
  *   <li>{@code PINNED_SKLEARN_VERSION} and {@code PINNED_NUMPY_VERSION} in {@code train_model.py}
  *       are checked before the model is written, because scikit-learn does not guarantee pickle
@@ -62,7 +62,7 @@ public class PinnedVersionsConsistencyTest {
     private static final Pattern PYTHON_CONSTANT =
             Pattern.compile("^\\s*(PINNED_[A-Z_]+_VERSION)\\s*=\\s*\"([^\"]+)\"");
 
-    private static final String REQUIREMENTS = "scripts/requirements.txt";
+    private static final String REQUIREMENTS = "scripts/requirements-model.txt";
     private static final String TRAIN_MODEL = "scripts/train_model.py";
 
     @Test

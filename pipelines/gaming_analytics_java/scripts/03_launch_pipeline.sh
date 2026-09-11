@@ -15,28 +15,29 @@
 #
 # Submits the gaming analytics streaming pipeline to Dataflow.
 #
-# Source the Terraform generated environment first:
+# Run these first:
 #   source scripts/00_set_environment.sh
+#   ./scripts/01_build_and_push_container.sh
+#   ./scripts/02_populate_bigtable.sh
 
 set -euo pipefail
 
 for var in PROJECT REGION TEMP_LOCATION SERVICE_ACCOUNT INPUT_SUBSCRIPTION OUTPUT_TOPIC \
-  ERROR_TOPIC BIGTABLE_INSTANCE BIGTABLE_TABLE BQ_TABLE; do
+  ERROR_TOPIC BIGTABLE_INSTANCE BIGTABLE_TABLE BQ_TABLE CONTAINER_URI; do
   if [ -z "${!var:-}" ]; then
     echo "ERROR: \$$var is not set. Run 'source scripts/00_set_environment.sh' first." >&2
     exit 1
   fi
 done
 
-# MODEL_URI is not produced by Terraform: it points at the scikit-learn pickle
-# that scripts/train_model.py uploads to GCS. There is no built-in fallback
-# scorer any more, so the pipeline cannot start without it.
-if [ -z "${MODEL_URI:-}" ]; then
-  echo "ERROR: \$MODEL_URI is not set. Train and upload the model first:" >&2
-  echo "         python3 scripts/train_model.py --model_uri=gs://\$BUCKET/models/gaming_recommender.pkl" >&2
-  echo "       then: export MODEL_URI=gs://\$BUCKET/models/gaming_recommender.pkl" >&2
-  exit 1
-fi
+# Where the model lives *inside* the harness container built by
+# 01_build_and_push_container.sh. The Python SDK harness reads the pickle from
+# this local path, so there is no per-worker download.
+#
+# Advanced use: point this at a gs:// URI and drop the container override below
+# to have the harness fetch the model from Cloud Storage instead. The stock
+# harness image then has to be pulled from Docker Hub, which needs egress.
+MODEL_PATH="${MODEL_PATH:-/opt/gaming_analytics/recommender.pkl}"
 
 # The Dataflow workers must never get a public IP, so they need a subnet with
 # Private Google Access. SUBNETWORK is the current variable; NETWORK is kept as
@@ -49,9 +50,9 @@ elif [ -n "${NETWORK:-}" ]; then
 fi
 
 # WORKER_MACHINE_TYPE overrides the machine type exported by Terraform. The
-# model runs on the worker CPU, in the Python SDK harness, so a GPU machine
-# type would buy nothing; note that Runner v2 multi-language jobs run a Java
-# and a Python harness side by side, so give the workers enough memory.
+# model runs on the worker CPU, in the Python SDK harness, so a GPU machine type
+# would buy nothing; note that Runner v2 multi-language jobs run a Java and a
+# Python harness side by side, so give the workers enough memory.
 MACHINE_TYPE_OPT=""
 EFFECTIVE_MACHINE_TYPE="${WORKER_MACHINE_TYPE:-${MACHINE_TYPE:-}}"
 if [ -n "${EFFECTIVE_MACHINE_TYPE}" ]; then
@@ -68,6 +69,22 @@ if [ -n "${MAX_DATAFLOW_WORKERS:-}" ]; then
   MAX_WORKERS_OPT="--maxNumWorkers=${MAX_DATAFLOW_WORKERS}"
 fi
 
+# Replaces the Python SDK harness that the expansion service asks for (by
+# default apache/beam_python3.13_sdk:2.76.0, pulled from Docker Hub) with our
+# Artifact Registry image, which already contains the model and its pinned
+# dependencies. The Java harness is left alone; only the Python one matches the
+# regex. No quotes and no spaces: build.gradle splits these args on whitespace.
+HARNESS_OVERRIDE_OPT="--sdkHarnessContainerImageOverrides=.*python.*,${CONTAINER_URI}"
+
+echo "Submitting the gaming analytics pipeline to Dataflow."
+echo "  project        : ${PROJECT} (${REGION})"
+echo "  input          : ${INPUT_SUBSCRIPTION}"
+echo "  recommendations: ${OUTPUT_TOPIC}"
+echo "  dead letter    : ${ERROR_TOPIC}"
+echo "  harness image  : ${CONTAINER_URI}"
+echo "  model path     : ${MODEL_PATH}"
+echo
+
 ./gradlew run -Pargs="
   --runner=DataflowRunner \
   --project=$PROJECT \
@@ -81,6 +98,7 @@ fi
   --streaming \
   --enableStreamingEngine \
   --experiments=use_runner_v2 \
+  $HARNESS_OVERRIDE_OPT \
   --usePublicIps=false \
   --inputSubscription=$INPUT_SUBSCRIPTION \
   --outputTopic=$OUTPUT_TOPIC \
@@ -90,4 +108,7 @@ fi
   --bigtableColumnFamily=${BIGTABLE_COLUMN_FAMILY:-features} \
   --bigQueryTable=$BQ_TABLE \
   --enableEnrichment=${ENABLE_ENRICHMENT:-true} \
-  --modelUri=$MODEL_URI"
+  --modelUri=$MODEL_PATH"
+
+echo
+echo "Next: ./scripts/04_publish_events.sh"

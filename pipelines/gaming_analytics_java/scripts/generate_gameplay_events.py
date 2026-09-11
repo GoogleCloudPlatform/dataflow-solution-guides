@@ -114,6 +114,7 @@ def run_generator(
 
   delay = 1.0 / rate_per_sec if rate_per_sec > 0 else 0
   sent_count = 0
+  pending = []
 
   try:
     while True:
@@ -127,8 +128,14 @@ def run_generator(
         if event["event_type"] == "level_complete":
           levels[player_id] += 1
 
-      publisher.publish(topic_path, payload_str.encode("utf-8"))
+      pending.append(publisher.publish(topic_path, payload_str.encode("utf-8")))
       sent_count += 1
+
+      # publish() batches in the background, so the futures have to be kept
+      # until they resolve. Drop the settled ones periodically to keep the
+      # list bounded during a continuous run.
+      if len(pending) >= 1000:
+        pending = [future for future in pending if not future.done()]
 
       if sent_count % 100 == 0:
         print(f"[{datetime.datetime.now()}] Published {sent_count} events...")
@@ -142,6 +149,18 @@ def run_generator(
 
   except KeyboardInterrupt:
     print(f"\nStopped by user. Total events sent: {sent_count}")
+
+  finally:
+    # publish() is asynchronous and batched: the client only commits a batch
+    # once it is full or its latency window elapses. Without an explicit flush
+    # the last partially filled batch is discarded when the process exits, so
+    # a few events would silently never reach the topic. stop() commits every
+    # outstanding batch, and resolving the futures surfaces publish failures
+    # that would otherwise be swallowed.
+    publisher.stop()
+    for future in pending:
+      future.result()
+    print(f"Flushed {sent_count} events to {topic_path}.")
 
 
 def parse_args() -> argparse.Namespace:
