@@ -32,8 +32,8 @@ executable implementation.
 
 Use an existing billing-enabled Google Cloud project, an existing network, and
 one region supporting Dataflow, Bigtable, CPU Vertex AI custom training and online
-prediction. Reserve quota for one `n1-standard-4` training worker, one
-`n1-standard-2` endpoint replica, one `n1-standard-2` Dataflow worker and one
+prediction. Reserve quota for one `n2-standard-4` training worker, one
+`n2-standard-2` endpoint replica, one `n2-standard-2` Dataflow worker and one
 Bigtable node. Resource names such as `anomaly-detection-transactions`,
 `customer_profiles`, and BigQuery dataset `anomaly_detection` are collision-resistant
 to prevent clashes in existing or shared projects.
@@ -170,7 +170,7 @@ custom Python 3.14 serving container using local Docker. The report includes the
 artifact SHA-256, serving digest and resolved dependencies. `deploy` requires this
 stage, uploads the model using the verified serving digest (`SERVING_CONTAINER_URI`),
 configures health route `/health`, predict route `/predict`, port 8080, creates
-an endpoint, deploys one CPU replica (`n1-standard-2`), and adds worker prediction
+an endpoint, deploys one CPU replica (`n2-standard-2`), and adds worker prediction
 IAM (`roles/anomalyDetectionPredictor`). It creates a separate ignored endpoint
 environment file. `verify` checks a batch of two numeric vectors and requires two
 scalar predictions in `{-1, 1}`.

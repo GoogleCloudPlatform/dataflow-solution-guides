@@ -1,0 +1,27 @@
+# Keeps the Cloud Build upload context small and reproducible.
+#
+# Without this, `gcloud builds submit` would tar up the Gradle build outputs,
+# the Gradle cache and the local helper virtualenv: hundreds of megabytes that
+# the Dockerfile never reads. Only scripts/ is actually needed.
+#
+# Note that the presence of this file disables gcloud's default behaviour of
+# honouring .gitignore, so anything that must be excluded has to be listed here.
+.git/
+.gitignore
+.gradle/
+build/
+bin/
+.venv/
+scripts/.venv/
+__pycache__/
+*.pyc
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+src/
+gradle/
+gradlew
+gradlew.bat
+build.gradle
+settings.gradle
+README.md

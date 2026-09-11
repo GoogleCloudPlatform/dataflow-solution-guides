@@ -1,0 +1,155 @@
+// Copyright 2026 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// https://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or https://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+plugins {
+  id 'application'
+  id "maven-publish"
+  id "com.diffplug.spotless" version "8.10.2"
+  id 'com.palantir.git-version' version '5.1.0'
+  id 'net.ltgt.errorprone' version "5.1.1"
+}
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
+}
+
+ext {
+  packageName = "gaming-analytics-java"
+  javaPackagePath = "com.google.cloud.dataflow.solutions.gaming_analytics"
+  appName = "GamingAnalyticsPipeline"
+  appVersion = "${gitVersion()}-SNAPSHOT"
+  beamVersion = "2.76.0"
+  junitVersion = "4.13.2"
+  hamcrestVersion = "3.0"
+  googleJavaFormat = '1.36.1'
+  errorProneCoreVersion = '2.50.0'
+  autoValueVersion = '1.11.1'
+  // Versions aligned with the ones Beam resolves transitively, so that the
+  // pipeline classpath does not diverge from the one used by the workers.
+  jacksonVersion = '2.18.8'
+  guavaVersion = '33.5.0-jre'
+}
+
+repositories {
+  mavenCentral()
+  maven {  // Apache Snapshots repository
+    url "https://repository.apache.org/content/repositories/snapshots/"
+  }
+}
+application {
+  mainClass = "${javaPackagePath}.GamingAnalyticsPipeline"
+  version = appVersion
+}
+test {
+  // JUnit 4.
+  useJUnit()
+  dependsOn cleanTest
+  testLogging.showStandardStreams = true
+  testLogging.showStackTraces = true
+  // The cross-language RunInference integration test is opt-in: it starts a Python expansion
+  // service and the Python SDK harness container, which the default build and CI must never
+  // require. It aborts through JUnit's Assume unless 'runCrossLanguageTests' is set. Gradle's -D
+  // only sets the property on the daemon, so it has to be forwarded to the test JVM explicitly.
+  // Both -D and -P work:
+  //   ./gradlew test -DrunCrossLanguageTests=true -DcrossLanguageModelUri=/tmp/model.pkl
+  ['runCrossLanguageTests', 'crossLanguageModelUri'].each { name ->
+    def value = project.findProperty(name) ?: System.getProperty(name)
+    if (value != null) {
+      systemProperty name, value
+    }
+  }
+}
+compileJava {
+  options.compilerArgs.addAll(['-Xlint:deprecation', '-Xlint:unchecked'])
+}
+run {
+  if (project.hasProperty('args')) {
+    // The launch scripts pass a multi-line string with backslash continuations,
+    // which collapses into runs of whitespace. Trim first and split on runs, so
+    // that no empty arguments reach PipelineOptionsFactory.
+    args project.args.trim().split('\\s+')
+  }
+}
+dependencies {
+  // App dependencies.
+  implementation "org.apache.beam:beam-sdks-java-core:${beamVersion}"
+  runtimeOnly "org.apache.beam:beam-runners-direct-java:${beamVersion}"
+  implementation "org.apache.beam:beam-runners-google-cloud-dataflow-java:${beamVersion}"
+  implementation "org.apache.beam:beam-sdks-java-io-google-cloud-platform:${beamVersion}"
+
+  implementation "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
+  annotationProcessor "com.google.auto.value:auto-value:${autoValueVersion}"
+
+  // Cross-language RunInference: the Java wrapper delegates to the Python
+  // apache_beam.ml.inference.base.RunInference through an expansion service.
+  implementation "org.apache.beam:beam-sdks-java-extensions-python:${beamVersion}"
+
+  // JSON handling for the Pub/Sub payloads.
+  implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+  // ImmutableMap, used by the data model.
+  implementation "com.google.guava:guava:${guavaVersion}"
+
+
+  // Tests dependencies.
+  testImplementation "junit:junit:${junitVersion}"
+  testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
+  testImplementation "org.apache.beam:beam-sdks-java-test-utils:${beamVersion}"
+  testImplementation "org.mockito:mockito-core:5.23.0"
+  errorprone "com.google.errorprone:error_prone_core:${errorProneCoreVersion}"
+}
+
+// Package a self-contained jar file.
+jar {
+  archiveBaseName = packageName
+  destinationDirectory = file('build')
+  manifest {
+    attributes 'Main-Class': "${javaPackagePath}.GamingAnalyticsPipeline"
+  }
+  exclude 'META-INF/*.SF'
+  exclude 'META-INF/*.DSA'
+  exclude 'META-INF/*.RSA'
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
+  from {
+    configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+  }
+  zip64 true
+}
+spotless {
+  format 'misc', {
+    // define the files to apply `misc` to
+    target '*.gradle', '*.md', '.gitignore'
+    // define the steps to apply to those files
+    trimTrailingWhitespace()
+    leadingTabsToSpaces(2)
+    endWithNewline()
+  }
+  java {
+    target 'src/**/*.java'
+    // apply a specific flavor of google-java-format
+    googleJavaFormat("${googleJavaFormat}").aosp().reflowLongStrings()
+    // fix formatting of type annotations
+    formatAnnotations()
+    // make sure every file has the following copyright header.
+    licenseHeader '''/*
+ * Copyright $YEAR Google.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+'''
+  }
+}

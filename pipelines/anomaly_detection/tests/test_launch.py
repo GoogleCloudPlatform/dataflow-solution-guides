@@ -53,7 +53,7 @@ class LaunchTest(unittest.TestCase):
             BIGQUERY_TABLE='project.dataset.table',
             MAX_DATAFLOW_WORKERS='1',
             DISK_SIZE_GB='200',
-            MACHINE_TYPE='n1-standard-2',
+            MACHINE_TYPE='n2-standard-2',
             SUBNETWORK=subnet,
             NETWORK=network)
         subprocess.run(['bash', str(script)],

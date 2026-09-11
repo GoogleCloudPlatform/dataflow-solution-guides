@@ -145,7 +145,7 @@ Keep the ignored deployment manifest to resume partial runs and clean up only
 owned resources. Ambiguous creates must be reconciled before retrying. Compatible
 external `MODEL_ENDPOINT` values are supported with endpoint-level worker
 prediction access (`roles/anomalyDetectionPredictor`); never adopt or delete external
-endpoints. Workers use private IPs and CPU `n1-standard-2`. Bigtable customer profiles
+endpoints. Workers use private IPs and CPU `n2-standard-2`. Bigtable customer profiles
 (`customer_profiles`) and BigQuery archival (`anomaly_detection.detections`) are active
 parts of the graph. Stop Dataflow, run workflow cleanup, execute any required manual
 resource deletions, then destroy Terraform. Report local/container tests separately
