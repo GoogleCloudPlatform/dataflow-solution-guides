@@ -16,7 +16,7 @@
 package com.google.cloud.dataflow.solutions.gaming_analytics.load;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.ProcessingError;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.Recommendation;
@@ -30,7 +30,7 @@ import org.junit.runners.JUnit4;
 public class PubSubPublishersTest {
 
     @Test
-    public void testRecommendationMessageCarriesFilterableAttributes() {
+    public void testRecommendationMessageCarriesNoAttributes() {
         Recommendation recommendation =
                 Recommendation.builder()
                         .setPlayerId("player_0042")
@@ -42,27 +42,33 @@ public class PubSubPublishersTest {
 
         PubsubMessage message = PubSubPublishers.toPubsubMessage(recommendation);
 
-        assertEquals("player_0042", message.getAttribute("player_id"));
-        assertEquals("level_failed", message.getAttribute("event_type"));
-        assertEquals("difficulty_assist_boost", message.getAttribute("recommendation"));
+        // The JSON body is the single source of truth for the activation consumer. Nothing is
+        // duplicated into the attributes, least of all the model output: an attribute is only
+        // worth its cost when a subscription filter or an ordering key reads it.
+        assertTrue(message.getAttributeMap().isEmpty());
         assertEquals(
                 recommendation.toJsonString(),
                 new String(message.getPayload(), StandardCharsets.UTF_8));
     }
 
     @Test
-    public void testRecommendationMessageOmitsAbsentAttributes() {
+    public void testRecommendationPayloadStillCarriesEveryField() {
         Recommendation recommendation =
                 Recommendation.builder()
                         .setPlayerId("player_1")
+                        .setEventType("purchase")
+                        .setRecommendation("premium_bundle_offer")
                         .setEventTimestamp("2026-09-11T09:53:50.000Z")
                         .build();
 
-        PubsubMessage message = PubSubPublishers.toPubsubMessage(recommendation);
+        String payload =
+                new String(
+                        PubSubPublishers.toPubsubMessage(recommendation).getPayload(),
+                        StandardCharsets.UTF_8);
 
-        assertEquals("player_1", message.getAttribute("player_id"));
-        assertFalse(message.getAttributeMap().containsKey("event_type"));
-        assertFalse(message.getAttributeMap().containsKey("recommendation"));
+        assertTrue(payload.contains("\"player_id\":\"player_1\""));
+        assertTrue(payload.contains("\"event_type\":\"purchase\""));
+        assertTrue(payload.contains("\"recommendation\":\"premium_bundle_offer\""));
     }
 
     @Test

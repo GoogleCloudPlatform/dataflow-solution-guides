@@ -19,8 +19,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 import com.google.api.services.bigquery.model.TableRow;
+import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.EnrichedEvent;
+import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.GameplayEvent;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.ProcessingError;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.Recommendation;
+import com.google.common.collect.ImmutableMap;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.beam.sdk.coders.Coder;
+import org.apache.beam.sdk.schemas.SchemaRegistry;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -39,6 +48,54 @@ public class GamingObjectsTest {
                 .setRecommendationScore(0.64)
                 .setEventTimestamp("2026-09-11T09:53:50.000Z")
                 .setProcessingTimestamp("2026-09-11T09:53:51.000Z");
+    }
+
+    @Test
+    public void testEnrichedEventSurvivesItsSchemaCoder() throws Exception {
+        // Regression test for the narrowed ImmutableMap feature map. Beam derives the coder from
+        // the getter type and generates the decoder with ByteBuddy; if the builder setter were
+        // also declared to take an ImmutableMap, that generated code would hand it a
+        // TransformingMap and the JVM would reject the class with a VerifyError, at runtime only.
+        EnrichedEvent original =
+                EnrichedEvent.of(
+                        GameplayEvent.builder()
+                                .setPlayerId("player_0042")
+                                .setEventType("level_failed")
+                                .setLevel(12)
+                                .setScore(9100L)
+                                .setEventTimestamp("2026-09-11T09:53:50.000Z")
+                                .build(),
+                        ImmutableMap.of("churn_risk", "0.85", "spend_tier", "whale"));
+
+        Coder<EnrichedEvent> coder =
+                SchemaRegistry.createDefault().getSchemaCoder(EnrichedEvent.class);
+
+        ByteArrayOutputStream encoded = new ByteArrayOutputStream();
+        coder.encode(original, encoded);
+        EnrichedEvent decoded = coder.decode(new ByteArrayInputStream(encoded.toByteArray()));
+
+        assertEquals(original.getEvent(), decoded.getEvent());
+        assertEquals(original.getFeatures(), decoded.getFeatures());
+    }
+
+    @Test
+    public void testEnrichedEventCopiesTheFeatureMapItIsGiven() {
+        Map<String, String> mutable = new HashMap<>();
+        mutable.put("churn_risk", "0.85");
+
+        EnrichedEvent enriched =
+                EnrichedEvent.of(
+                        GameplayEvent.builder().setPlayerId("player_0042").build(), mutable);
+
+        // A copy was taken, so later writes to the caller's map are not visible.
+        mutable.put("churn_risk", "0.05");
+        mutable.put("spend_tier", "whale");
+        assertEquals(ImmutableMap.of("churn_risk", "0.85"), enriched.getFeatures());
+
+        // There is deliberately no "mutating the returned map throws" assertion here: the getter is
+        // declared as ImmutableMap, so Error Prone's DoNotCall check rejects any such call at
+        // compile time. That is a stronger guarantee than a runtime exception, but it also means
+        // the call cannot be written in a test.
     }
 
     @Test

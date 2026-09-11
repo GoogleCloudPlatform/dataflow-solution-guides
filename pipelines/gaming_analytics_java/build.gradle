@@ -32,8 +32,9 @@ ext {
   // Versions aligned with the ones Beam resolves transitively, so that the
   // pipeline classpath does not diverge from the one used by the workers.
   jacksonVersion = '2.18.8'
-  googleAuthVersion = '1.49.0'
+  guavaVersion = '33.5.0-jre'
 }
+
 repositories {
   mavenCentral()
   maven {  // Apache Snapshots repository
@@ -49,6 +50,19 @@ test {
   useJUnit()
   dependsOn cleanTest
   testLogging.showStandardStreams = true
+  testLogging.showStackTraces = true
+  // The cross-language RunInference integration test is opt-in: it starts a Python expansion
+  // service and the Python SDK harness container, which the default build and CI must never
+  // require. It aborts through JUnit's Assume unless 'runCrossLanguageTests' is set. Gradle's -D
+  // only sets the property on the daemon, so it has to be forwarded to the test JVM explicitly.
+  // Both -D and -P work:
+  //   ./gradlew test -DrunCrossLanguageTests=true -DcrossLanguageModelUri=/tmp/model.pkl
+  ['runCrossLanguageTests', 'crossLanguageModelUri'].each { name ->
+    def value = project.findProperty(name) ?: System.getProperty(name)
+    if (value != null) {
+      systemProperty name, value
+    }
+  }
 }
 compileJava {
   options.compilerArgs.addAll(['-Xlint:deprecation', '-Xlint:unchecked'])
@@ -68,10 +82,15 @@ dependencies {
   implementation "com.google.auto.value:auto-value-annotations:${autoValueVersion}"
   annotationProcessor "com.google.auto.value:auto-value:${autoValueVersion}"
 
-  // JSON handling for Pub/Sub payloads and for the Vertex AI prediction protocol.
+  // Cross-language RunInference: the Java wrapper delegates to the Python
+  // apache_beam.ml.inference.base.RunInference through an expansion service.
+  implementation "org.apache.beam:beam-sdks-java-extensions-python:${beamVersion}"
+
+  // JSON handling for the Pub/Sub payloads.
   implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
-  // Application Default Credentials for the Vertex AI online prediction calls.
-  implementation "com.google.auth:google-auth-library-oauth2-http:${googleAuthVersion}"
+  // ImmutableMap, used by the data model.
+  implementation "com.google.guava:guava:${guavaVersion}"
+
 
   // Tests dependencies.
   testImplementation "junit:junit:${junitVersion}"

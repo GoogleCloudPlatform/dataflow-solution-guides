@@ -82,34 +82,22 @@ public interface GamingAnalyticsOptions extends PipelineOptions {
 
     void setBigQueryTable(String value);
 
-    @Description("Inference mode: 'local' for the in-process recommender, 'vertex' for an endpoint")
-    @Default.String("local")
-    String getInferenceMode();
+    @Validation.Required
+    @Description(
+            "Cloud Storage URI of the pickled scikit-learn model loaded by RunInference"
+                    + " (MODEL_URI), as gs://BUCKET/OBJECT. Produce it with"
+                    + " scripts/train_model.py.")
+    String getModelUri();
 
-    void setInferenceMode(String value);
+    void setModelUri(String value);
 
     @Description(
-            "Vertex AI endpoint used when inferenceMode=vertex, as"
-                    + " projects/P/locations/L/endpoints/E")
-    String getModelEndpoint();
+            "Optional address, as host:port, of an already running Python expansion service"
+                    + " (EXPANSION_SERVICE). When it is empty, Beam starts a transient one at"
+                    + " submission time, installs the pinned scikit-learn, NumPy and pandas"
+                    + " versions into its virtualenv, and stages those same versions for the"
+                    + " workers.")
+    String getExpansionService();
 
-    void setModelEndpoint(String value);
-
-    @Description("Field of the Vertex AI prediction holding the recommendation label")
-    @Default.String("recommendation")
-    String getPredictionLabelField();
-
-    void setPredictionLabelField(String value);
-
-    @Description("Field of the Vertex AI prediction holding the recommendation score")
-    @Default.String("recommendation_score")
-    String getPredictionScoreField();
-
-    void setPredictionScoreField(String value);
-
-    @Description("Timeout, in seconds, of each Vertex AI online prediction request")
-    @Default.Integer(10)
-    Integer getPredictionTimeoutSeconds();
-
-    void setPredictionTimeoutSeconds(Integer value);
+    void setExpansionService(String value);
 }

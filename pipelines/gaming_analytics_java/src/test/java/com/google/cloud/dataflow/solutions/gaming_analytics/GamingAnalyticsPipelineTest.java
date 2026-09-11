@@ -17,13 +17,12 @@ package com.google.cloud.dataflow.solutions.gaming_analytics;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.ProcessingError;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.Recommendation;
-import com.google.cloud.dataflow.solutions.gaming_analytics.inference.LocalRecommender;
-import com.google.cloud.dataflow.solutions.gaming_analytics.inference.Recommenders;
 import com.google.cloud.dataflow.solutions.gaming_analytics.options.GamingAnalyticsOptions;
 import com.google.cloud.dataflow.solutions.gaming_analytics.transform.JsonToGameplayEvents;
 import com.google.cloud.dataflow.solutions.gaming_analytics.transform.PlayerFeatureEnrichment;
@@ -47,6 +46,10 @@ import org.junit.runners.JUnit4;
 /**
  * End-to-end coverage of the transform chain on the DirectRunner, plus a construction test of the
  * full graph including the Pub/Sub and BigQuery connectors.
+ *
+ * <p>Both substitute {@link FakeRecommendationInference} for the cross-language scoring step, so
+ * that the suite never starts a Python expansion service and {@code ./gradlew build} stays
+ * hermetic.
  */
 @RunWith(JUnit4.class)
 public class GamingAnalyticsPipelineTest implements Serializable {
@@ -63,6 +66,7 @@ public class GamingAnalyticsPipelineTest implements Serializable {
         "--bigtableInstance=gaming-analytics",
         "--bigtableTable=player_features",
         "--bigQueryTable=test-project.gaming_analytics.player_recommendations",
+        "--modelUri=gs://test-bucket/models/gaming_recommender.pkl",
     };
 
     private static GamingAnalyticsOptions options(String... extraArgs) {
@@ -75,7 +79,9 @@ public class GamingAnalyticsPipelineTest implements Serializable {
 
     @Test
     public void testGraphIsBuiltWithEveryStage() {
-        Pipeline p = GamingAnalyticsPipeline.createPipeline(options(), new LocalRecommender());
+        Pipeline p =
+                GamingAnalyticsPipeline.createPipeline(
+                        options(), FakeRecommendationInference.alwaysPredicting(0));
         assertNotNull(p);
 
         StringBuilder transformNames = new StringBuilder();
@@ -109,6 +115,20 @@ public class GamingAnalyticsPipelineTest implements Serializable {
     }
 
     @Test
+    public void testModelUriIsRequired() {
+        String[] withoutModel =
+                Arrays.stream(LAUNCH_ARGS)
+                        .filter(arg -> !arg.startsWith("--modelUri="))
+                        .toArray(String[]::new);
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        PipelineOptionsFactory.fromArgs(withoutModel)
+                                .withValidation()
+                                .as(GamingAnalyticsOptions.class));
+    }
+
+    @Test
     public void testLaunchScriptArgumentsAreParseable() {
         // scripts/01_launch_pipeline.sh builds a single multi-line -Pargs value; bash removes the
         // backslash-newline continuations but leaves runs of spaces, and the Gradle 'run' task
@@ -121,16 +141,17 @@ public class GamingAnalyticsPipelineTest implements Serializable {
                     + " --tempLocation=gs://test-bucket/tmp  "
                     + " --serviceAccount=sa@test-project.iam.gserviceaccount.com  "
                     + " --subnetwork=regions/us-central1/subnetworks/default  "
-                    + " --workerMachineType=g2-standard-4   --diskSizeGb=200   --maxNumWorkers=3  "
-                    + " --dataflowServiceOptions=worker_accelerator=type:nvidia-l4;count:1;install-nvidia-driver:5xx"
-                    + "   --streaming   --enableStreamingEngine   --usePublicIps=false  "
+                    + " --workerMachineType=n1-standard-2   --diskSizeGb=200   --maxNumWorkers=3   "
+                    + "  --experiments=use_runner_v2   --streaming   --enableStreamingEngine  "
+                    + " --usePublicIps=false  "
                     + " --inputSubscription=projects/test-project/subscriptions/gaming-events-sub  "
                     + " --outputTopic=projects/test-project/topics/gaming-recommendations  "
                     + " --errorTopic=projects/test-project/topics/gaming-analytics-errors  "
                     + " --bigtableInstance=gaming-analytics   --bigtableTable=player_features  "
                     + " --bigtableColumnFamily=features  "
                     + " --bigQueryTable=test-project.gaming_analytics.player_recommendations  "
-                    + " --enableEnrichment=true   --inferenceMode=gpu   ";
+                    + " --enableEnrichment=true  "
+                    + " --modelUri=gs://test-bucket/models/gaming_recommender.pkl   ";
 
         GamingAnalyticsOptions parsed =
                 PipelineOptionsFactory.fromArgs(argsProperty.split("\\s"))
@@ -142,10 +163,17 @@ public class GamingAnalyticsPipelineTest implements Serializable {
                 parsed.getInputSubscription());
         assertEquals(
                 "test-project.gaming_analytics.player_recommendations", parsed.getBigQueryTable());
-        assertEquals("gpu", parsed.getInferenceMode());
+        assertEquals("gs://test-bucket/models/gaming_recommender.pkl", parsed.getModelUri());
         assertTrue(parsed.getEnableEnrichment());
-        // The Terraform inference_mode value must resolve to a usable recommender.
-        assertNotNull(Recommenders.fromOptions(parsed));
+
+        // Runner v2 is mandatory for multi-language pipelines. If the launch script ever stops
+        // passing it, the job fails at submission with an opaque error, so assert on it here.
+        assertTrue(argsProperty.contains("--experiments=use_runner_v2"));
+
+        // The options must translate into a usable, correctly configured scoring step.
+        RecommendationInference inference = GamingAnalyticsPipeline.inferenceFromOptions(parsed);
+        assertEquals("gs://test-bucket/models/gaming_recommender.pkl", inference.modelUri());
+        assertNull(inference.expansionService());
     }
 
     @Test
@@ -172,7 +200,11 @@ public class GamingAnalyticsPipelineTest implements Serializable {
 
         PCollectionTuple scored =
                 enriched.get(PlayerFeatureEnrichment.SUCCESS_TAG)
-                        .apply("ScoreEvents", RecommendationInference.of(new LocalRecommender()));
+                        .apply(
+                                "ScoreEvents",
+                                FakeRecommendationInference.alwaysPredicting(
+                                        RecommendationInference.RECOMMENDATION_LABELS.indexOf(
+                                                "premium_bundle_offer")));
 
         PCollection<Recommendation> recommendations =
                 scored.get(RecommendationInference.SUCCESS_TAG);
@@ -183,8 +215,7 @@ public class GamingAnalyticsPipelineTest implements Serializable {
                             Recommendation recommendation = elements.iterator().next();
                             assertEquals("player_0001", recommendation.getPlayerId());
                             assertEquals(
-                                    LocalRecommender.DAILY_QUEST,
-                                    recommendation.getRecommendation());
+                                    "premium_bundle_offer", recommendation.getRecommendation());
                             // The BigQuery row must always carry the two required columns.
                             assertNotNull(recommendation.toTableRow().get("player_id"));
                             assertNotNull(recommendation.toTableRow().get("event_timestamp"));

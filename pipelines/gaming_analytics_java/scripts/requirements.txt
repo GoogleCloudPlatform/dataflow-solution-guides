@@ -1,2 +1,24 @@
+# Helper scripts for the gaming analytics pipeline.
 google-cloud-pubsub>=2.18.0
 google-cloud-bigtable>=2.20.0
+
+# Pinned exactly, not bounded. These are the versions the Apache Beam 2.76.0
+# Python SDK harness image ships
+# (sdks/python/container/py3XX/base_image_requirements.txt), so installing them
+# on a worker is a no-op. All three also appear in
+# RecommendationInference.HARNESS_REQUIREMENTS; re-read the Beam requirements
+# file and move both lists together when the Beam version changes.
+#
+# scikit-learn and numpy are mirrored a third time, as PINNED_SKLEARN_VERSION
+# and PINNED_NUMPY_VERSION in train_model.py: they are what the model artifact
+# is pickled with, and scikit-learn does not guarantee cross-version pickle
+# compatibility, so check_pinned_versions() in that script enforces those two
+# exact versions before writing a model. Move those constants too.
+scikit-learn==1.7.2
+numpy==2.4.6
+# pandas is not used by train_model.py and is not part of the pickle. It is
+# pinned because apache_beam.ml.inference.sklearn_inference imports it at
+# module scope in the harness, and Beam only supplies it implicitly when no
+# extra packages are listed at all.
+pandas==2.3.3
+google-cloud-storage>=2.14.0

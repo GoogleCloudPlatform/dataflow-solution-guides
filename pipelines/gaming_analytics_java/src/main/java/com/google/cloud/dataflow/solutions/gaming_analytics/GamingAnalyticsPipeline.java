@@ -15,12 +15,11 @@
  */
 package com.google.cloud.dataflow.solutions.gaming_analytics;
 
+import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.EnrichedEvent;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.GameplayEvent;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.ProcessingError;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.Recommendation;
 import com.google.cloud.dataflow.solutions.gaming_analytics.extract.GameplayEventReader;
-import com.google.cloud.dataflow.solutions.gaming_analytics.inference.Recommender;
-import com.google.cloud.dataflow.solutions.gaming_analytics.inference.Recommenders;
 import com.google.cloud.dataflow.solutions.gaming_analytics.load.PubSubPublishers;
 import com.google.cloud.dataflow.solutions.gaming_analytics.load.RecommendationBigQuerySink;
 import com.google.cloud.dataflow.solutions.gaming_analytics.options.GamingAnalyticsOptions;
@@ -32,6 +31,7 @@ import org.apache.beam.sdk.extensions.gcp.options.GcpOptions;
 import org.apache.beam.sdk.io.gcp.bigquery.WriteResult;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.Flatten;
+import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
@@ -40,9 +40,13 @@ import org.apache.beam.sdk.values.PCollectionTuple;
  * Real-time gaming analytics and in-game activation pipeline.
  *
  * <p>Gameplay events are read from Pub/Sub, hydrated with the player features held in Cloud
- * Bigtable, scored with the configured recommender, and then published back to Pub/Sub for
- * immediate in-game activation while an analytical copy is streamed into BigQuery. Every element
- * the pipeline cannot process is routed to the dead-letter topic rather than being dropped.
+ * Bigtable, scored with Apache Beam {@code RunInference} (through its cross-language wrapper, see
+ * {@link RecommendationInference}), and then published back to Pub/Sub for immediate in-game
+ * activation while an analytical copy is streamed into BigQuery. Every element the pipeline cannot
+ * process is routed to the dead-letter topic rather than being dropped.
+ *
+ * <p>Because the scoring step is a multi-language transform, this pipeline requires <b>Dataflow
+ * Runner v2</b>: {@code scripts/01_launch_pipeline.sh} passes {@code --experiments=use_runner_v2}.
  */
 public class GamingAnalyticsPipeline {
 
@@ -53,18 +57,29 @@ public class GamingAnalyticsPipeline {
                         .withValidation()
                         .as(GamingAnalyticsOptions.class);
 
-        Pipeline p = createPipeline(options, Recommenders.fromOptions(options));
+        Pipeline p = createPipeline(options, inferenceFromOptions(options));
         p.run();
+    }
+
+    /** Builds the cross-language scoring step described by the pipeline options. */
+    public static RecommendationInference inferenceFromOptions(GamingAnalyticsOptions options) {
+        return RecommendationInference.withModel(options.getModelUri())
+                .withExpansionService(options.getExpansionService());
     }
 
     /**
      * Builds the pipeline.
      *
      * @param options the pipeline configuration
-     * @param recommender the scoring backend, injected so that tests can run the whole graph
-     *     without any cloud dependency
+     * @param inference the scoring step, injected rather than built here. The production
+     *     implementation is a multi-language transform that contacts a Python expansion service
+     *     when it expands, so the tests that assert on the shape of the graph substitute an
+     *     in-process stand-in and stay hermetic. Whatever is passed must emit {@link
+     *     RecommendationInference#SUCCESS_TAG} and {@link RecommendationInference#ERROR_TAG}.
      */
-    public static Pipeline createPipeline(GamingAnalyticsOptions options, Recommender recommender) {
+    public static Pipeline createPipeline(
+            GamingAnalyticsOptions options,
+            PTransform<PCollection<EnrichedEvent>, PCollectionTuple> inference) {
         Pipeline p = Pipeline.create(options);
 
         String bigtableProject =
@@ -95,10 +110,9 @@ public class GamingAnalyticsPipeline {
                                         options.getEnableEnrichment() == null
                                                 || options.getEnableEnrichment()));
 
-        // T: score the events.
+        // T: score the events with RunInference.
         PCollectionTuple scored =
-                enriched.get(PlayerFeatureEnrichment.SUCCESS_TAG)
-                        .apply("ScoreEvents", RecommendationInference.of(recommender));
+                enriched.get(PlayerFeatureEnrichment.SUCCESS_TAG).apply("ScoreEvents", inference);
 
         PCollection<Recommendation> recommendations =
                 scored.get(RecommendationInference.SUCCESS_TAG);

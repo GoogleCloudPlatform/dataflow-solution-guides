@@ -42,6 +42,21 @@ The guide supports two inference topologies. Both are covered by the `inference_
 > [!NOTE]
 > No Dataflow job and no Vertex AI endpoint are created by Terraform. In `vertex` mode you deploy the endpoint separately and grant it to the worker service account.
 
+> [!IMPORTANT]
+> **These modes no longer match the Java pipeline shipped in this repository.** That pipeline scores
+> events with a **scikit-learn** model running on the worker through cross-language `RunInference`.
+> scikit-learn does not use a GPU, and the pipeline never calls a Vertex AI endpoint. Concretely:
+>
+> - the `gpu` default selects a `g2-standard-4` with an L4 that the pipeline will not use —
+>   `scripts/01_launch_pipeline.sh` therefore does not request the accelerator unless you export
+>   `USE_GPU_ACCELERATOR=true`, and `WORKER_MACHINE_TYPE` overrides the machine type;
+> - the `gamingAnalyticsPredictor` custom role created in `vertex` mode grants a permission the
+>   pipeline does not exercise.
+>
+> `inference_mode = "vertex"` (or an explicit `machine_type`) is currently the cheapest way to get
+> plain CPU workers. This module is kept as-is on purpose; reconciling the variable with the
+> pipeline is tracked as a follow-up.
+
 ## Configuration variables
 
 This deployment accepts the following configuration variables:

@@ -25,10 +25,10 @@ import com.google.cloud.bigtable.data.v2.models.TableId;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.EnrichedEvent;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.GameplayEvent;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.ProcessingError;
+import com.google.common.collect.ImmutableMap;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -146,11 +146,15 @@ public abstract class PlayerFeatureEnrichment
      * @param columnFamily the only column family taken into account
      * @return an immutable map of qualifier to UTF-8 decoded value
      */
-    public static Map<String, String> extractFeatures(List<RowCell> cells, String columnFamily) {
+    public static ImmutableMap<String, String> extractFeatures(
+            List<RowCell> cells, String columnFamily) {
         if (cells == null || cells.isEmpty()) {
-            return Collections.emptyMap();
+            return ImmutableMap.of();
         }
-        Map<String, String> features = new HashMap<>();
+        // ImmutableMap.Builder rejects duplicate keys, and a Bigtable row legitimately carries
+        // several cells per qualifier, so the latest cell is selected first and the copy is made
+        // once at the end.
+        Map<String, String> features = new LinkedHashMap<>();
         for (RowCell cell : cells) {
             if (!columnFamily.equals(cell.getFamily())) {
                 continue;
@@ -158,7 +162,7 @@ public abstract class PlayerFeatureEnrichment
             features.putIfAbsent(
                     cell.getQualifier().toStringUtf8(), cell.getValue().toStringUtf8());
         }
-        return Collections.unmodifiableMap(features);
+        return ImmutableMap.copyOf(features);
     }
 
     @Override
@@ -232,14 +236,14 @@ public abstract class PlayerFeatureEnrichment
                 @Timestamp Instant timestamp,
                 MultiOutputReceiver output) {
             if (!enabled || bigtableDataClient == null) {
-                output.get(SUCCESS_TAG).output(EnrichedEvent.of(event, Collections.emptyMap()));
+                output.get(SUCCESS_TAG).output(EnrichedEvent.of(event, ImmutableMap.of()));
                 return;
             }
 
             String rowKey = event.getPlayerId();
             if (rowKey == null || rowKey.trim().isEmpty()) {
                 featureStoreMisses.inc();
-                output.get(SUCCESS_TAG).output(EnrichedEvent.of(event, Collections.emptyMap()));
+                output.get(SUCCESS_TAG).output(EnrichedEvent.of(event, ImmutableMap.of()));
                 return;
             }
 
@@ -250,7 +254,7 @@ public abstract class PlayerFeatureEnrichment
                                 .iterator();
                 if (!rows.hasNext()) {
                     featureStoreMisses.inc();
-                    output.get(SUCCESS_TAG).output(EnrichedEvent.of(event, Collections.emptyMap()));
+                    output.get(SUCCESS_TAG).output(EnrichedEvent.of(event, ImmutableMap.of()));
                     return;
                 }
 

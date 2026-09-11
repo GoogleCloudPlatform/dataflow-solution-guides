@@ -17,9 +17,8 @@ package com.google.cloud.dataflow.solutions.gaming_analytics.load;
 
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.ProcessingError;
 import com.google.cloud.dataflow.solutions.gaming_analytics.data.GamingObjects.Recommendation;
+import com.google.common.collect.ImmutableMap;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
 import org.apache.beam.sdk.metrics.Counter;
@@ -37,8 +36,17 @@ import org.apache.beam.sdk.values.PDone;
  * gaming platform can activate them in game with minimal delay. Unprocessable elements go to the
  * separate dead-letter topic, where they can be inspected and reprocessed.
  *
- * <p>Messages carry attributes so that the activation consumer can filter without parsing the
- * payload.
+ * <p><b>On message attributes.</b> An attribute is only worth setting when a consumer uses it
+ * without reading the payload, which in practice means a Pub/Sub subscription filter or an ordering
+ * key. Recommendations therefore carry <b>no</b> attributes: {@code player_id}, {@code event_type}
+ * and {@code recommendation} are all in the JSON body, no consumer in this guide filters on them,
+ * and duplicating them would create a second copy of the record — including the model output — that
+ * can silently drift from the body. If your activation consumer needs per-player ordering, set a
+ * Pub/Sub ordering key rather than an attribute.
+ *
+ * <p>Dead-letter records do carry a {@code stage} attribute, because that one has a concrete use:
+ * it lets an operator create a filtered subscription per failure stage (for example {@code
+ * attributes.stage = "enrich"}) and triage failures without parsing every payload.
  */
 public final class PubSubPublishers {
 
@@ -55,23 +63,15 @@ public final class PubSubPublishers {
 
     /** Builds the Pub/Sub message carrying a recommendation. */
     public static PubsubMessage toPubsubMessage(Recommendation recommendation) {
-        Map<String, String> attributes = new HashMap<>();
-        attributes.put("player_id", recommendation.getPlayerId());
-        if (recommendation.getEventType() != null) {
-            attributes.put("event_type", recommendation.getEventType());
-        }
-        if (recommendation.getRecommendation() != null) {
-            attributes.put("recommendation", recommendation.getRecommendation());
-        }
         return new PubsubMessage(
-                recommendation.toJsonString().getBytes(StandardCharsets.UTF_8), attributes);
+                recommendation.toJsonString().getBytes(StandardCharsets.UTF_8), ImmutableMap.of());
     }
 
     /** Builds the Pub/Sub message carrying a dead-letter record. */
     public static PubsubMessage toPubsubMessage(ProcessingError error) {
-        Map<String, String> attributes = new HashMap<>();
-        attributes.put("stage", error.getStage());
-        return new PubsubMessage(error.toJsonString().getBytes(StandardCharsets.UTF_8), attributes);
+        return new PubsubMessage(
+                error.toJsonString().getBytes(StandardCharsets.UTF_8),
+                ImmutableMap.of("stage", error.getStage()));
     }
 
     private static class PublishRecommendations
