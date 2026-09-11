@@ -228,12 +228,18 @@ module "dataflow_sa" {
 // this module creates rather than to the whole project.
 //
 // This has to be an instance-scoped binding, not a table-scoped one. Reading
-// rows only needs `bigtable.tables.readRows` on the table, but the Bigtable
-// client also runs a channel-pool health checker that calls
-// `bigtable.instances.ping`, and that permission is authorized against the
-// *instance*. With a table-scoped binding the data reads succeed while every
-// background probe fails with PERMISSION_DENIED, which floods the worker logs
-// and makes the client recycle gRPC channels it believes are unhealthy.
+// rows only needs `bigtable.tables.readRows` on the table, but the *Java*
+// Bigtable client this pipeline uses also runs a channel-pool health checker
+// that calls `bigtable.instances.ping`, and that permission is authorized
+// against the instance. With a table-scoped binding the data reads succeed
+// while every background probe fails with PERMISSION_DENIED, which floods the
+// worker logs and makes the client recycle gRPC channels it believes are
+// unhealthy.
+//
+// This is client-specific, so do not copy it blindly. The legacy Python
+// client (`google.cloud.bigtable.Client`, used by some of the other guides in
+// this repository) never issues that ping, and a table-scoped binding is both
+// sufficient and tighter there.
 resource "google_bigtable_instance_iam_member" "worker_features" {
   project  = var.project_id
   instance = local.bigtable_instance
