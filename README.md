@@ -28,7 +28,7 @@ This the list of solution guides available at this moment:
 |          [IoT Analytics](./use_cases/IoT_Analytics.md)          |    Real-time Internet of Things (IoT) analytics with Bigtable enrichment & Scikit-Learn RunInference    | Ready :white_check_mark:  |
 |      [Anomaly Detection](./use_cases/Anomaly_Detection.md)      |         Real-time anomaly detection with Bigtable enrichment & models deployed in Vertex AI             | Ready :white_check_mark:  |
 |          [Customer Data Platform](./use_cases/CDP.md)           |          Real-time customer data platform that unifies a customer view from different sources.          | Ready :white_check_mark:  |
-|       [Gaming Analytics](./use_cases/Gaming_Analytics.md)       |               Real-time analyis of gaming data to enhance live gameplay & offer targeting               |      Beta :factory:       |
+|       [Gaming Analytics](./use_cases/Gaming_Analytics.md)       |              Real-time analysis of gaming data to enhance live gameplay & offer targeting               | Ready :white_check_mark:  |
 
 ## Repository structure
 
