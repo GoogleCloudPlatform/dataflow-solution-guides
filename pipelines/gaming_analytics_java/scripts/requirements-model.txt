@@ -18,7 +18,7 @@
 # PINNED_NUMPY_VERSION in train_model.py. PinnedVersionsConsistencyTest keeps
 # all three copies in step; they move together with the Beam version.
 scikit-learn==1.7.2
-numpy==2.4.6
+numpy==2.5.3
 # pandas is not used by train_model.py and is not part of the pickle. It is
 # required because apache_beam.ml.inference.sklearn_inference imports it at
 # module scope inside the harness.
