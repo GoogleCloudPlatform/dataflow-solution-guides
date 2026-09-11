@@ -43,6 +43,7 @@ dataflow-solution-guides/
 │   ├── clickstream_analytics_java/ # Java: Bigtable lookup enrichment + BigQuery deadletter
 │   ├── iot_analytics/        # Python: IoT sensor aggregation + Bigtable & Scikit-Learn RunInference
 │   ├── log_replication_splunk/ # Dataflow Flex Template: Pub/Sub to Splunk HEC
+│   ├── gaming_analytics_java/ # Java: Bigtable player features + recommendation inference, Pub/Sub activation & BigQuery
 │   └── pylintrc              # Google Python Style Guide Pylint configuration
 │
 └── .agents/                  # Workspace Agent Customizations

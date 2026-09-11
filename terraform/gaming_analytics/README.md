@@ -98,7 +98,7 @@ This deployment accepts the following configuration variables:
    ```
 
 4. **Access the deployed resources:**
-   Terraform generates `pipelines/gaming_analytics/scripts/00_set_environment.sh` with all required environment variables.
+   Terraform generates `pipelines/gaming_analytics_java/scripts/00_set_environment.sh` with all required environment variables.
 
 > [!IMPORTANT]
 > If you deploy into an existing network with `--no_use_public_ips` workers, make sure Private Google Access is enabled on the subnet, that TCP ports `12345` and `12346` are allowed between workers, and that Cloud NAT is configured if the workers need internet access.
@@ -108,7 +108,7 @@ This deployment accepts the following configuration variables:
 The Terraform code generates an environment configuration script with all variable values to be used by the pipeline:
 
 ```bash
-source ../../pipelines/gaming_analytics/scripts/00_set_environment.sh
+source ../../pipelines/gaming_analytics_java/scripts/00_set_environment.sh
 ```
 
 ## How to remove

@@ -328,7 +328,7 @@ pylint --rcfile ../pylintrc .
 | 6 | **`iot_analytics/`** *(Done)* | Cloud Bigtable (Instance & Table), BigQuery Dataset & Table, Pub/Sub Topics, Artifact Registry, Service Account | `iot-analytics-sa` | `pipelines/iot_analytics/` |
 | 7 | **`ml_ai/`** *(Done)* | Pub/Sub Topics (`messages`, `predictions`), Artifact Registry, GCS Bucket | `ml-ai-dataflow-sa` | `pipelines/ml_ai_python/` |
 | 8 | **`log_replication_splunk/`** *(Done)* | Pub/Sub Topic, Secret Manager (Splunk HEC token), Optional Splunk Demo VM | `splunk-replication-sa` | `pipelines/log_replication_splunk/` |
-| 9 | **`gaming_analytics/`** *(Done — built greenfield in the modern pattern)* | Pub/Sub Topics (`gaming-events`, `gaming-recommendations`, `gaming-analytics-errors`), Cloud Bigtable feature store, BigQuery Dataset & Table, Artifact Registry | `gaming-analytics-sa` | `pipelines/gaming_analytics/` *(pipeline pending)* |
+| 9 | **`gaming_analytics/`** *(Done — built greenfield in the modern pattern)* | Pub/Sub Topics (`gaming-events`, `gaming-recommendations`, `gaming-analytics-errors`), Cloud Bigtable feature store, BigQuery Dataset & Table, Artifact Registry | `gaming-analytics-sa` | `pipelines/gaming_analytics_java/` |
 
 ---
 

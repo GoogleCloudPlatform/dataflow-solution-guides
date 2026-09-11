@@ -36,3 +36,5 @@ These are the pipelines included in this directory
 | Marketing Intelligence |        Python        |     [marketing_intelligence](./marketing_intelligence/)     |
 |    Log replication     |  Dataflow template   |     [log_replication_splunk](./log_replication_splunk/)     |
 | Clickstream Analytics  |         Java         | [clickstream_analytics_java](./clickstream_analytics_java/) |
+|     IoT Analytics      |        Python        |            [iot_analytics](./iot_analytics/)                |
+|   Gaming Analytics     |         Java         |     [gaming_analytics_java](./gaming_analytics_java/)       |
