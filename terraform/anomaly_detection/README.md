@@ -15,7 +15,7 @@ The existing Fabric module pins remain at v58.0.0.
 | Bigtable | `anomaly-detection`, one-node cluster, `customer_profiles` with `profile` column family |
 | BigQuery | `anomaly_detection.detections`, explicit schema, daily timestamp partitions, customer/transaction clustering |
 | Bucket | Reused by default; optional creation in the chosen region |
-| Worker | `anomaly-detection-sa`, default `n1-standard-2` CPU machine |
+| Worker | `anomaly-detection-sa`, default `n2-standard-2` CPU machine |
 | Trainer | `anomaly-training-sa`, isolated artifact access beneath `anomaly-training/` |
 | Prediction role | `anomalyDetectionPredictor`, containing only `aiplatform.endpoints.predict`; workflow grants it on its endpoint |
 

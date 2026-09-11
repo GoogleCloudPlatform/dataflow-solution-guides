@@ -24,8 +24,8 @@ run "application_contract" {
   command = plan
 
   assert {
-    condition     = local.machine_type == "n1-standard-2"
-    error_message = "The inference client must use a CPU worker."
+    condition     = local.machine_type == "n2-standard-2"
+    error_message = "The inference client must use a CPU worker, and an N2 one: the n1-standard types are absent from newer regions such as europe-southwest1."
   }
   assert {
     condition     = google_bigtable_table_iam_member.worker_features.table == "customer_profiles" && google_bigtable_table_iam_member.worker_features.role == "roles/bigtable.reader"

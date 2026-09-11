@@ -21,10 +21,11 @@ locals {
   // cross-language RunInference transform. scikit-learn is CPU only, so there
   // is no accelerator and no GPU machine type: see the pipeline README.
   //
-  // N2 rather than N1: the older N1 family is not offered in the newer regions
-  // (europe-southwest1, for one), where Dataflow rejects the job outright with
-  // "Unable to get machine type information for machine type n1-standard-2".
-  // N2 is available everywhere this guide is likely to be deployed.
+  // N2 rather than N1: the n1-standard types are not offered in the newer
+  // regions (europe-southwest1 lists no n1-standard-* at all, only n1-ultramem),
+  // where Dataflow rejects the job outright with "Unable to get machine type
+  // information for machine type n1-standard-2". N2 is available everywhere
+  // this guide is likely to be deployed.
   machine_type         = var.machine_type != null ? var.machine_type : "n2-standard-2"
   worker_disk_size_gb  = 50
   max_dataflow_workers = 3

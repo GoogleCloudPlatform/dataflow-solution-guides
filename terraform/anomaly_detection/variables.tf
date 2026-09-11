@@ -66,20 +66,26 @@ variable "training_service_account_name" {
   nullable    = false
 }
 
+// N2 rather than N1 throughout: the n1-standard types are not offered in the
+// newer regions (europe-southwest1 lists no n1-standard-* at all), so an N1
+// default makes this guide fail on first deploy there. Dataflow rejects the
+// job with "Unable to get machine type information for machine type
+// n1-standard-2". n2-standard-2 and n2-standard-4 are available broadly and
+// are supported by Vertex AI custom training and prediction alike.
 variable "machine_type" {
-  description = "Dataflow worker machine type."
+  description = "Dataflow worker machine type. Avoid the n1-standard types: they are not offered in newer regions such as europe-southwest1."
   type        = string
-  default     = "n1-standard-2"
+  default     = "n2-standard-2"
 }
 
 variable "training_machine_type" {
-  description = "Vertex AI training machine type."
+  description = "Vertex AI training machine type. Avoid the n1-standard types: they are not offered in newer regions such as europe-southwest1."
   type        = string
-  default     = "n1-standard-4"
+  default     = "n2-standard-4"
 }
 
 variable "endpoint_machine_type" {
-  description = "Vertex AI prediction endpoint machine type."
+  description = "Vertex AI prediction endpoint machine type. Avoid the n1-standard types: they are not offered in newer regions such as europe-southwest1."
   type        = string
-  default     = "n1-standard-2"
+  default     = "n2-standard-2"
 }

@@ -100,7 +100,7 @@ def execute(args, state, path):
       save(path, state)
       endpoint.deploy(
           aiplatform.Model(state['model']),
-          machine_type=os.environ.get('ENDPOINT_MACHINE_TYPE', 'n1-standard-2'),
+          machine_type=os.environ.get('ENDPOINT_MACHINE_TYPE', 'n2-standard-2'),
           min_replica_count=1,
           max_replica_count=1)
     state.pop('deploy_pending', None)
@@ -189,7 +189,7 @@ def submit_training(state, image):
       worker_pool_specs=[{
           'machine_spec': {
               'machine_type':
-                  os.environ.get('TRAINING_MACHINE_TYPE', 'n1-standard-4')
+                  os.environ.get('TRAINING_MACHINE_TYPE', 'n2-standard-4')
           },
           'replica_count': 1,
           'container_spec': {

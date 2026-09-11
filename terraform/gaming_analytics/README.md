@@ -58,7 +58,7 @@ This deployment accepts the following configuration variables:
 | `bucket_name` | `string` | `null` | Optional GCS bucket name for Dataflow temp/staging files. Defaults to `project_id` if not specified. |
 | `create_bucket` | `bool` | `false` | Set to `true` to provision a new GCS bucket, or `false` to reuse an existing one. |
 | `service_account_name` | `string` | `"gaming-analytics-sa"` | Name of the dedicated Dataflow worker service account to create. |
-| `machine_type` | `string` | `null` | Overrides the worker machine type. Defaults to `n2-standard-2`. The N1 family is not available in newer regions such as `europe-southwest1`. |
+| `machine_type` | `string` | `null` | Overrides the worker machine type. Defaults to `n2-standard-2`. The `n1-standard` types are not available in newer regions such as `europe-southwest1`. |
 | `input_topic` | `string` | `"gaming-events"` | Name for the input Pub/Sub topic. |
 | `output_topic` | `string` | `"gaming-recommendations"` | Name for the output Pub/Sub topic. |
 | `destroy_all_resources` | `bool` | `true` | When `true`, allows deletion of the Bigtable instance and BigQuery dataset contents on `terraform destroy`. Set to `false` for production. |
