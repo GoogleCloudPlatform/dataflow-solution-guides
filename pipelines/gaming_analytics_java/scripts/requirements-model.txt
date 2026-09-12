@@ -22,4 +22,4 @@ numpy==2.4.6
 # pandas is not used by train_model.py and is not part of the pickle. It is
 # required because apache_beam.ml.inference.sklearn_inference imports it at
 # module scope inside the harness.
-pandas==2.3.3
+pandas==3.0.5
