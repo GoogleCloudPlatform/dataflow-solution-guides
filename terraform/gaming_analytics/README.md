@@ -40,7 +40,7 @@ The Java pipeline shipped with this guide scores events with a **scikit-learn** 
 | Worker disk | 50 GB |
 
 > [!NOTE]
-> A Runner v2 multi-language job runs a Java and a Python SDK harness side by side on every worker. `n2-standard-2` is sized for the guide's demo throughput; raise `machine_type` before pushing real traffic through it.
+> A Portable Runner multi-language job runs a Java and a Python SDK harness side by side on every worker. `n2-standard-2` is sized for the guide's demo throughput; raise `machine_type` before pushing real traffic through it.
 
 > [!NOTE]
 > No Dataflow job is created by Terraform, and neither is the model artifact. The model is trained during the build of the custom Python SDK harness image and baked into it, so that the versions it was pickled with are by construction the versions that load it on the worker. Run `pipelines/gaming_analytics_java/scripts/01_build_and_push_container.sh` after `terraform apply` and before launching the pipeline; it publishes the image to the Artifact Registry repository above, at `CONTAINER_URI`. The pipeline reads the model from `MODEL_PATH` inside that image.

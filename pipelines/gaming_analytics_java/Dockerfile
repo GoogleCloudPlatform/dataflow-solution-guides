@@ -16,8 +16,8 @@
 #
 # The pipeline itself is Java, but it scores events with the Apache Beam
 # RunInference transform through its cross-language wrapper, so a Dataflow
-# Runner v2 worker runs a Java harness and a Python harness side by side. This
-# image replaces only the Python one, selected at launch time with
+# Portable Runner worker runs a Java harness and a Python harness side by side.
+# This image replaces only the Python one, selected at launch time with
 #   --sdkHarnessContainerImageOverrides=".*python.*,<this image>"
 # (see scripts/03_launch_pipeline.sh).
 #

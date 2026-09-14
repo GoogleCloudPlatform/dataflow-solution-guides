@@ -51,8 +51,8 @@ fi
 
 # WORKER_MACHINE_TYPE overrides the machine type exported by Terraform. The
 # model runs on the worker CPU, in the Python SDK harness, so a GPU machine type
-# would buy nothing; note that Runner v2 multi-language jobs run a Java and a
-# Python harness side by side, so give the workers enough memory.
+# would buy nothing; note that Portable Runner multi-language jobs run a Java and
+# a Python harness side by side, so give the workers enough memory.
 MACHINE_TYPE_OPT=""
 EFFECTIVE_MACHINE_TYPE="${WORKER_MACHINE_TYPE:-${MACHINE_TYPE:-}}"
 if [ -n "${EFFECTIVE_MACHINE_TYPE}" ]; then
@@ -97,7 +97,7 @@ echo
   $MAX_WORKERS_OPT \
   --streaming \
   --enableStreamingEngine \
-  --experiments=use_runner_v2 \
+  --experiments=enable_portable_runner \
   $HARNESS_OVERRIDE_OPT \
   --usePublicIps=false \
   --inputSubscription=$INPUT_SUBSCRIPTION \

@@ -67,8 +67,9 @@ import org.slf4j.LoggerFactory;
  *       contains it starts (or contacts) a Python expansion service, which needs either a local
  *       Python interpreter that can {@code pip install} Beam, or Docker. It is therefore never
  *       exercised by the unit test suite; see {@code RecommendationInferenceCrossLanguageIT}.
- *   <li><b>Dataflow Runner v2 is required</b> ({@code --experiments=use_runner_v2}). Multi-language
- *       pipelines do not run on the original Dataflow runner.
+ *   <li><b>The Dataflow Portable Runner is required</b> ({@code
+ *       --experiments=enable_portable_runner}). Multi-language pipelines do not run on the
+ *       Streaming Java Runner.
  *   <li><b>The Python package versions must match the ones the model was pickled with.</b> {@link
  *       #HARNESS_REQUIREMENTS} is what gets installed in the Python SDK harness. Of those, {@code
  *       scikit-learn} and {@code numpy} are the pickle-critical pair, and {@code

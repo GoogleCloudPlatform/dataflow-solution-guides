@@ -143,8 +143,8 @@ public class GamingAnalyticsPipelineTest implements Serializable {
                     + " --serviceAccount=sa@test-project.iam.gserviceaccount.com  "
                     + " --subnetwork=regions/us-central1/subnetworks/default  "
                     + " --workerMachineType=n2-standard-2   --diskSizeGb=50   --maxNumWorkers=3    "
-                    + " --experiments=use_runner_v2   --streaming   --enableStreamingEngine  "
-                    + " --sdkHarnessContainerImageOverrides=.*python.*,"
+                    + " --experiments=enable_portable_runner   --streaming  "
+                    + " --enableStreamingEngine   --sdkHarnessContainerImageOverrides=.*python.*,"
                         + harnessImage
                         + "   --usePublicIps=false  "
                         + " --inputSubscription=projects/test-project/subscriptions/gaming-events-sub"
@@ -169,9 +169,9 @@ public class GamingAnalyticsPipelineTest implements Serializable {
         assertEquals("/opt/gaming_analytics/recommender.pkl", parsed.getModelUri());
         assertTrue(parsed.getEnableEnrichment());
 
-        // Runner v2 is mandatory for multi-language pipelines. If the launch script ever stops
-        // passing it, the job fails at submission with an opaque error, so assert on it here.
-        assertTrue(argsProperty.contains("--experiments=use_runner_v2"));
+        // The Portable Runner is mandatory for multi-language pipelines. If the launch script ever
+        // stops passing it, the job fails at submission with an opaque error, so assert on it here.
+        assertTrue(argsProperty.contains("--experiments=enable_portable_runner"));
 
         // The override is what makes the workers run our Artifact Registry harness, which is the
         // only image that has the model baked in at --modelUri. Without it Dataflow quietly falls

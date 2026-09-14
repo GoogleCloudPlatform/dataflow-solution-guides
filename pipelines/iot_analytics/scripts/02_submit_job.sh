@@ -48,7 +48,6 @@ $PYTHON_CMD -m main \
   --service_account_email=$SERVICE_ACCOUNT \
   $SUBNET_OPT \
   --no_use_public_ips \
-  --experiments=use_runner_v2 \
   --experiments=no_use_multiple_sdk_containers \
   --machine_type=${MACHINE_TYPE:-n2-standard-4} \
   --sdk_container_image=$CONTAINER_URI \
