@@ -45,8 +45,9 @@ import org.apache.beam.sdk.values.PCollectionTuple;
  * activation while an analytical copy is streamed into BigQuery. Every element the pipeline cannot
  * process is routed to the dead-letter topic rather than being dropped.
  *
- * <p>Because the scoring step is a multi-language transform, this pipeline requires <b>Dataflow
- * Runner v2</b>: {@code scripts/03_launch_pipeline.sh} passes {@code --experiments=use_runner_v2}.
+ * <p>Because the scoring step is a multi-language transform, this pipeline requires the <b>Dataflow
+ * Portable Runner</b>: {@code scripts/03_launch_pipeline.sh} passes {@code
+ * --experiments=enable_portable_runner}.
  */
 public class GamingAnalyticsPipeline {
 

@@ -60,8 +60,8 @@ import org.junit.runners.JUnit4;
  * <p>It deliberately does <b>not</b> execute the pipeline. The Java {@code DirectRunner} is not a
  * portable runner and cannot run an expanded external transform; attempting it fails with {@code
  * NullPointerException: No evaluator for PTransform "beam:transform:external:v1"}. Executing this
- * path requires a portable runner — in this guide, Dataflow Runner v2. End-to-end execution is
- * therefore verified by deploying the pipeline, not by this test.
+ * path requires a portable runner — in this guide, the Dataflow Portable Runner. End-to-end
+ * execution is therefore verified by deploying the pipeline, not by this test.
  *
  * <h2>How to run it</h2>
  *
