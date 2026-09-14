@@ -122,13 +122,14 @@ would leave `recommendation_score` empty.
 #### Requirements this places on the deployment
 
 > [!IMPORTANT]
-> **Dataflow Runner v2 is required.** Multi-language pipelines do not run on the original Dataflow
-> runner. `scripts/03_launch_pipeline.sh` passes `--experiments=use_runner_v2`.
+> **The Dataflow Portable Runner is required.** Multi-language pipelines do not run on the
+> Streaming Java Runner. `scripts/03_launch_pipeline.sh` passes
+> `--experiments=enable_portable_runner`.
 
 ##### The Python SDK harness is a container built by this guide
 
-A Runner v2 multi-language job runs a second SDK harness container next to the Java one, and the
-Python side of `RunInference` executes inside it. This guide ships that container:
+A Portable Runner multi-language job runs a second SDK harness container next to the Java one, and
+the Python side of `RunInference` executes inside it. This guide ships that container:
 [`Dockerfile`](Dockerfile) starts from `apache/beam_python3.13_sdk:2.76.0`, installs
 [`scripts/requirements-model.txt`](scripts/requirements-model.txt), and then **runs
 `scripts/train_model.py` as a build step**, writing the pickled model to
@@ -223,9 +224,9 @@ guarantees any more that the versions in that harness are the ones the model was
 > [!NOTE]
 > The model runs on the worker CPU: scikit-learn does not use a GPU, and the Terraform module
 > provisions plain CPU workers (`n2-standard-2` by default) with no accelerator. Bear in mind that a
-> Runner v2 multi-language job runs a Java and a Python SDK harness side by side on every worker, so
-> if you raise the throughput, give them more room with the Terraform `machine_type` variable or by
-> exporting `WORKER_MACHINE_TYPE` before launching.
+> Portable Runner multi-language job runs a Java and a Python SDK harness side by side on every
+> worker, so if you raise the throughput, give them more room with the Terraform `machine_type`
+> variable or by exporting `WORKER_MACHINE_TYPE` before launching.
 
 ---
 
@@ -344,7 +345,7 @@ always passes both:
 
 | Option | Value | Why |
 | :--- | :--- | :--- |
-| `--experiments` | `use_runner_v2` | Multi-language pipelines only run on Runner v2. |
+| `--experiments` | `enable_portable_runner` | Multi-language pipelines only run on the Portable Runner. |
 | `--sdkHarnessContainerImageOverrides` | `.*python.*,$CONTAINER_URI` | Runs the harness image built in this directory instead of the stock one. The regex matches the Python harness only; the Java harness is untouched. |
 
 ---
@@ -413,8 +414,8 @@ loader is *rejected*, so the positive test cannot pass vacuously.
 > **It does not execute the pipeline, and cannot.** The Java `DirectRunner` is not a portable runner
 > and has no evaluator for an expanded external transform; running one fails with
 > `NullPointerException: No evaluator for PTransform "beam:transform:external:v1"`. Executing this
-> path needs a portable runner — here, Dataflow Runner v2. **End-to-end scoring is therefore only
-> verifiable by deploying the pipeline**, not by any local test.
+> path needs a portable runner — here, the Dataflow Portable Runner. **End-to-end scoring is
+> therefore only verifiable by deploying the pipeline**, not by any local test.
 
 ### The captured Python prediction fixture
 
@@ -455,9 +456,9 @@ print(base64.b64encode(encoded).decode())
 > [!WARNING]
 > **The DirectRunner cannot run this pipeline end to end.** It is not a portable runner, so it has
 > no evaluator for the expanded cross-language `RunInference` (`beam:transform:external:v1`). Use
-> `DataflowRunner` with `--experiments=use_runner_v2`, or another portable runner, to execute the
-> full graph. The DirectRunner is still what the unit tests use, substituting a stand-in for the
-> language hop.
+> `DataflowRunner` with `--experiments=enable_portable_runner`, or another portable runner, to
+> execute the full graph. The DirectRunner is still what the unit tests use, substituting a stand-in
+> for the language hop.
 
 ---
 
@@ -516,8 +517,8 @@ on defaults alone.
 
 The script enforces the repository guardrails: private IPs only (`--usePublicIps=false`), the
 dedicated worker service account (`--serviceAccount=$SERVICE_ACCOUNT`), the subnetwork exported by
-Terraform, and Streaming Engine. It also passes `--experiments=use_runner_v2`, without which the
-cross-language `RunInference` cannot run, and
+Terraform, and Streaming Engine. It also passes `--experiments=enable_portable_runner`, without
+which the cross-language `RunInference` cannot run, and
 `--sdkHarnessContainerImageOverrides=.*python.*,$CONTAINER_URI`, without which the workers would run
 a Python harness that has no model at `$MODEL_PATH`.
 
