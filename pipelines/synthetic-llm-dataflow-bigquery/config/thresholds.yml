@@ -1,0 +1,155 @@
+# Mode A validation thresholds — env-scoped severity gates.
+#
+# Loaded by the Beam pipeline at job start (M1 §12 — wiring not yet implemented;
+# this file is the contract).
+#
+# Severity ladder (see .claude/skills/validation-mode-a.md and the brief §8):
+#   BLOCKER  → raises BlockerThresholdExceeded → Dataflow job FAILED
+#   CRITICAL → DLQ + metric + Mode-B-fails-CI (Mode B = M2)
+#   MAJOR    → metric only; alerts in Mode B
+#   MINOR    → counter only; trend
+#
+# Each rule id maps to the check catalog in the brief §6. Add new rules
+# only after adding them to the catalog and a corresponding check.
+
+defaults:
+  # Fraction of records that fail any BLOCKER-severity rule before the
+  # whole Dataflow job is failed. Stricter in prod.
+  blocker_failure_ratio:
+    dev: 0.20
+    uat: 0.05
+    prd: 0.01
+
+rules:
+  schema.types:
+    dimension: validity
+    severity: BLOCKER
+    threshold: 1.0   # 100% type match required
+
+  null.required:
+    dimension: completeness
+    severity: BLOCKER
+    threshold: 0.0   # 0% nulls on REQUIRED columns
+
+  pk.duplicate:
+    dimension: uniqueness
+    severity: BLOCKER
+    threshold: 0     # 0 duplicates on declared primary keys
+
+  fk.orphan:
+    dimension: consistency
+    severity: BLOCKER
+    threshold: 0     # 0 rows referencing a parent key that was not landed
+    # ADR 0031. The engine draws whole parent key TUPLES, so an orphan
+    # means a generator regression, not a tolerance to tune. Rows divert
+    # to the DLQ; NULL FK tuples ("no parent", SQL MATCH SIMPLE) pass.
+    # Added after the 2026-08-23 run reported PASSED with 81.8% orphans —
+    # no rule scored referential integrity at all.
+
+  row.duplicate:
+    dimension: uniqueness
+    severity: BLOCKER
+    threshold: 0     # duplicates divert to DLQ; ratio gated by blocker_failure_ratio
+
+  identity.unique:
+    dimension: uniqueness
+    severity: BLOCKER
+    threshold: 0
+
+  engine_failure:
+    dimension: reliability
+    severity: BLOCKER
+    threshold: 0     # any engine-internal crash counts toward the gate
+
+  schema.batch:
+    dimension: validity
+    severity: CRITICAL
+    threshold: 1.0   # 100% of batch passes the Pandera-derived schema
+
+  null.optional:
+    dimension: completeness
+    severity: MAJOR
+    threshold:
+      dev: 0.10
+      uat: 0.07
+      prd: 0.05    # ≤ 5% null on NULLABLE columns
+
+  range.numeric:
+    dimension: validity
+    severity: CRITICAL
+    threshold: 1.0
+
+  enum.member:
+    dimension: validity
+    severity: CRITICAL
+    threshold: 1.0
+
+  regex.format:
+    dimension: validity
+    severity: MAJOR
+    threshold: 0.999  # ≥ 99.9% format match
+
+  # --- post-run free-text fidelity (2026-08-05 spec C4) -------------------
+  # scope: post_run — evaluated OFFLINE by scripts/e2e/e2e_gcp_probe.py against
+  # the landed table (they need full-table aggregates the in-DAG gate never
+  # sees). Values start at the 2026-08-04 crosscheck's warn thresholds.
+
+  freetext.empty_parity:
+    dimension: fidelity
+    severity: MAJOR
+    scope: post_run
+    max_abs_delta: 0.10   # |empty_fraction(synthetic) - empty_fraction(source)|
+
+  freetext.distinct_floor:
+    dimension: fidelity
+    severity: MAJOR
+    scope: post_run
+    # Applies where the source column is genuinely high-cardinality
+    # (source distinct_ratio > 0.5). Synthetic distinct must reach
+    # min(min_ratio_of_source x source_distinct, floor_distinct) —
+    # the 10M run landed distinct == pool size (512) on all 13 columns.
+    applies_above_source_distinct_ratio: 0.5
+    min_ratio_of_source: 0.5
+    floor_distinct: 5120  # 10x the 512 LLM pool cap
+
+  freetext.copy_fraction:
+    dimension: privacy
+    severity: BLOCKER
+    scope: post_run
+    # Verbatim source values on high-cardinality columns. Not exact zero:
+    # at 1M landing rows a few-in-a-million coincidental collision is
+    # expected noise, and the strict 0.0 false-flagged 15 rule instances
+    # across the two 2026-08-09 R1 runs while displaying a rounded 0.0
+    # (ADR 0024 wave). 1e-4 = 100 rows/1M — far below any memorization
+    # signature (real leaks measured 0.3-0.94).
+    max: 1.0e-4
+    applies_above_source_distinct: 100
+    # Day-granularity temporal columns (probe flag
+    # `temporal_day_granularity`) collide with a dense source by domain
+    # size (~3650 possible days) — the 2026-08-11 A_TABLE R1 fired 5 false
+    # BLOCKERs on this class while memorization_flags had already demoted
+    # the same columns to INFO. Exempted rows stay visible, tagged
+    # `exempt: temporal_day_granularity`, and pass.
+    exempt_day_granularity: true
+    # Numeric columns collide the same way: an in-range integer draw lands
+    # on a real value by DOMAIN DENSITY, not by copying a row (ADR 0025
+    # pre-authorized the carve-out; the 2026-08-20 R1 pair fired 15 false
+    # BLOCKERs at 0.02%-11% substantive on INT64 columns). Numeric privacy
+    # stays owned by memorization_flags (substantive >= 0.3, k-anonymity
+    # floor) — exempted rows stay visible, tagged `exempt: numeric_domain`.
+    exempt_numeric_domains: true
+
+  numeric.decile_ks:
+    dimension: fidelity
+    severity: MAJOR
+    scope: post_run
+    # Decile Kolmogorov-Smirnov distance between source and synthetic
+    # numeric marginals, computed by scripts/e2e/source_synthetic_stats_diff.py
+    # (11-point empirical quantiles, ADR 0022). Promoted to a catalog rule
+    # after the 2026-08-11 R1 pair: 22 numeric columns sat at KS 0.40-0.90
+    # with NO rule anywhere scoring the gap — only the stats-diff markdown
+    # caught it. Warn at 0.2, fail at 0.4 (the script's historical
+    # verdict bands); the B.1 inverse-CDF sampler (ADR 0025) is expected
+    # to hold sample-resolution KS well under the warn band.
+    warn: 0.2
+    max: 0.4

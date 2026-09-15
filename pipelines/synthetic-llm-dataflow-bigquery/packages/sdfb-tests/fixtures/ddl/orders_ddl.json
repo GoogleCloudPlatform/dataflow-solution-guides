@@ -1,0 +1,40 @@
+{
+  "table_info": {
+    "table_id": "demo_project.demo_dataset.orders",
+    "description": "Test fixture: orders table with nested + repeated fields.",
+    "data_location": "EU",
+    "table_type": "TABLE"
+  },
+  "schema": [
+    {"name": "order_id", "type": "STRING", "mode": "REQUIRED", "max_length": 36, "description": "UUID."},
+    {"name": "customer_id", "type": "INT64", "mode": "REQUIRED", "description": "FK to customers."},
+    {"name": "ordered_at", "type": "TIMESTAMP", "mode": "REQUIRED"},
+    {"name": "status", "type": "STRING", "mode": "REQUIRED", "max_length": 16},
+    {"name": "total", "type": "NUMERIC", "mode": "REQUIRED", "precision": 18, "scale": 2},
+    {"name": "currency", "type": "STRING", "mode": "REQUIRED", "max_length": 3, "description": "ISO-4217."},
+    {
+      "name": "shipping_address",
+      "type": "RECORD",
+      "mode": "NULLABLE",
+      "fields": [
+        {"name": "street", "type": "STRING", "mode": "REQUIRED", "max_length": 128},
+        {"name": "city", "type": "STRING", "mode": "REQUIRED", "max_length": 64},
+        {"name": "postal_code", "type": "STRING", "mode": "REQUIRED", "max_length": 16},
+        {"name": "country", "type": "STRING", "mode": "REQUIRED", "max_length": 2}
+      ]
+    },
+    {
+      "name": "line_items",
+      "type": "RECORD",
+      "mode": "REPEATED",
+      "fields": [
+        {"name": "sku", "type": "STRING", "mode": "REQUIRED", "max_length": 32},
+        {"name": "qty", "type": "INT64", "mode": "REQUIRED"},
+        {"name": "unit_price", "type": "NUMERIC", "mode": "REQUIRED", "precision": 18, "scale": 2}
+      ]
+    }
+  ],
+  "primary_keys": ["order_id"],
+  "partitioning": {"type": "DAY", "field": "ordered_at"},
+  "clustering": {"fields": ["customer_id", "status"]}
+}

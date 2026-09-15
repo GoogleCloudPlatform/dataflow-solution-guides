@@ -1,0 +1,105 @@
+# Example relational model — the two MULTI-PARENT shapes (ADR 0037).
+#
+# `example_*.yaml` files are DOCUMENTATION: a directory scan skips them
+# (`relationships_example_skipped` in the launcher log), so a real model
+# next to this file may reuse the same generic names. To load this one on
+# purpose, point --relationships_uri at the FILE:
+#
+#   uv run --no-sync python3 scripts/relationships/card.py \
+#     --relationships-uri config/relationships/example_star_diamond.yaml --all
+#
+# Names here are generic on purpose — real table/column names are never
+# committed (see README.md § "Real names stay out of git").
+#
+# Two shapes in one model, deliberately disconnected:
+#
+#   star      dim_a ←── fact ──→ dim_b        (no ancestry between the dims)
+#   diamond     top ←── left ←── bottom ──→ right ──→ top
+
+model: example_star_diamond
+description: a star-schema fact and a true diamond — the two ADR 0037 shapes
+
+tables:
+
+  # ---------------------------------------------------------------- star
+  # Two independent dimensions. Neither descends from the other, so the
+  # driving rule falls through to step 4 (ruling A): the FIRST DECLARED
+  # enforced edge of `fact` drives, and the launcher logs
+  # `fk_driving_edge_defaulted` (WARNING). Add `drives: true` to the edge
+  # you want if the default is not the one you meant.
+
+  dim_a:
+    pk: [A_KEY]
+    note: dimension — a root, generated first
+
+  dim_b:
+    pk: [B_KEY]
+    note: dimension — a second root, unrelated to dim_a
+
+  fact:
+    pk: [A_KEY, B_KEY, LINE_NO]     # per-(A,B) line number completes the PK
+    fk:
+      # DRIVING (first declared, ruling A): `fact` rows are generated FROM
+      # dim_a's landed keys — one request stream, one key tuple per child
+      # (ADR 0036).  Card tag:
+      #   [enforced, DRIVES (first declared — mark drives: true to choose)]
+      - cols:     [A_KEY]
+        ref:      dim_a
+        ref_cols: [A_KEY]
+        note: the parent whose keys drive generation
+
+      # INDEPENDENT: shares NO column with the driving edge, so it keeps
+      # the ADR 0030/0031 side-input key pool — a whole dim_b key tuple is
+      # drawn per row, and the fk.orphan gate measures it.
+      #   [enforced, independent]
+      - cols:     [B_KEY]
+        ref:      dim_b
+        ref_cols: [B_KEY]
+        note: a star-schema dimension — drawn from the sampled key pool
+
+  # ------------------------------------------------------------- diamond
+  # `bottom` reaches `top` twice: once through `left`, once through
+  # `right`. Both branches carry T, so T must be ONE value that satisfies
+  # both parents — that is what a conditional edge buys.
+
+  top:
+    pk: [T]
+    note: the shared ancestor of both branches
+
+  left:
+    pk: [T, L]
+    fk:
+      - cols:     [T]
+        ref:      top
+        ref_cols: [T]
+
+  right:
+    pk: [T, R]
+    fk:
+      - cols:     [T]
+        ref:      top
+        ref_cols: [T]
+
+  bottom:
+    pk: [T, L, R]
+    fk:
+      # DRIVING: bottom is generated from left's landed (T, L) tuples, so
+      # T and L are inherited from the key — never sampled.
+      #   [enforced, DRIVES]
+      - cols:     [T, L]
+        ref:      left
+        ref_cols: [T, L]
+        drives:   true
+
+      # CONDITIONAL on (T): shares T with the driving edge and adds R.
+      # T comes from the driving key; R is one candidate that exists in
+      # `right` FOR that T, picked from a co-partitioned CoGroupByKey on T
+      # (Top-M per shared value, M = --fk_candidate_cap, default 64).
+      #   [enforced, conditional on (T)]
+      # If `right` holds no row for a T: R = NULL when R is NULLABLE in
+      # the landing schema, else the key is dropped before generation and
+      # reported as `fk.unmatched` (ruling B).
+      - cols:     [T, R]
+        ref:      right
+        ref_cols: [T, R]
+        note: the diamond's other branch — conditional on the shared T

@@ -1,0 +1,17 @@
+# Cloud Build uploads the pipeline directory as the image build context.
+# Keep it to what docker/Dockerfile COPYs.
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+*.egg-info
+build/
+dist/
+docs/
+tests/
+scripts/
+packages/sdfb-tests/tests/
+packages/sdfb-tests/fixtures/
+packages/sdfb-tests/src/

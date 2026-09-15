@@ -1,0 +1,64 @@
+[
+  {
+    "order_id": "ord-c1f7-2026-0001",
+    "customer_id": 1,
+    "ordered_at": "2026-04-01T10:00:00Z",
+    "status": "DELIVERED",
+    "total": "125.50",
+    "currency": "EUR",
+    "shipping_address": {"street": "Friedrichstr. 123", "city": "Berlin", "postal_code": "10117", "country": "DE"},
+    "line_items": [
+      {"sku": "SKU-A001", "qty": 2, "unit_price": "45.00"},
+      {"sku": "SKU-B002", "qty": 1, "unit_price": "35.50"}
+    ]
+  },
+  {
+    "order_id": "ord-d2e8-2026-0002",
+    "customer_id": 4,
+    "ordered_at": "2026-04-05T14:30:00Z",
+    "status": "SHIPPED",
+    "total": "299.99",
+    "currency": "USD",
+    "shipping_address": {"street": "1 Market Plaza", "city": "San Francisco", "postal_code": "94105", "country": "US"},
+    "line_items": [
+      {"sku": "SKU-C003", "qty": 1, "unit_price": "299.99"}
+    ]
+  },
+  {
+    "order_id": "ord-e3f9-2026-0003",
+    "customer_id": 2,
+    "ordered_at": "2026-04-12T09:15:00Z",
+    "status": "CANCELLED",
+    "total": "0.00",
+    "currency": "GBP",
+    "shipping_address": null,
+    "line_items": []
+  },
+  {
+    "order_id": "ord-f4a0-2026-0004",
+    "customer_id": 9,
+    "ordered_at": "2026-04-18T16:45:00Z",
+    "status": "DELIVERED",
+    "total": "812.75",
+    "currency": "EUR",
+    "shipping_address": {"street": "Kurfürstendamm 200", "city": "Berlin", "postal_code": "10719", "country": "DE"},
+    "line_items": [
+      {"sku": "SKU-A001", "qty": 5, "unit_price": "45.00"},
+      {"sku": "SKU-D004", "qty": 3, "unit_price": "120.50"},
+      {"sku": "SKU-E005", "qty": 2, "unit_price": "112.62"}
+    ]
+  },
+  {
+    "order_id": "ord-a5b1-2026-0005",
+    "customer_id": 5,
+    "ordered_at": "2026-04-22T11:00:00Z",
+    "status": "PROCESSING",
+    "total": "55.00",
+    "currency": "EUR",
+    "shipping_address": {"street": "Maximilianstr. 5", "city": "Munich", "postal_code": "80539", "country": "DE"},
+    "line_items": [
+      {"sku": "SKU-B002", "qty": 1, "unit_price": "35.50"},
+      {"sku": "SKU-F006", "qty": 1, "unit_price": "19.50"}
+    ]
+  }
+]

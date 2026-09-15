@@ -1,0 +1,150 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="sdk-containers" name="SdkContainersTopology">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="780" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1400" height="780" as="geometry"/>
+        </mxCell>
+        <mxCell id="title" value="sdk_containers — what changes inside one Dataflow GPU worker (8 vCPUs, 1 T4)" style="text;html=1;align=center;fontSize=16;fontStyle=1;fontColor=#202124;" vertex="1" parent="1">
+          <mxGeometry x="200" y="12" width="1000" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="orange = Beam SDK harness / DoFn code · green = CPU engine + guards · purple = GPU tenants · gray = the worker-log milestones that prove it · solid purple edge = the one spawn, dashed = the seven reuses" style="text;html=1;align=center;fontSize=11;fontColor=#5f6368;" vertex="1" parent="1">
+          <mxGeometry x="200" y="38" width="1000" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- ================= LEFT: single ================= -->
+        <mxCell id="L-hdr" value="sdk_containers=single (default) — --experiments=no_use_multiple_sdk_containers" style="text;html=1;align=left;fontSize=13;fontStyle=1;fontColor=#b44f26;" vertex="1" parent="1">
+          <mxGeometry x="40" y="62" width="640" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-vm" value="worker VM · n1-standard-8 class · 8 vCPUs · 1 × T4" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#9aa0a6;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=2;fontSize=11;fontStyle=1;fontColor=#3c4043;" vertex="1" parent="1">
+          <mxGeometry x="40" y="88" width="640" height="612" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-cpu0" value="vCPU 0&lt;br&gt;busy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="60" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="L-cpu1" value="vCPU 1&lt;br&gt;idle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9aa0a6;dashed=1;fontColor=#5f6368;fontSize=10;" vertex="1" parent="1"><mxGeometry x="136" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="L-cpu2" value="vCPU 2&lt;br&gt;idle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9aa0a6;dashed=1;fontColor=#5f6368;fontSize=10;" vertex="1" parent="1"><mxGeometry x="212" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="L-cpu3" value="vCPU 3&lt;br&gt;idle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9aa0a6;dashed=1;fontColor=#5f6368;fontSize=10;" vertex="1" parent="1"><mxGeometry x="288" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="L-cpu4" value="vCPU 4&lt;br&gt;idle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9aa0a6;dashed=1;fontColor=#5f6368;fontSize=10;" vertex="1" parent="1"><mxGeometry x="364" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="L-cpu5" value="vCPU 5&lt;br&gt;idle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9aa0a6;dashed=1;fontColor=#5f6368;fontSize=10;" vertex="1" parent="1"><mxGeometry x="440" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="L-cpu6" value="vCPU 6&lt;br&gt;idle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9aa0a6;dashed=1;fontColor=#5f6368;fontSize=10;" vertex="1" parent="1"><mxGeometry x="516" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="L-cpu7" value="vCPU 7&lt;br&gt;idle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9aa0a6;dashed=1;fontColor=#5f6368;fontSize=10;" vertex="1" parent="1"><mxGeometry x="592" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="L-cpucap" value="pure-Python generate stages: 8 threads take turns on ONE GIL → about one vCPU of work per worker" style="text;html=1;align=left;fontSize=10;fontColor=#5f6368;" vertex="1" parent="1">
+          <mxGeometry x="60" y="150" width="600" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-proc" value="🔀 SDK harness process sdk-0-0 — one interpreter, one GIL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbe3d9;strokeColor=#eb6834;strokeWidth=2;verticalAlign=top;align=left;spacingLeft=8;spacingTop=2;fontSize=11;fontStyle=1;fontColor=#7a2e12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="178" width="600" height="222" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-thcap" value="8 harness threads, each running GenerateRecordsDoFn bundles" style="text;html=1;align=left;fontSize=10;fontColor=#7a2e12;" vertex="1" parent="1">
+          <mxGeometry x="76" y="200" width="560" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-t1" value="T1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="76" y="220" width="64" height="34" as="geometry"/></mxCell>
+        <mxCell id="L-t2" value="T2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="148" y="220" width="64" height="34" as="geometry"/></mxCell>
+        <mxCell id="L-t3" value="T3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="220" y="220" width="64" height="34" as="geometry"/></mxCell>
+        <mxCell id="L-t4" value="T4" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="292" y="220" width="64" height="34" as="geometry"/></mxCell>
+        <mxCell id="L-t5" value="T5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="364" y="220" width="64" height="34" as="geometry"/></mxCell>
+        <mxCell id="L-t6" value="T6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="436" y="220" width="64" height="34" as="geometry"/></mxCell>
+        <mxCell id="L-t7" value="T7" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="508" y="220" width="64" height="34" as="geometry"/></mxCell>
+        <mxCell id="L-t8" value="T8" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="580" y="220" width="64" height="34" as="geometry"/></mxCell>
+        <mxCell id="L-gil" value="GIL" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b44f26;strokeWidth=2;fontColor=#b44f26;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="336" y="262" width="48" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-engine" value="⚙️ process engine registry — ONE engine build per (engine, table): DoFn.setup() ×1 pays the pull and the fit for all 8 threads (engine_shared holders=8); B.1 pools and the lazy embedder are shared the same way" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#127a55;fontColor=#ffffff;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="76" y="298" width="568" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-client" value="🧠 VLLMModelClient — this process pulls the weights and spawns the server in setup(); tears it down in teardown()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7a3fd1;strokeColor=#5a2f9d;fontColor=#ffffff;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="76" y="356" width="568" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-t4box" value="T4 GPU · 16 GB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1eafb;strokeColor=#7a3fd1;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=2;fontSize=11;fontStyle=1;fontColor=#5a2f9d;" vertex="1" parent="1">
+          <mxGeometry x="60" y="428" width="600" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-vllm" value="🧠 vLLM server :8000 — one tenant, spawned once per worker; all 8 threads call it over HTTP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7a3fd1;strokeColor=#5a2f9d;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="90" y="456" width="540" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-embed" value="cold population embed: BgeEmbedder in this same process, demoted to CPU before vLLM sizes its KV budget" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b89ae6;strokeColor=#7a3fd1;fontColor=#2b1651;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="90" y="522" width="540" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5a2f9d;strokeWidth=2;endArrow=block;fontSize=10;fontColor=#3c4043;" edge="1" parent="1" source="L-client" target="L-vllm">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="L-e1l" value="spawn + HTTP /v1/completions" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#3c4043;labelBackgroundColor=#ffffff;" vertex="1" connectable="0" parent="L-e1">
+          <mxGeometry x="0.1" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="L-reads" value="⚪ what the worker log shows: one dofn_setup_done per table per worker, one vllm_ready, no spawn lock, engine_shared holders=8; but batch_done for a 10k-row batch is GIL-bound — the fleet rate is a few interpreters wide, not a few dozen" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6b7280;strokeColor=#4b5563;fontColor=#ffffff;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="596" width="600" height="88" as="geometry"/>
+        </mxCell>
+
+        <!-- ================= RIGHT: multi ================= -->
+        <mxCell id="R-hdr" value="sdk_containers=multi — Dataflow's default: one SDK process per vCPU, host network shared" style="text;html=1;align=left;fontSize=13;fontStyle=1;fontColor=#b44f26;" vertex="1" parent="1">
+          <mxGeometry x="720" y="62" width="640" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="R-vm" value="worker VM · n1-standard-8 class · 8 vCPUs · 1 × T4" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#9aa0a6;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=2;fontSize=11;fontStyle=1;fontColor=#3c4043;" vertex="1" parent="1">
+          <mxGeometry x="720" y="88" width="640" height="612" as="geometry"/>
+        </mxCell>
+        <mxCell id="R-cpu0" value="vCPU 0&lt;br&gt;busy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="740" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="R-cpu1" value="vCPU 1&lt;br&gt;busy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="816" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="R-cpu2" value="vCPU 2&lt;br&gt;busy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="892" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="R-cpu3" value="vCPU 3&lt;br&gt;busy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="968" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="R-cpu4" value="vCPU 4&lt;br&gt;busy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1044" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="R-cpu5" value="vCPU 5&lt;br&gt;busy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1120" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="R-cpu6" value="vCPU 6&lt;br&gt;busy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1196" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="R-cpu7" value="vCPU 7&lt;br&gt;busy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1272" y="116" width="60" height="32" as="geometry"/></mxCell>
+        <mxCell id="R-cpucap" value="pure-Python generate stages: eight interpreters, eight GILs → every vCPU runs DoFn bundles" style="text;html=1;align=left;fontSize=10;fontColor=#5f6368;" vertex="1" parent="1">
+          <mxGeometry x="740" y="150" width="600" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="R-p0" value="🔀 sdk-0-0&lt;br&gt;own GIL&lt;br&gt;&lt;b&gt;wins the mutex&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;strokeWidth=2;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="740" y="178" width="70" height="66" as="geometry"/></mxCell>
+        <mxCell id="R-p1" value="🔀 sdk-0-1&lt;br&gt;own GIL&lt;br&gt;waits → reuses" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="816" y="178" width="70" height="66" as="geometry"/></mxCell>
+        <mxCell id="R-p2" value="🔀 sdk-0-2&lt;br&gt;own GIL&lt;br&gt;waits → reuses" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="892" y="178" width="70" height="66" as="geometry"/></mxCell>
+        <mxCell id="R-p3" value="🔀 sdk-0-3&lt;br&gt;own GIL&lt;br&gt;waits → reuses" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="968" y="178" width="70" height="66" as="geometry"/></mxCell>
+        <mxCell id="R-p4" value="🔀 sdk-0-4&lt;br&gt;own GIL&lt;br&gt;waits → reuses" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1044" y="178" width="70" height="66" as="geometry"/></mxCell>
+        <mxCell id="R-p5" value="🔀 sdk-0-5&lt;br&gt;own GIL&lt;br&gt;waits → reuses" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1120" y="178" width="70" height="66" as="geometry"/></mxCell>
+        <mxCell id="R-p6" value="🔀 sdk-0-6&lt;br&gt;own GIL&lt;br&gt;waits → reuses" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1196" y="178" width="70" height="66" as="geometry"/></mxCell>
+        <mxCell id="R-p7" value="🔀 sdk-0-7&lt;br&gt;own GIL&lt;br&gt;waits → reuses" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#b44f26;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1272" y="178" width="70" height="66" as="geometry"/></mxCell>
+        <mxCell id="R-mutex" value="🛡️ _PortMutex :8001 — a bound loopback port on the shared host network serializes pull → spawn → ready across the 8 processes (vllm_spawn_lock_acquired ×1, vllm_spawn_lock_wait ×7); waiters bind to the winner's server through the reuse probe /v1/models" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#127a55;fontColor=#ffffff;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="740" y="290" width="600" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="R-engine" value="⚙️ engine registry per PROCESS — 8 builds per worker (dofn_setup_done ×8 per table): one CTGAN fit or one B.1 fit each, one lazy pool ladder each; the lazy BgeEmbedder opens no CUDA context unless that process actually embeds" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#127a55;fontColor=#ffffff;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="772" y="354" width="536" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="R-t4box" value="T4 GPU · 16 GB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1eafb;strokeColor=#7a3fd1;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=2;fontSize=11;fontStyle=1;fontColor=#5a2f9d;" vertex="1" parent="1">
+          <mxGeometry x="740" y="428" width="600" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="R-vllm" value="🧠 ONE vLLM server :8000 — spawned by the mutex winner, reused by the other 7 over HTTP, kept alive at teardown (vllm_server_kept_alive) so it outlives the client that spawned it" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7a3fd1;strokeColor=#5a2f9d;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="770" y="456" width="540" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="R-embed" value="cold population embed: at most rag_embed_shards (2) embedders per JOB, keyed groups instead of a Reshuffle; the pool branch waits for them (AwaitRagPopulation) before its first LLM call spawns vLLM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b89ae6;strokeColor=#7a3fd1;fontColor=#2b1651;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="770" y="522" width="540" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="R-e0" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#127a55;strokeWidth=2;endArrow=block;exitX=0.5;exitY=1;entryX=0.06;entryY=0;" edge="1" parent="1" source="R-p0" target="R-mutex">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="R-e0l" value="acquires" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#127a55;labelBackgroundColor=#ffffff;" vertex="1" connectable="0" parent="R-e0">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="R-e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#127a55;strokeWidth=2;dashed=1;endArrow=block;exitX=0.5;exitY=1;entryX=0.94;entryY=0;" edge="1" parent="1" source="R-p7" target="R-mutex">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="R-e7l" value="waits" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#127a55;labelBackgroundColor=#ffffff;" vertex="1" connectable="0" parent="R-e7">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="R-e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5a2f9d;strokeWidth=2;endArrow=block;exitX=0.02;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="R-mutex" target="R-vllm">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="752" y="484"/></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="R-e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5a2f9d;strokeWidth=2;dashed=1;endArrow=block;exitX=0.98;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="R-mutex" target="R-vllm">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1328" y="484"/></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="R-reads" value="⚪ what the worker log shows: sdk_container_topology=multi, exactly one vllm_spawn_lock_acquired per worker and vllm_spawn_lock_wait on the rest, one vllm_ready, no CUDA OOM, no vllm_spawn_lost_race, dofn_setup_done ×8 per table — and batch_done at a fraction of the single-process time" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6b7280;strokeColor=#4b5563;fontColor=#ffffff;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="740" y="596" width="600" height="88" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="claim" value="Claim: multi multiplies the interpreters by eight and leaves the GPU with one tenant — a single spawn, shared through a port mutex; what it costs is eight engine builds per worker instead of one, paid once per process in setup()." style="text;html=1;align=center;fontSize=11;fontStyle=2;fontColor=#3c4043;" vertex="1" parent="1">
+          <mxGeometry x="100" y="712" width="1200" height="40" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

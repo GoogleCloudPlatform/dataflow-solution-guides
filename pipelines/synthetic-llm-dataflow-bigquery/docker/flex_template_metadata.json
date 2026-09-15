@@ -1,0 +1,386 @@
+{
+  "name": "synthetic-dataflow-bigquery",
+  "description": "Generate fictitious-but-realistic synthetic rows for a BigQuery table via Apache Beam + L4 GPU + Gemma 4. See docs/DEPLOYMENT_PREREQUISITES.md.",
+  "parameters": [
+    {
+      "name": "ddl_uri",
+      "label": "DDL JSON URI",
+      "helpText": "gs:// path to a _ddl.json \u2014 the OFFLINE FALLBACK only (ADR 0027 D2). Live extraction is authoritative at every launch: structure from reference_table, description surfaces (llm_prompt_constraint + relational contract) overlaid from landing_table \u2014 the SOURCE table's descriptions are stripped, never used to steer generation. Extract the pin from the LANDING table; it is consumed only when live extraction fails (air-gap, BQ outage), with staleness reported via ddl_pin_drift / ddl_pin_fresh.",
+      "isOptional": true,
+      "regexes": [
+        "^gs://[^/]+/.+\\.json$"
+      ]
+    },
+    {
+      "name": "reference_table",
+      "label": "Reference table FQN",
+      "helpText": "Source BigQuery table for live SELECT reference rows. project.dataset.table.",
+      "regexes": [
+        "^[a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
+      ]
+    },
+    {
+      "name": "reference_rows_limit",
+      "label": "Reference rows LIMIT",
+      "helpText": "Cap on rows pulled by SELECT ... LIMIT N. Default 10000.",
+      "isOptional": true,
+      "regexes": [
+        "^[0-9]+$"
+      ]
+    },
+    {
+      "name": "landing_table",
+      "label": "Landing table FQN",
+      "helpText": "Destination BigQuery table for valid synthetic rows. project.dataset.table.",
+      "regexes": [
+        "^[a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
+      ]
+    },
+    {
+      "name": "dlq_table",
+      "label": "DLQ table FQN",
+      "helpText": "Destination BigQuery table for dead-lettered rows. project.dataset.table.",
+      "regexes": [
+        "^[a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
+      ]
+    },
+    {
+      "name": "num_rows",
+      "label": "Number of synthetic rows to generate",
+      "helpText": "Positive integer.",
+      "regexes": [
+        "^[1-9][0-9]*$"
+      ]
+    },
+    {
+      "name": "initial_workers",
+      "label": "Initial worker count",
+      "helpText": "Initial Dataflow worker count (ADR 0034). Empty = Dataflow's default; the 2026-08-29 R6 pair started on 2 workers and autoscaled to 4 only ~4 min into the first generate stage. A 10M-row run should start at its maxWorkers. Must not exceed maxWorkers.",
+      "isOptional": true,
+      "regexes": [
+        "^[0-9]*$"
+      ]
+    },
+    {
+      "name": "autoscaling",
+      "label": "Worker autoscaling mode",
+      "helpText": "auto (default): a fleet sized by initial_workers stays that size (autoscaling NONE), otherwise Dataflow's THROUGHPUT_BASED. fixed: same pin, initial_workers required. throughput: always scale. The 2026-09-07/08 multi runs lost ~4 min per job to mid-job scale-downs between the parent and child stages (ADR 0034 D9).",
+      "isOptional": true,
+      "regexes": [
+        "^(auto|throughput|fixed)?$"
+      ]
+    },
+    {
+      "name": "batch_size",
+      "label": "Batch size per generate_batch call",
+      "helpText": "Records per LLM batch. Default 16.",
+      "isOptional": true,
+      "regexes": [
+        "^[1-9][0-9]*$"
+      ]
+    },
+    {
+      "name": "similarity",
+      "label": "Similarity to reference (0.0\u20131.0)",
+      "helpText": "0=pure random within schema, 1=mimic reference closely. Default 0.5.",
+      "isOptional": true,
+      "regexes": [
+        "^(0(\\.[0-9]+)?|1(\\.0+)?)$"
+      ]
+    },
+    {
+      "name": "run_id",
+      "label": "Run ID",
+      "helpText": "Unique identifier propagated to validation_runs and reference_digest provenance.",
+      "regexes": [
+        "^[a-zA-Z0-9_-]+$"
+      ]
+    },
+    {
+      "name": "identity_cols",
+      "label": "Identity columns",
+      "helpText": "Comma-separated per-row-unique columns synthesized fresh each row (PK/UUID); never sampled from reference data. Optional; empty means no identity-column synthesis.",
+      "isOptional": true,
+      "regexes": [
+        "^([a-zA-Z0-9_]+(,[a-zA-Z0-9_]+)*)?$"
+      ]
+    },
+    {
+      "name": "pk_cols",
+      "label": "Primary-key columns",
+      "helpText": "Comma-separated declared primary-key columns; duplicate PK tuples divert to the DLQ (rule_id=pk.duplicate, BLOCKER). Optional; empty means PK not declared.",
+      "isOptional": true,
+      "regexes": [
+        "^([a-zA-Z0-9_]+(,[a-zA-Z0-9_]+)*)?$"
+      ]
+    },
+    {
+      "name": "engine",
+      "label": "Generation engine",
+      "helpText": "b1_rag (RAG over reference rows) or b2_library (CTGAN/SDV-family wrapper).",
+      "regexes": [
+        "^(b1_rag|b2_library)$"
+      ]
+    },
+    {
+      "name": "model_uri",
+      "label": "Model URI",
+      "helpText": "gs://<bucket>/synthetic/models/<family>/<model>/<version>/.",
+      "regexes": [
+        "^gs://[^/]+/.+/$"
+      ]
+    },
+    {
+      "name": "embedder_uri",
+      "label": "Embedder URI (B.1 RAG)",
+      "helpText": "gs://<bucket>/synthetic/models/embedders/<model>/<version>/ \u2014 optional; empty uses the dependency-free HashingEmbedder.",
+      "isOptional": true,
+      "regexes": [
+        "^(gs://[^/]+/.+/|)$"
+      ]
+    },
+    {
+      "name": "rag_chunks_table",
+      "label": "RAG chunk-store table FQN (B.1)",
+      "helpText": "project.dataset.table of synthetic_rag.rag_chunks. Enables the read-instead-of-reembed path; with build_rag_layer=true also enables population. Optional; empty disables the chunk store.",
+      "isOptional": true,
+      "regexes": [
+        "^([a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+)?$"
+      ]
+    },
+    {
+      "name": "build_rag_layer",
+      "label": "Populate the RAG chunk store",
+      "helpText": "true/false. Populate rag_chunks from this run's reference sample (skipped when the reference_digest already exists for the embedder id+version). Requires rag_chunks_table.",
+      "isOptional": true,
+      "regexes": [
+        "^(true|false|1|0|yes|no)?$"
+      ]
+    },
+    {
+      "name": "validation_runs_table",
+      "label": "validation_runs table FQN",
+      "helpText": "Destination BigQuery table for the run-level summary row. project.dataset.table. Optional; empty skips the write.",
+      "isOptional": true,
+      "regexes": [
+        "^([a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+)?$"
+      ]
+    },
+    {
+      "name": "env",
+      "label": "Environment tier",
+      "helpText": "dev | uat | prd \u2014 selects the threshold tier from config/thresholds.yml.",
+      "isOptional": true,
+      "regexes": [
+        "^(dev|uat|prd)$"
+      ]
+    },
+    {
+      "name": "thresholds_uri",
+      "label": "Thresholds file URI",
+      "helpText": "gs:// or local path to thresholds.yml selecting the pass/fail gates for the run's env tier. Default: config/thresholds.yml.",
+      "isOptional": true
+    },
+    {
+      "name": "client_type",
+      "label": "Model client type",
+      "helpText": "vllm (production), mlx (M4 local smoke), fake (CI fixture).",
+      "isOptional": true,
+      "regexes": [
+        "^(vllm|mlx|fake)$"
+      ]
+    },
+    {
+      "name": "vllm_dtype",
+      "label": "vLLM serve dtype override",
+      "helpText": "auto (default) = checkpoint dtype (bf16 for Gemma/Qwen). float16 = explicit downcast REQUIRED on T4 for fp16-safe bf16 checkpoints (Qwen); refused for gemma-family models.",
+      "isOptional": true,
+      "regexes": [
+        "^(auto|float16|bfloat16)$"
+      ]
+    },
+    {
+      "name": "vllm_max_model_len",
+      "label": "vLLM max-model-len cap",
+      "helpText": "Caps the KV-cache context allocation. Without it vLLM sizes for the checkpoint's native context (Qwen3-2507: 262K needs 36GiB KV and kills the T4 EngineCore at startup). Default 8192 fits every registry model/GPU pairing. Empty = no cap.",
+      "isOptional": true,
+      "regexes": [
+        "^([0-9]+)?$"
+      ]
+    },
+    {
+      "name": "seed",
+      "label": "Explicit base RNG seed",
+      "helpText": "Explicit base RNG seed (integer) for deliberate reproduction of a run. Empty (default) derives a fresh seed per (run_id, batch) \u2014 recommended.",
+      "isOptional": true,
+      "regexes": [
+        "^([0-9]+)?$"
+      ]
+    },
+    {
+      "name": "write_disposition",
+      "label": "Landing write disposition",
+      "helpText": "append (default, WRITE_APPEND) or overwrite (WRITE_TRUNCATE). Landing table only; DLQ/quality/RAG tables always append.",
+      "isOptional": true,
+      "regexes": [
+        "^(append|overwrite)$"
+      ]
+    },
+    {
+      "name": "create_if_not_exists",
+      "label": "Create landing table if missing",
+      "helpText": "true/1/yes: CREATE_IF_NEEDED carrying the derived landing schema. Default false (CREATE_NEVER).",
+      "isOptional": true,
+      "regexes": [
+        "^(true|false|1|0|yes|no)$"
+      ]
+    },
+    {
+      "name": "freetext_pools_table",
+      "label": "Free-text pool store table",
+      "helpText": "project.dataset.table of synthetic_rag.freetext_pools. Enables the read-instead-of-rebuild path; with build_pool_layer=true also enables the build branch. Optional; empty disables the pool store.",
+      "isOptional": true,
+      "regexes": [
+        "^([a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+)?$"
+      ]
+    },
+    {
+      "name": "build_pool_layer",
+      "label": "Build the free-text pool store",
+      "helpText": "true/false. Build free-text pools in their own branch and persist them (skipped when this reference_digest already exists for this model_uri). Requires freetext_pools_table.",
+      "isOptional": true,
+      "regexes": [
+        "^(true|false|True|False|1|0|yes|no)?$"
+      ]
+    },
+    {
+      "name": "pool_seed_strategy",
+      "label": "Free-text pool seed strategy",
+      "helpText": "centroid (control, densest region) | kcenter (seeds span the column's modes) | kcenter_rotate (re-seeded per ladder attempt; forfeits vLLM prefix caching by design).",
+      "isOptional": true,
+      "regexes": [
+        "^(centroid|kcenter|kcenter_rotate)?$"
+      ]
+    },
+    {
+      "name": "uniqueness_mode",
+      "label": "Uniqueness enforcement mode",
+      "helpText": "exact (default) diverts every duplicate to the DLQ behind ONE full-row shuffle barrier (PK/identity rules resolved from key-only groups, ADR 0034). exact_chained keeps the pre-ADR-0034 three-barrier chain (row digest -> PK -> identity) for A/B runs. streaming lands rows as they are generated and measures the duplicate rate instead; duplicate rows LAND, the run is still marked FAILED_BLOCKER, so re-run with write_disposition=overwrite.",
+      "isOptional": true,
+      "regexes": [
+        "^(exact|exact_chained|streaming)?$"
+      ]
+    },
+    {
+      "name": "fk_fanout_stats_table",
+      "label": "FK fan-out stats table FQN",
+      "helpText": "project.dataset.table for synthetic_data_quality.fk_fanout_stats (ADR 0036 cache of the SOURCE fan-out histogram + PK cells per driving edge). Empty (default) = measure every launch, never cache.",
+      "isOptional": true,
+      "regexes": [
+        "^([a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+)?$"
+      ]
+    },
+    {
+      "name": "fk_candidate_cap",
+      "label": "FK candidate cap",
+      "helpText": "ADR 0037 \u2014 max candidate tuples per shared key for a conditional FK edge; a driven child's PK-completing members must cover the source fan-out within this cap. Default 64.",
+      "isOptional": true,
+      "regexes": [
+        "^([1-9][0-9]*)?$"
+      ]
+    },
+    {
+      "name": "on_model_conflict",
+      "label": "On a measured model conflict",
+      "helpText": "ADR 0038 \u2014 what a MEASURED contradiction between the relationship model and the SOURCE does. adjust (default) = drop the declared pk: the full-source fan-out proves is not a key, announce it in the MODEL ADJUSTED banner, emit the effective model as YAML, and carry on; the landing table then reproduces the source's key-repeat share and that table's pk.duplicate stops counting toward the BLOCKER gate. stop = refuse the launch, as before ADR 0038. Model self-contradictions and the ADR 0035 capacity gate stop under both settings.",
+      "isOptional": true,
+      "regexes": [
+        "^(adjust|stop)?$"
+      ]
+    },
+    {
+      "name": "driven_uniqueness_mode",
+      "label": "Driven-child uniqueness mode",
+      "helpText": "Uniqueness mode for a DRIVEN child without identity columns (ADR 0036): its PK is unique by construction, so streaming (default) measures duplicates without the landing-path barrier. exact / exact_chained are available for A/B runs, same semantics as uniqueness_mode.",
+      "isOptional": true,
+      "regexes": [
+        "^(exact|exact_chained|streaming)?$"
+      ]
+    },
+    {
+      "name": "freetext_expansion",
+      "label": "Free-text shape expander",
+      "helpText": "off = pool draws only (distinct capped at pool size). identifiers (default) = code-like columns expand from their observed shape mix, breaking the pool-size distinct ceiling. all = also mutate digit runs inside texty pool draws. Never adds an LLM call (2026-08-05 spec C3).",
+      "isOptional": true,
+      "regexes": [
+        "^(off|identifiers|all)?$"
+      ]
+    },
+    {
+      "name": "prompt_constraints",
+      "label": "Per-column LLM prompt constraints",
+      "helpText": "on (default) attaches each column's llm_prompt_constraint (parsed from its DDL description JSON) to the pool prompt as a constant, prefix-cache-safe suffix. Columns without a constraint are untouched \u2014 with none anywhere, 'on' is a no-op (spec C5).",
+      "isOptional": true,
+      "regexes": [
+        "^(on|off)?$"
+      ]
+    },
+    {
+      "name": "prompt_debug",
+      "label": "Pool-prompt debug logging",
+      "helpText": "off (default) logs nothing. redacted logs each built pool prompt as a freetext_pool_prompt milestone with seed exemplars elided (<k seeds elided>) plus a sha12 prompt hash. full logs verbatim prompts at WARNING \u2014 reference values reach Dataflow logs, short-lived debug runs only (ADR 0024 \u00a73c).",
+      "isOptional": true,
+      "regexes": [
+        "^(off|redacted|full)?$"
+      ]
+    },
+    {
+      "name": "source_stats",
+      "label": "Source-table stats computation",
+      "helpText": "sample (default) computes per-column source_table_stats from the reference sample driver-side (zero DAG cost); exact adds ONE aggregate scan of the live table (HLL distinct, deciles, top-k) and feeds exact distinct into free-text pool sizing (ADR 0022); off disables entirely (WS8 spec WS-B).",
+      "isOptional": true,
+      "regexes": [
+        "^(off|sample|exact)?$"
+      ]
+    },
+    {
+      "name": "source_stats_table",
+      "label": "Source stats BQ table",
+      "helpText": "project.dataset.table for source_table_stats rows; empty/omitted skips the BQ write (stats still land as milestone + JSON artifact). Existing (table, digest) rows are never rewritten. Never auto-created: bq mk from config/bq_schema/synthetic_rag/source_table_stats.schema.json.",
+      "isOptional": true
+    },
+    {
+      "name": "source_stats_json",
+      "label": "Source stats JSON artifact path",
+      "helpText": "gs:// or local path for the per-run stats JSON artifact; empty/omitted skips it.",
+      "isOptional": true
+    },
+    {
+      "name": "fk_parent_landing",
+      "label": "FK parent landing dataset",
+      "helpText": "EXPERT OVERRIDE only (ADR 0029): parents are assumed landed in the landing dataset and this derives automatically. Set only when parents land in a DIFFERENT project.dataset.",
+      "isOptional": true
+    },
+    {
+      "name": "generate_fk_relationships",
+      "label": "Generate FK relationships",
+      "helpText": "true (default): declared relationships are honored \u2014 the launch expands to the whole FK component, parents first, everything derived. Tables with no relationships behave exactly as false. false: isolated generation; declared edges ignored LOUDLY. ADR 0029.",
+      "isOptional": true
+    },
+    {
+      "name": "relationships_uri",
+      "label": "Relationship models URI",
+      "helpText": "Where the relational models live (ADR 0032): a folder or a single YAML file, local or gs://. Default: the config/relationships folder packaged in the image. Point it at gs://... to change PK/FK/identity without rebuilding \u2014 this is the ONLY source of relational truth; table descriptions are never read for it.",
+      "isOptional": true
+    },
+    {
+      "name": "multi_table_mode",
+      "label": "Multi-table execution mode",
+      "helpText": "single_job (default): every planned table in ONE Dataflow job \u2014 one worker fleet, one vLLM ignition, in-DAG FK key handoff (ADR 0030). sequential_jobs: one job per table, parents first (fallback/debugging).",
+      "isOptional": true,
+      "regexes": [
+        "^(single_job|sequential_jobs)$"
+      ]
+    }
+  ]
+}

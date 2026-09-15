@@ -1,0 +1,124 @@
+# Model registry for the synthesis pipeline.
+#
+# This file is a REGISTRY/REFERENCE — it documents which models exist, their
+# canonical GCS layout, vLLM kwargs, GPU memory, and license. No job reads it.
+# The pipeline's `--model_uri` flag takes a FULL gs:// URI (not a key), set by
+# whatever launches the job: the `SDFB_MODEL_URI` Composer Variable
+# (composer/synthetic_beam_bigquery.py + workflow 3), or MODEL_URI from the
+# Terraform of the Dataflow Solution Guides. Pick a model by pointing that
+# value at the matching `gcs_uri` below.
+#
+# Weights are staged to GCS once, from `hf_repo` (Hugging Face) or its
+# ModelScope mirror, and never pulled from a model hub at runtime.
+# Worker `setup()` pulls them via the google-cloud-storage Python client (no
+# gsutil in the image) and vLLM loads from /local-ssd/model. See
+# docs/MODEL_LAYOUT.md for the on-GCS file checklist.
+
+defaults:
+  family: gemma4
+  max_model_len: 8192
+  gpu_memory_utilization: 0.85
+  enforce_eager: false
+
+models:
+  gemma4_e4b:
+    # M1 §11 first pass — fast iteration, fits anywhere.
+    description: Gemma 4 E4B Instruct (4.5B effective params, 128K context). Dev / cost-floor.
+    gcs_uri: "gs://{bucket}/synthetic/models/gemma4/e4b-it/v1/"
+    quantization: null            # FP16
+    expected_vram_gb: 9
+    min_compute_capability: "8.0"  # bf16; T4 (7.5) cannot run this — see RUN_PLAYBOOK.md
+    license: apache-2.0             # Gemma 4 weights; earlier Gemma used gemma-tos
+    source: kaggle
+    hf_repo: google/gemma-4-E4B-it  # public, ungated
+    # MUST be the `-it` (instruction-tuned) variant — the base `gemma-4-e4b`
+    # slug ships no chat_template and won't follow JSON-output instructions.
+    # The IT checkpoint is multimodal (Gemma4ForConditionalGeneration); MLX
+    # needs strict=False on load (see handlers/mlx_client.py).
+    download_hint: |
+      kaggle models instances versions download google/gemma-4/transformers/gemma-4-e4b-it/1
+
+  gemma4_26b_a4b_awq:
+    # M1 §11 primary production target — MoE, Q4-AWQ for single-L4 fit.
+    description: Gemma 4 26B A4B MoE, Q4-AWQ. Activates ~3.8B/token. Primary production.
+    # MUST be the instruction-tuned variant (same lesson as e4b — the base has
+    # no chat template and won't follow JSON-output instructions). Verify the
+    # exact Kaggle IT-AWQ slug + path before staging; placeholder below.
+    gcs_uri: "gs://{bucket}/synthetic/models/gemma4/26b-a4b-awq/v1/"
+    quantization: awq
+    expected_vram_gb: 16
+    min_compute_capability: "8.0"  # bf16; T4 (7.5) cannot run this — see RUN_PLAYBOOK.md
+    license: gemma-tos
+    source: kaggle
+    download_hint: |
+      kaggle models instances versions download google/gemma-4/transformers/26b-a4b-awq/1  # TODO: confirm -it slug
+
+  qwen2_5_7b_instruct:
+    # Cross-family comparison on L4. Downloaded 2026-07 from ModelScope
+    # (4 bf16 shards, 14.2GB + index). L4 ONLY: weights alone exceed the T4
+    # budget (14.2GB > 16GB x gpu_memory_utilization 0.85 = 13.6GB), before
+    # any KV cache — do not pair with gpu=t4 regardless of dtype.
+    # Ships NO special_tokens_map.json (Qwen convention — special tokens live
+    # in tokenizer_config.json); configuration.json is ModelScope metadata.
+    description: Qwen 2.5 7B Instruct, 128K context. Apache-2.0. L4-only (VRAM).
+    gcs_uri: "gs://{bucket}/synthetic/models/qwen2.5/7b-instruct/v1/"
+    quantization: null            # bf16 checkpoint; runs native bf16 on L4
+    expected_vram_gb: 15
+    min_compute_capability: "8.0"  # not dtype-limited (fp16-safe family) but VRAM-limited to L4-class
+    license: apache-2.0
+    source: modelscope            # pulled once on the M4, never at runtime
+    download_hint: |
+      modelscope download --model Qwen/Qwen2.5-7B-Instruct --local_dir models/qwen2.5/7b-instruct/v1
+
+  qwen3_4b_instruct_2507:
+    # T4-safe profile — the ONLY registry entry that runs on Turing (SM 7.5).
+    # Gemma cannot run on T4 in any form (bf16 needs SM>=8.0 and fp16 Gemma
+    # silently emits empty output; attention head sizes exceed Turing's 64KB
+    # shared memory — vLLM #38918/#38887). Use this to exercise the REAL vLLM
+    # path cheaply on gpu=t4; keep Gemma-on-L4 as the fidelity profile.
+    # Downloaded 2026-07 from ModelScope (3 bf16 shards, 7.5GB + index).
+    # T4 fit: ~7.5GB weights + ~6GB KV within the 13.6GB budget (16GB x 0.85).
+    # REQUIRES vllm_dtype=float16 on T4: the checkpoint is bf16 (SM>=8.0) but
+    # the family is fp16-safe, so the explicit --dtype float16 downcast is
+    # what makes it run on Turing (the DAG exposes the `vllm_dtype` param).
+    # Native context is 262K — the DAG's `vllm_max_model_len` param (default
+    # 8192) MUST stay set or the KV allocation will not fit: uncapped, vLLM
+    # sizes the KV cache for 262K (36GiB) and the T4 EngineCore exits 1 at
+    # startup (E2E 2026-07-14). Ships NO special_tokens_map.json (Qwen
+    # convention); configuration.json is ModelScope metadata.
+    description: Qwen3 4B Instruct (2507). T4-compatible via vllm_dtype=float16; guided-JSON clean.
+    gcs_uri: "gs://{bucket}/synthetic/models/qwen3/4b-instruct-2507/v1/"
+    quantization: null            # bf16 checkpoint; serve fp16 on T4, bf16 on L4
+    expected_vram_gb: 9
+    min_compute_capability: "7.5"  # with vllm_dtype=float16
+    license: apache-2.0
+    source: modelscope            # pulled once on the M4, never at runtime
+    hf_repo: Qwen/Qwen3-4B-Instruct-2507  # same id on ModelScope
+    download_hint: |
+      modelscope download --model Qwen/Qwen3-4B-Instruct-2507 --local_dir models/qwen3/4b-instruct-2507/v1
+
+# Embedding models for B.1 RAG (M1 §7).
+embedders:
+  bge_small_en_v1_5:
+    description: BAAI/bge-small-en-v1.5 — small, fast, OK quality. Mirrored to GCS.
+    gcs_uri: "gs://{bucket}/synthetic/models/embedders/bge-small-en-v1.5/v1/"
+    dim: 384
+    license: mit
+    hf_repo: BAAI/bge-small-en-v1.5       # same id on ModelScope
+
+# B.2 library-wrapper engine (M1 §6). Statistical synthesizer fitted on
+# reference rows; the LLM patches free-text columns only. See ADR 0013.
+b2_library:
+  sdgx:
+    description: >-
+      hitsz-ids/synthetic-data-generator. CTGAN-family tabular synthesizer
+      fitted once per worker on reference_rows; vectorized sampling at
+      generate_batch. CPU-fittable, in-memory DataFrameConnector (no disk).
+    package: sdgx
+    version_spec: ">=0.2.0"      # mirror of sdfb-beam [library] extra pin
+    model: CTGANSynthesizerModel
+    default_epochs: 100
+    license: apache-2.0
+    source: pypi
+    fallback_backend: empirical_numpy
+    deferred_upgrade: "sdv.GaussianCopulaSynthesizer (BSL-1.1)"

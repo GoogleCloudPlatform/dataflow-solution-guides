@@ -1,0 +1,23 @@
+[
+  {"name": "run_id", "type": "STRING", "mode": "REQUIRED", "description": "Pipeline run id; joins to dead_letter.run_id."},
+  {"name": "reference_digest", "type": "STRING", "mode": "NULLABLE", "description": "SHA-256 of the canonical reference sample (provenance)."},
+  {"name": "reference_table", "type": "STRING", "mode": "NULLABLE", "description": "Source table the reference rows were SELECTed from."},
+  {"name": "landing_table", "type": "STRING", "mode": "NULLABLE", "description": "Destination table for valid synthetic rows."},
+  {"name": "engine", "type": "STRING", "mode": "NULLABLE", "description": "b1_rag | b2_library."},
+  {"name": "model_uri", "type": "STRING", "mode": "NULLABLE", "description": "gs:// URI of the LLM weights used."},
+  {"name": "env", "type": "STRING", "mode": "NULLABLE", "description": "dev | uat | prd \u2014 threshold tier applied."},
+  {"name": "num_rows_requested", "type": "INTEGER", "mode": "NULLABLE", "description": "Rows the run was asked to generate."},
+  {"name": "valid_count", "type": "INTEGER", "mode": "NULLABLE", "description": "Rows that passed all Mode-A checks and landed."},
+  {"name": "dlq_count", "type": "INTEGER", "mode": "NULLABLE", "description": "Total dead-lettered records."},
+  {"name": "blocker_count", "type": "INTEGER", "mode": "NULLABLE", "description": "DLQ records whose rule_id is BLOCKER-severity."},
+  {"name": "dlq_by_rule", "type": "STRING", "mode": "NULLABLE", "description": "JSON map rule_id -> count (PARSE_JSON to query)."},
+  {"name": "blocker_failure_ratio", "type": "FLOAT", "mode": "NULLABLE", "description": "Configured gate for this env (from thresholds.yml)."},
+  {"name": "observed_blocker_ratio", "type": "FLOAT", "mode": "NULLABLE", "description": "blocker_count / the rows generated \u2014 valid_count + dlq_count, minus the DLQ counts of any excluded_blocker_rules (ADR 0038: an excluded rule leaves BOTH sides of the ratio)."},
+  {"name": "status", "type": "STRING", "mode": "NULLABLE", "description": "PASSED | FAILED_BLOCKER."},
+  {"name": "excluded_blocker_rules", "type": "STRING", "mode": "NULLABLE", "description": "ADR 0038 \u2014 rule_ids left out of blocker_count (comma-separated); pk.duplicate on a table whose declared pk: the source disproved."},
+  {"name": "source_repeat_share", "type": "FLOAT", "mode": "NULLABLE", "description": "ADR 0038 \u2014 share of the SOURCE child's rows repeating a key value (1 - key_values/children over the fan-out histogram)."},
+  {"name": "landing_repeat_share", "type": "FLOAT", "mode": "NULLABLE", "description": "ADR 0038 \u2014 pk.duplicate over the rows generated (valid_count + row.duplicate); the landing table's key-repeat share."},
+  {"name": "repeat_share_delta", "type": "FLOAT", "mode": "NULLABLE", "description": "ADR 0038 \u2014 landing_repeat_share - source_repeat_share."},
+  {"name": "repeat_share_within_tolerance", "type": "BOOLEAN", "mode": "NULLABLE", "description": "ADR 0038 \u2014 |repeat_share_delta| <= REPEAT_SHARE_TOLERANCE (0.05); NULL when the launch measured no source share for this table."},
+  {"name": "created_at", "type": "TIMESTAMP", "mode": "REQUIRED", "description": "Row write time (UTC); DAY partition key."}
+]

@@ -1,0 +1,109 @@
+#  Copyright 2026 The synthetic-llm-dataflow-bigquery Authors
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+# One-shot model staging. Weights are pulled ONCE here and copied to GCS;
+# Dataflow workers read them from GCS only (no model hub at runtime,
+# HF_HUB_OFFLINE=1 in the image). See docs/MODEL_LAYOUT.md for the layout.
+#
+#   _MODEL=gemma4-e4b-it  google/gemma-4-E4B-it        (Apache-2.0)
+#   _MODEL=qwen3-4b       Qwen/Qwen3-4B-Instruct-2507  (Apache-2.0)
+#   embedder (always)     BAAI/bge-small-en-v1.5       (MIT, B.1 RAG)
+#
+#   _SOURCE=huggingface   Hugging Face Hub (default)
+#   _SOURCE=modelscope    ModelScope mirror, same repository ids
+#
+# Every repository is public and ungated, so no credentials are needed.
+# Only the files vLLM and the embedder load are copied.
+steps:
+  - id: download-and-validate
+    name: python:3.12-slim
+    env:
+      - MODEL=${_MODEL}
+      - SOURCE=${_SOURCE}
+    script: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      pip install --quiet huggingface_hub modelscope
+      python3 - <<'PYEOF'
+      import json, os, sys
+      from pathlib import Path
+
+      root = Path("/workspace/models")
+      models = {
+          "gemma4-e4b-it": ("google/gemma-4-E4B-it", "gemma4/e4b-it/v1"),
+          "qwen3-4b": ("Qwen/Qwen3-4B-Instruct-2507", "qwen3/4b-instruct-2507/v1"),
+      }
+      if os.environ["MODEL"] not in models:
+          sys.exit(f"unknown _MODEL {os.environ['MODEL']!r}")
+      files = ["*.json", "*.safetensors", "*.jinja", "*.txt"]
+
+      def download(repo_id, target):
+          source = os.environ["SOURCE"]
+          if source == "huggingface":
+              from huggingface_hub import snapshot_download
+          elif source == "modelscope":
+              from modelscope import snapshot_download
+          else:
+              sys.exit(f"unknown _SOURCE {source!r}")
+          snapshot_download(repo_id, local_dir=str(target), allow_patterns=files)
+          print(f"{source}: {repo_id} -> {target}")
+
+      repo_id, layout = models[os.environ["MODEL"]]
+      target = root / layout
+      download(repo_id, target)
+      embedder = root / "embedders/bge-small-en-v1.5/v1"
+      download("BAAI/bge-small-en-v1.5", embedder)
+
+      def check(directory, required, need_chat_template):
+          missing = [n for n in required
+                     if not (directory / n).is_file() or (directory / n).stat().st_size == 0]
+          shards = sorted(directory.glob("*.safetensors"))
+          if not shards:
+              missing.append("*.safetensors")
+          index = directory / "model.safetensors.index.json"
+          if len(shards) > 1 and index.is_file():
+              wanted = set(json.loads(index.read_text())["weight_map"].values())
+              missing += sorted(w for w in wanted if not (directory / w).is_file())
+          if need_chat_template:
+              config = json.loads((directory / "tokenizer_config.json").read_text())
+              if "chat_template" not in config and not (directory / "chat_template.jinja").is_file():
+                  missing.append("chat template (an instruction-tuned checkpoint is required)")
+          return [f"{directory}: {m}" for m in missing]
+
+      failures = check(target, ["config.json", "tokenizer.json", "tokenizer_config.json"], True)
+      failures += check(embedder, ["config.json", "tokenizer.json", "tokenizer_config.json",
+                                   "special_tokens_map.json"], False)
+      if failures:
+          sys.exit("MODEL VALIDATION FAILED:\n  " + "\n  ".join(failures))
+      print("models staged and validated:", target, embedder)
+      PYEOF
+
+  - id: upload
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    script: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      gcloud storage cp --recursive /workspace/models/* "gs://${_BUCKET}/synthetic/models/"
+    env:
+      - _BUCKET=${_BUCKET}
+
+substitutions:
+  _BUCKET: unset
+  _MODEL: gemma4-e4b-it
+  _SOURCE: huggingface
+options:
+  logging: CLOUD_LOGGING_ONLY
+  diskSizeGb: 100
+  automapSubstitutions: true
+timeout: 3600s
