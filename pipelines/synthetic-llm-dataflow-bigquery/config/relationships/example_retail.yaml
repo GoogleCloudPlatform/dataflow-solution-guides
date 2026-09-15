@@ -1,0 +1,64 @@
+# Example relational model — the single source of truth for PK/FK/identity
+# (ADR 0032). Copy this file, rename it, edit it: nothing else declares
+# relationships, and no `bq update` / `terraform apply` is involved.
+#
+# Names here are ALIASES on purpose. Real table/column names must never be
+# committed (see config/relationships/README.md): drop your real model next
+# to this file (the folder is gitignored apart from the examples) or pass
+# --relationships_uri=gs://... at launch.
+
+model: example_retail
+description: accounts -> orders -> order lines, plus an unrelated ledger
+
+tables:
+
+  # A parent: no FK edges, so it generates first.
+  A_TABLE:
+    pk: [A_COL_001, A_COL_002]      # composite PK is fine
+    identity: [A_COL_009]           # unique-but-not-key columns
+    note: account master
+
+  # A child: every row takes a WHOLE key tuple that A_TABLE landed
+  # (ADR 0031), so orphans are impossible by construction.
+  B_TABLE:
+    pk: [B_COL_001]
+    fk:
+      - cols:     [B_COL_006, B_COL_007]
+        ref:      A_TABLE                  # bare name = a table in THIS model
+        ref_cols: [A_COL_001, A_COL_002]   # need NOT be the parent's full PK
+
+  C_TABLE:
+    pk: [C_COL_001]
+    fk:
+      - cols:     [C_COL_004]
+        ref:      B_TABLE
+        ref_cols: [B_COL_001]
+
+      # A relationship that is real in the business model but whose join
+      # key is not in the DDL: drawn in the card and the diagram, never a
+      # source of keys.
+      - cols:     [JOIN_KEY]
+        ref:      A_TABLE
+        ref_cols: [JOIN_KEY]
+        enforced: false
+        note: reporting-only link, key not materialised
+
+  # Flip to false to DETACH this table: it stops travelling with the model,
+  # and anything that reached the rest only through it detaches too. It
+  # still generates when you target it explicitly.
+  D_TABLE:
+    enabled: false
+    pk: [D_COL_001]
+    fk:
+      - cols:     [D_COL_002]
+        ref:      C_TABLE
+        ref_cols: [C_COL_001]
+
+  # A parent OUTSIDE this model (already landed by another run) is
+  # referenced dataset-qualified and needs no entry of its own.
+  E_TABLE:
+    pk: [E_COL_001]
+    fk:
+      - cols:     [E_COL_002]
+        ref:      warehouse_ds.EXT_TABLE
+        ref_cols: [EXT_ID]

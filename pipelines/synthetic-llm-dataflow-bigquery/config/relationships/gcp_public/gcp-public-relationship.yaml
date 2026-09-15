@@ -1,0 +1,50 @@
+# Public relational demo model (ADR 0040) over the fictitious e-commerce
+# dataset `bigquery-public-data.thelook_ecommerce`.
+#
+# The Dataflow Solution Guides deployment (terraform/synthetic-llm-dataflow-
+# bigquery) snapshots users, orders and order_items into `synthetic_source`
+# and copies the products catalog into the landing dataset, where it acts as
+# an already-landed parent. A launch that targets order_items generates the
+# whole component: users (num_rows), then orders from the users' landed
+# keys, then order_items from the orders' landed keys.
+#
+# This file sits one folder below config/relationships on purpose: a
+# directory scan does not recurse, so it never joins a launch that did not
+# name it with --relationships_uri.
+model: gcp_public_thelook
+description: users -> orders -> order_items, product_id from the landed products catalog
+
+tables:
+
+  users:
+    pk: [id]
+    identity: [id]          # fresh per-row keys; a sampled numeric PK would collide
+    note: root, generated with num_rows rows
+
+  orders:
+    pk: [order_id]
+    identity: [order_id]
+    fk:
+      - cols:     [user_id]
+        ref:      users
+        ref_cols: [id]
+
+  order_items:
+    pk: [id]
+    identity: [id]
+    fk:
+      # Driving edge widened with user_id, so every item copies the user of
+      # its order instead of drawing one (ADR 0036).
+      - cols:     [order_id, user_id]
+        ref:      orders
+        ref_cols: [order_id, user_id]
+        drives:   true
+      # Implied: orders already carries user_id from users.
+      - cols:     [user_id]
+        ref:      users
+        ref_cols: [id]
+      # External: the catalog is not generated; keys are drawn from the
+      # landing dataset's products table.
+      - cols:     [product_id]
+        ref:      synthetic_data.products
+        ref_cols: [id]

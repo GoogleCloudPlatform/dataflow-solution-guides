@@ -25,6 +25,7 @@ This skill provides step-by-step execution workflows for deploying, running, ver
 | **Clickstream Analytics** | `terraform/clickstream_analytics` | `pipelines/clickstream_analytics_java` | `./scripts/01_launch_pipeline.sh` | Pub/Sub events | Cloud Bigtable & BigQuery analytics table |
 | **IoT Analytics** | `terraform/iot_analytics` | `pipelines/iot_analytics` | `./scripts/02_submit_job.sh` | `python scripts/publish_on_pubsub.py` | BigQuery `iot.maintenance_analytics` & Pub/Sub `maintenance-alerts` |
 | **Log Replication** | `terraform/log_replication_splunk` | `pipelines/log_replication_splunk` | `./scripts/01_launch_ps_to_splunk.sh` | Pub/Sub logging topic | Splunk HTTP Event Collector (HEC) |
+| **Synthetic Data Generation** | `terraform/synthetic-llm-dataflow-bigquery` | `pipelines/synthetic-llm-dataflow-bigquery` | `./scripts/04_run_dataflow.sh` | BigQuery `synthetic_source` snapshots of `thelook_ecommerce` | `./scripts/05_verify_run.sh RUN_ID` (BigQuery `synthetic_data`, `synthetic_data_quality.validation_runs`) |
 
 ---
 

@@ -1,0 +1,110 @@
+#  Copyright 2026 The synthetic-llm-dataflow-bigquery Authors
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+# One-shot model staging. Weights are pulled ONCE here and copied to GCS;
+# Dataflow workers read them from GCS only (no model hub at runtime,
+# HF_HUB_OFFLINE=1 in the image). See docs/MODEL_LAYOUT.md for the layout.
+#
+#   _MODEL=gemma4-e4b-it  Kaggle (accept the Gemma license on Kaggle first;
+#                         needs the kaggle-username / kaggle-key secrets)
+#   _MODEL=qwen3-4b       ModelScope, no credentials
+#
+# The bge-small embedder (B.1 RAG) is staged with either model.
+steps:
+  - id: download-and-validate
+    name: python:3.12-slim
+    secretEnv: ["KAGGLE_USERNAME", "KAGGLE_KEY"]
+    env:
+      - MODEL=${_MODEL}
+      - KAGGLE_HANDLE=${_KAGGLE_HANDLE}
+    script: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      pip install --quiet kagglehub modelscope
+      python3 - <<'PYEOF'
+      import json, os, shutil, sys
+      from pathlib import Path
+
+      root = Path("/workspace/models")
+      model = os.environ["MODEL"]
+      if model == "gemma4-e4b-it":
+          import kagglehub
+          target = root / "gemma4/e4b-it/v1"
+          src = Path(kagglehub.model_download(os.environ["KAGGLE_HANDLE"]))
+          shutil.copytree(src, target, dirs_exist_ok=True)
+      elif model == "qwen3-4b":
+          from modelscope import snapshot_download
+          target = root / "qwen3/4b-instruct-2507/v1"
+          snapshot_download("Qwen/Qwen3-4B-Instruct-2507", local_dir=str(target))
+      else:
+          sys.exit(f"unknown _MODEL {model!r}")
+
+      embedder = root / "embedders/bge-small-en-v1.5/v1"
+      try:
+          import kagglehub
+          src = Path(kagglehub.model_download("baai/bge-small-en-v1.5/transformers/default"))
+          shutil.copytree(src, embedder, dirs_exist_ok=True)
+      except Exception as exc:  # documented fallback: ModelScope needs no credentials
+          print(f"kaggle embedder download failed ({exc}); using ModelScope")
+          from modelscope import snapshot_download
+          snapshot_download("BAAI/bge-small-en-v1.5", local_dir=str(embedder))
+
+      def check(directory, required, need_chat_template):
+          missing = [n for n in required
+                     if not (directory / n).is_file() or (directory / n).stat().st_size == 0]
+          shards = sorted(directory.glob("*.safetensors"))
+          if not shards:
+              missing.append("*.safetensors")
+          index = directory / "model.safetensors.index.json"
+          if len(shards) > 1 and index.is_file():
+              wanted = set(json.loads(index.read_text())["weight_map"].values())
+              missing += sorted(w for w in wanted if not (directory / w).is_file())
+          if need_chat_template:
+              config = json.loads((directory / "tokenizer_config.json").read_text())
+              if "chat_template" not in config and not (directory / "chat_template.jinja").is_file():
+                  missing.append("chat template (an instruction-tuned checkpoint is required)")
+          return [f"{directory}: {m}" for m in missing]
+
+      failures = check(target, ["config.json", "tokenizer.json", "tokenizer_config.json"], True)
+      failures += check(embedder, ["config.json", "tokenizer.json", "tokenizer_config.json",
+                                   "special_tokens_map.json"], False)
+      if failures:
+          sys.exit("MODEL VALIDATION FAILED:\n  " + "\n  ".join(failures))
+      print("models staged and validated:", target, embedder)
+      PYEOF
+
+  - id: upload
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    script: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      gcloud storage cp --recursive /workspace/models/* "gs://${_BUCKET}/synthetic/models/"
+    env:
+      - _BUCKET=${_BUCKET}
+
+substitutions:
+  _BUCKET: unset
+  _MODEL: gemma4-e4b-it
+  _KAGGLE_HANDLE: google/gemma-4/transformers/gemma-4-e4b-it
+options:
+  logging: CLOUD_LOGGING_ONLY
+  diskSizeGb: 100
+  automapSubstitutions: true
+timeout: 3600s
+availableSecrets:
+  secretManager:
+    - versionName: projects/${PROJECT_ID}/secrets/kaggle-username/versions/latest
+      env: KAGGLE_USERNAME
+    - versionName: projects/${PROJECT_ID}/secrets/kaggle-key/versions/latest
+      env: KAGGLE_KEY

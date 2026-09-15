@@ -1,0 +1,7 @@
+{
+  "source_repo": "https://github.com/albertols/synthetic-llm-dataflow-bigquery",
+  "ref": "v0.5.0",
+  "sha": "a01e54abd46e676b53f344bd8ba5d10af231de21",
+  "committed_at": "2026-09-15T01:52:27Z",
+  "tool": "scripts/dsg/sync.py"
+}

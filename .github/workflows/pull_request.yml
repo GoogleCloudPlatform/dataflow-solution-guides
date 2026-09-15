@@ -332,8 +332,8 @@ jobs:
           for pipeline_dir in $TARGET_DIRS
           do
             echo "Checking pipelines/$pipeline_dir"
-            HAS_PY=$(find "$pipeline_dir" -name "*.py" -not -path "*/.*" 2>/dev/null | head -n 1)
-            HAS_REQ=$(find "$pipeline_dir" -name "requirements*.txt" -not -path "*/.*" 2>/dev/null | head -n 1)
+            HAS_PY=$(find "$pipeline_dir" -name "*.py" -not -path "*/.*" -print -quit 2>/dev/null)
+            HAS_REQ=$(find "$pipeline_dir" -name "requirements*.txt" -not -path "*/.*" -print -quit 2>/dev/null)
             if [ -f "$pipeline_dir/setup.py" ] || [ -n "$HAS_PY" ] || [ -n "$HAS_REQ" ]
             then
               echo
