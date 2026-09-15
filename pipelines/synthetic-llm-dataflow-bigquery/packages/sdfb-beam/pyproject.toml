@@ -1,0 +1,69 @@
+[project]
+name = "sdfb-beam"
+version = "0.1.0"
+description = "Apache Beam pipeline + DoFns for synthetic-dataflow-bigquery."
+requires-python = ">=3.11,<3.13"
+license = { text = "Apache-2.0" }
+readme = { content-type = "text/markdown", text = "Beam pipeline package. Imports sdfb-core; adds Beam + GCP + validation libs." }
+
+dependencies = [
+    "sdfb-core",
+    # Pinned EXACTLY to the Beam SDK base image (apache/beam_python3.11_sdk:2.74.0
+    # on Docker Hub, docker/Dockerfile BEAM_SDK_IMAGE). Runner v2 requires the
+    # worker boot binary and the apache-beam wheel to be the same version.
+    # Bump in lockstep with the SDK base image. 2.74.0 still ships
+    # apache_beam.ml.inference.vllm_inference (added 2.60.0).
+    "apache-beam[gcp]==2.74.0",
+    "pandera>=0.20.0",
+    "whylogs>=1.5.0",
+    "pandas>=2.2.0",
+    "google-cloud-bigquery>=3.20.0",
+    "pyyaml>=6.0",
+]
+
+# Optional extras — only installed inside the GPU container, never on the laptop.
+# Splitting them keeps `uv sync` on the laptop fast and prevents accidental
+# torch / vllm imports during pure-core tests.
+[project.optional-dependencies]
+# Inference engine on Dataflow L4 workers.
+gpu = [
+    # Gemma 4 (model_type=gemma4) needs vLLM >= 0.20.0 (which moved to
+    # transformers >= 5; v0.21.0 deprecates transformers v4). Older vLLM
+    # fails at config parse: "rope_scaling should have a 'rope_type' key".
+    # Marked linux-only — vLLM ships no macOS wheels, and it only ever runs
+    # inside the GPU container anyway (the M4 spike is not viable; ADR 0010).
+    "vllm>=0.21.0; sys_platform == 'linux'",
+    "torch>=2.4.0; sys_platform == 'linux'",
+    # VLLMModelClient owns the vLLM OpenAI server directly (ADR 0014) + talks
+    # to it via the openai client, so openai is an explicit dep (not a
+    # transitive pull from Beam's handler). Linux-only; laptop tests mock it.
+    "openai>=1.40.0; sys_platform == 'linux'",
+]
+# B.1 RAG engine — local-only embedder (weights mirrored to GCS, no HF Hub).
+embedding = [
+    "faiss-cpu>=1.8.0",
+    # >= 5.5.0 to match the vLLM >= 0.21 line (which requires transformers v5
+    # and added Gemma 4). Avoids a split where the image installs both extras
+    # but resolves an incompatible transformers.
+    "transformers>=5.5.0",
+    "torch>=2.4.0",
+    "safetensors>=0.4.0",
+]
+# B.2 library-wrapper engine — candidate pinned for M1 §6 spike.
+library = [
+    "sdgx>=0.2.0",  # hitsz-ids/synthetic-data-generator; revisit vs DataDreamer
+]
+# Apple Silicon local smoke test backend — see docs/M4_LOCAL_SMOKE.md.
+# Installed ONLY on the M4; NEVER baked into the GPU image (would conflict
+# with vllm + torch on linux/amd64).
+mlx = [
+    "mlx>=0.18.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "mlx-lm>=0.18.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sdfb_beam"]

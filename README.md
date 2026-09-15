@@ -29,6 +29,7 @@ This the list of solution guides available at this moment:
 |      [Anomaly Detection](./use_cases/Anomaly_Detection.md)      |         Real-time anomaly detection with Bigtable enrichment & models deployed in Vertex AI             | Ready :white_check_mark:  |
 |          [Customer Data Platform](./use_cases/CDP.md)           |          Real-time customer data platform that unifies a customer view from different sources.          | Ready :white_check_mark:  |
 |       [Gaming Analytics](./use_cases/Gaming_Analytics.md)       |              Real-time analysis of gaming data to enhance live gameplay & offer targeting               | Ready :white_check_mark:  |
+| [Synthetic Data Generation](./use_cases/Synthetic_Data_Generation.md) | Batch synthetic BigQuery tables from a DDL and a reference sample, with a self-hosted LLM on GPU workers | Ready :white_check_mark: |
 
 ## Repository structure
 

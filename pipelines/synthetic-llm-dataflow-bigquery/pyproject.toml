@@ -1,0 +1,101 @@
+# synthetic-dataflow-bigquery — uv virtual workspace root.
+#
+# Members live under packages/. The root itself is not installable; it
+# exists to share dev tooling (ruff, mypy, pytest) and pin Python.
+#
+# Local dev (laptop):     uv sync --group dev          (no Beam/GCP/GPU deps)
+# Beam dev (laptop):      uv sync --group dev --package sdfb-beam
+# GPU container build:    uv sync --group dev --package sdfb-beam --extra gpu --extra embedding --extra library
+[project]
+name = "synthetic-dataflow-bigquery"
+version = "0.1.0"
+description = "Synthetic data generation for BigQuery via Apache Beam on Dataflow, powered by self-hosted open-weight LLMs (Gemma 4 family) on L4 GPU workers."
+requires-python = ">=3.11,<3.13"
+license = { text = "Apache-2.0" }
+readme = "README.md"
+authors = [{ name = "synthetic-dataflow-bigquery contributors" }]
+
+[tool.uv]
+package = false
+
+# apache-beam 2.74.0 → envoy-data-plane >=1.0.3 → betterproto==2.0.0b6, a
+# PRE-RELEASE. uv's default strategy (if-necessary-or-explicit) only accepts
+# pre-releases pinned explicitly in first-party requirements or constraints —
+# a transitive pin does not qualify and resolution fails with "no version of
+# betterproto==2.0.0b6". Surfacing the pin here is the canonical uv pattern
+# for transitive pre-release deps. Drop when beam's envoy-data-plane chain
+# moves to a stable betterproto.
+constraint-dependencies = ["betterproto==2.0.0b6"]
+
+[tool.uv.workspace]
+members = ["packages/sdfb-core", "packages/sdfb-beam", "packages/sdfb-tests"]
+
+[tool.uv.sources]
+sdfb-core = { workspace = true }
+sdfb-beam = { workspace = true }
+sdfb-tests = { workspace = true }
+
+[dependency-groups]
+dev = [
+    # Workspace member — transitively pulls sdfb-core and sdfb-beam in via
+    # sdfb-tests' own dependencies. Without this entry, `uv sync --group dev`
+    # leaves the workspace packages uninstalled because the root has no
+    # dependencies of its own (`package = false`).
+    "sdfb-tests",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "hypothesis>=6.100.0",
+    # figure scripts (scripts/doc/, scripts/release/) — relied on an ad-hoc
+    # local install until now; CI needs it declared.
+    "matplotlib>=3.9",
+    # Style gate shared with the Dataflow Solution Guides: yapf
+    # `--style yapf` formats, pylint with the vendored dsg/pylintrc lints.
+    "yapf==0.43.0",
+    "pylint>=4.0,<5.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["packages/sdfb-tests/fixtures"]
+
+[tool.ruff.lint]
+# No "I": yapf owns import wrapping and pylint (dsg/pylintrc) owns import
+# order; ruff's isort re-wraps what yapf formats and the two never converge.
+select = ["E", "F", "B", "UP", "N", "RUF", "SIM", "PL"]
+# PLC0415: deferred (function-level) imports are an architectural pattern here —
+# sdfb-core stays import-light and engines/handlers defer heavy/optional deps
+# (faiss, sdgx, torch, vllm, mlx) so the package imports without them.
+ignore = ["E501", "PLR0913", "PLC0415"]
+
+[tool.ruff.lint.per-file-ignores]
+# PLR2004: magic-number checks are noise in tests.
+# N806: `Record = derive_record_model(...)` binds a dynamically derived class —
+# PascalCase is the correct name for a class object, even in a local.
+"**/tests/**" = ["PLR2004", "N806"]
+
+[tool.yapf]
+based_on_style = "yapf"
+
+[tool.yapfignore]
+ignore_patterns = [".venv/**", "packages/sdfb-tests/fixtures/**"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["packages/sdfb-tests/tests"]
+pythonpath = ["packages/sdfb-tests/src"]
+addopts = "-ra --strict-markers"
+markers = [
+    "gpu: requires NVIDIA GPU — skipped on the laptop (run on the M4)",
+    "gcp: requires live GCP credentials — skipped on the laptop",
+    "integration: DirectRunner end-to-end tests with FakeModelClient",
+    "slow: takes >1s — run nightly, not on every commit",
+]
