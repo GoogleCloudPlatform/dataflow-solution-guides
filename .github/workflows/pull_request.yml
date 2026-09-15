@@ -162,7 +162,7 @@ jobs:
         if: (steps.filter.outputs.java == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
-          java-version: '25'
+          java-version: '25.0.4+101.0.LTS'
           distribution: 'temurin'
       # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
       # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
