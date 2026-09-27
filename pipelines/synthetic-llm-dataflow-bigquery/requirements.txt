@@ -89,7 +89,7 @@ pg8000==1.31.5
 pillow==12.2.0
 platformdirs==3.11.0
 pluggy==1.6.0
-propcache==0.5.2
+propcache==0.5.4
 proto-plus==1.28.0
 protobuf==6.33.6
 pyarrow==23.0.1
