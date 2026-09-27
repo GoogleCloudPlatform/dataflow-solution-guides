@@ -1,0 +1,9 @@
+[
+  {"name": "reference_digest", "type": "STRING", "mode": "REQUIRED", "description": "SHA-256 over the whole reference sample (ADR 0005). Together with model_uri this is the pool's identity: a new sample or a different LLM is a different pool."},
+  {"name": "model_uri", "type": "STRING", "mode": "REQUIRED", "description": "LLM weights URI that produced these values. NOT an embedder identity — that is what makes this a sibling of rag_chunks rather than a chunk_kind of it (ADR 0020)."},
+  {"name": "column", "type": "STRING", "mode": "REQUIRED", "description": "Free-text column the pool belongs to."},
+  {"name": "target", "type": "INT64", "mode": "REQUIRED", "description": "Requested pool size: min(num_rows, column_distinct, _FREE_TEXT_POOL_MAX)."},
+  {"name": "values", "type": "STRING", "mode": "REPEATED", "description": "Deduped generated values in insertion order. REPEATED (not a JSON blob) so pools stay queryable with UNNEST. NOTE: `values` is a BigQuery RESERVED keyword — always backtick it in SQL."},
+  {"name": "stagnated", "type": "BOOL", "mode": "REQUIRED", "description": "True when the ladder stopped yielding novel values before reaching target. Recorded so a later worker reads the conclusion instead of re-running the ladder to re-derive it — the single largest waste in the 2026-07-26 1M run."},
+  {"name": "attempts", "type": "INT64", "mode": "REQUIRED", "description": "Ladder attempts spent producing this pool (observability; never a fetch key)."}
+]
