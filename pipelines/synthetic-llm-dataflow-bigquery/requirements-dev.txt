@@ -88,7 +88,7 @@ jeepney==0.9.0 ; sys_platform == 'linux'
 jsonpickle==3.4.2
 keyring==25.7.0
 keyrings-google-artifactregistry-auth==1.1.2
-kiwisolver==1.5.0
+kiwisolver==1.5.1
 librt==0.11.0 ; platform_python_implementation != 'PyPy'
 matplotlib==3.10.9
 mccabe==0.7.0
