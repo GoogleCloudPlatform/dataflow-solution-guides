@@ -1,0 +1,19 @@
+{
+  "table_info": {
+    "table_id": "demo_project.demo_dataset.customers",
+    "description": "Test fixture: customers table.",
+    "data_location": "EU",
+    "table_type": "TABLE"
+  },
+  "schema": [
+    {"name": "customer_id", "type": "INT64", "mode": "REQUIRED", "description": "Surrogate customer key."},
+    {"name": "email", "type": "STRING", "mode": "REQUIRED", "max_length": 255, "description": "Customer email; unique."},
+    {"name": "signup_at", "type": "TIMESTAMP", "mode": "REQUIRED", "description": "Account creation timestamp (UTC)."},
+    {"name": "country", "type": "STRING", "mode": "NULLABLE", "max_length": 2, "description": "ISO-3166-1 alpha-2."},
+    {"name": "tier", "type": "STRING", "mode": "REQUIRED", "max_length": 16, "description": "Subscription tier."},
+    {"name": "lifetime_value", "type": "NUMERIC", "mode": "NULLABLE", "precision": 18, "scale": 2}
+  ],
+  "primary_keys": ["customer_id"],
+  "partitioning": {"type": "DAY", "field": "signup_at"},
+  "clustering": {"fields": ["country", "tier"]}
+}
