@@ -78,7 +78,7 @@ httpx==0.28.1
 hyperframe==6.1.0
 hypothesis==6.152.8
 idna==3.15
-importlib-metadata==9.0.0
+importlib-metadata==9.0.1
 iniconfig==2.3.0
 isort==9.0.1
 jaraco-classes==3.4.0
