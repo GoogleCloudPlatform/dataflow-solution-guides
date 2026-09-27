@@ -1,0 +1,30 @@
+# Keep build context minimal — only what the Dockerfile COPYs.
+.git
+.github
+.idea
+.vscode
+.venv
+.envrc
+.envrc.example
+.direnv
+
+# Tests (not needed on workers; we install --no-dev anyway)
+packages/sdfb-tests
+
+# Local artifacts
+output
+temp
+models
+.beam
+.pytest_cache
+.mypy_cache
+.ruff_cache
+__pycache__
+*.pyc
+
+# Docs / scripts (workers don't need them)
+docs
+scripts
+
+# Logs
+*.log
