@@ -1,0 +1,7 @@
+[
+  {"name": "source_table", "type": "STRING", "mode": "REQUIRED", "description": "SOURCE child table FQN the fan-out was measured against."},
+  {"name": "edge_cols", "type": "STRING", "mode": "REQUIRED", "description": "Comma-joined driving edge FK columns (child side)."},
+  {"name": "model_sha", "type": "STRING", "mode": "REQUIRED", "description": "Model/prompt sha the measurement is scoped to (cache key component)."},
+  {"name": "measured_at", "type": "TIMESTAMP", "mode": "REQUIRED", "description": "Measurement write time (UTC)."},
+  {"name": "payload", "type": "STRING", "mode": "REQUIRED", "description": "JSON-encoded measurement payload: the FanoutPlan histogram + PK cells, and (ADR 0038 fix J) the declared PK's own source measurement under \"pk\" (rows, key_tuples, max_rows_per_key). No column change — a row written before fix J simply lacks the key."}
+]

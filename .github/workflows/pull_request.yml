@@ -241,6 +241,7 @@ jobs:
           python-version: |
             3.13
             3.14
+            3.11
       - name: Install pylint
         if: (steps.filter.outputs.pylint == 'true' || steps.filter.outputs.shared == 'true') && steps.targets.outputs.dirs != ''
         run: |
@@ -319,6 +320,7 @@ jobs:
           python-version: |
             3.13
             3.14
+            3.11
       - name: Install pipenv
         if: (steps.filter.outputs.python == 'true' || steps.filter.outputs.workflow == 'true') && steps.targets.outputs.dirs != ''
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
@@ -332,8 +334,8 @@ jobs:
           for pipeline_dir in $TARGET_DIRS
           do
             echo "Checking pipelines/$pipeline_dir"
-            HAS_PY=$(find "$pipeline_dir" -name "*.py" -not -path "*/.*" 2>/dev/null | head -n 1)
-            HAS_REQ=$(find "$pipeline_dir" -name "requirements*.txt" -not -path "*/.*" 2>/dev/null | head -n 1)
+            HAS_PY=$(find "$pipeline_dir" -name "*.py" -not -path "*/.*" -print -quit 2>/dev/null)
+            HAS_REQ=$(find "$pipeline_dir" -name "requirements*.txt" -not -path "*/.*" -print -quit 2>/dev/null)
             if [ -f "$pipeline_dir/setup.py" ] || [ -n "$HAS_PY" ] || [ -n "$HAS_REQ" ]
             then
               echo
@@ -406,7 +408,7 @@ jobs:
           if [ "$IS_WORKFLOW" = "true" ]; then
             DIRS=""
             for d in */; do
-              if [ -f "$d/Dockerfile" ]; then
+              if [ -f "$d/Dockerfile" ] || [ -f "$d/docker/Dockerfile" ]; then
                 DIRS="$DIRS ${d%/}"
               fi
             done
@@ -415,7 +417,7 @@ jobs:
             RAW_DIRS=$(echo "$FILES_JSON" | jq -r '.[] | select(startswith("pipelines/")) | split("/") | select(length > 2) | .[1]' | sort -u)
             DIRS=""
             for d in $RAW_DIRS; do
-              if [ -f "$d/Dockerfile" ]; then
+              if [ -f "$d/Dockerfile" ] || [ -f "$d/docker/Dockerfile" ]; then
                 DIRS="$DIRS $d"
               fi
             done
@@ -444,6 +446,16 @@ jobs:
               cd "$pipeline_dir"
               mkdir -p gemma_2B && touch gemma_2B/DUMMY
               docker build -t github-actions .
+              cd ..
+            elif [ -f "$pipeline_dir/docker/Dockerfile" ]
+            then
+              echo
+              echo -------------------------------------
+              echo Building Docker "$pipeline_dir"
+              echo -------------------------------------
+              echo
+              cd "$pipeline_dir"
+              docker build -f docker/Dockerfile -t github-actions .
               cd ..
             else
               echo Ignoring, no Dockerfile found

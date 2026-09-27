@@ -21,7 +21,8 @@ dataflow-solution-guides/
 │   ├── Clickstream_Analytics.md  # Real-time clickstream analytics with Bigtable enrichment
 │   ├── IoT_Analytics.md      # Real-time IoT analytics with Bigtable & Scikit-Learn RunInference
 │   ├── Log_replication.md    # Real-time log replication into Splunk
-│   └── Gaming_Analytics.md   # Real-time gaming analytics with Bigtable enrichment & in-game activation
+│   ├── Gaming_Analytics.md   # Real-time gaming analytics with Bigtable enrichment & in-game activation
+│   └── Synthetic_Data_Generation.md # Batch relational synthetic data generation with vLLM on GPU
 │
 ├── terraform/                # Infrastructure-as-Code using Google Cloud Foundation Fabric
 │   ├── ml_ai/                # Pub/Sub topics, Artifact Registry, GCS bucket, Service Account
@@ -32,7 +33,8 @@ dataflow-solution-guides/
 │   ├── clickstream_analytics/  # Bigtable instance, Pub/Sub, BigQuery, Service Account
 │   ├── iot_analytics/        # Bigtable, Pub/Sub, BigQuery, Artifact Registry, Service Account
 │   ├── log_replication_splunk/ # Pub/Sub, Secret Manager, Service Account, Optional Splunk VM
-│   └── gaming_analytics/     # Pub/Sub in/out/dead-letter, Bigtable feature store, BigQuery, Artifact Registry, Service Account
+│   ├── gaming_analytics/     # Pub/Sub in/out/dead-letter, Bigtable feature store, BigQuery, Artifact Registry, Service Account
+│   └── synthetic-llm-dataflow-bigquery/ # BigQuery datasets/tables, Artifact Registry, Service Accounts, optional Flex Template job
 │
 ├── pipelines/                # Apache Beam streaming pipeline implementations
 │   ├── ml_ai_python/         # Python: Beam RunInference with Gemma 4 using vLLM on NVIDIA L4 GPU
@@ -44,6 +46,7 @@ dataflow-solution-guides/
 │   ├── iot_analytics/        # Python: IoT sensor aggregation + Bigtable & Scikit-Learn RunInference
 │   ├── log_replication_splunk/ # Dataflow Flex Template: Pub/Sub to Splunk HEC
 │   ├── gaming_analytics_java/ # Java: Bigtable player features + recommendation inference, Pub/Sub activation & BigQuery
+│   ├── synthetic-llm-dataflow-bigquery/ # Python: batch relational synthetic data, self-hosted LLM (vLLM) on L4, Flex Template
 │   └── pylintrc              # Google Python Style Guide Pylint configuration
 │
 └── .agents/                  # Workspace Agent Customizations
@@ -206,3 +209,9 @@ The repository includes specialized workspace skills located in `.agents/skills/
 ### Anomaly detection deployment
 
 Anomaly detection implements synthetic data → managed CPU Vertex AI training → custom prediction endpoint deployment → Bigtable enrichment → keyed Dataflow inference → Pub/Sub and BigQuery. The entire solution runs on Python 3.14 across workers, local tooling, custom training containers, and custom prediction serving containers (eliminating deprecated prebuilt scikit-learn containers). Source Terraform-generated `scripts/00_set_variables.sh`, build worker, training, and serving images (`scripts/01_build_and_push_container.sh`, `scripts/01_build_training_container.sh`, `scripts/01_build_serving_container.sh`), source their environment digests, then run `python -m anomaly_detection_pipeline.workflow` stages `train`, `validate`, `deploy`, `verify`, `seed` and `smoke`; source the separate endpoint environment before launch. Keep the ignored manifest for partial-run recovery and ownership-aware cleanup. Compatible external endpoints remain supported through `MODEL_ENDPOINT` and optional `MODEL_LOCATION`. Input is `anomaly-detection-transactions` via `anomaly-detection-transactions-sub`; outputs are `anomaly-detection-detections`, BigQuery `anomaly_detection.detections`, and `anomaly-detection-errors`. Bigtable uses instance `anomaly-detection` and table `customer_profiles`. Workers use `n2-standard-2`, private IPs, and dedicated identity `anomaly-detection-sa`; training uses `anomaly-training-sa`. Endpoint authorization uses custom role `anomalyDetectionPredictor` (`aiplatform.endpoints.predict`). Existing project/network and bucket reuse remain defaults. `SUBNETWORK` is optional with legacy `NETWORK` subnet-path fallback; existing networks need Private Google Access, worker TCP 12345/12346 and NAT where needed. Follow `use_cases/Anomaly_Detection.md` for exact commands and the non-Terraform resource teardown sequence. Stop Dataflow, clean up workflow-owned Vertex resources/artifacts, then destroy Terraform. Report live-cloud verification separately from local tests.
+
+<!-- dsg-sync:synthetic-llm-dataflow-bigquery:start -->
+### Synthetic data generation deployment
+
+Batch, not streaming: `terraform apply` in `terraform/synthetic-llm-dataflow-bigquery` (US BigQuery, a region with the chosen GPU: `gpu = "l4"` on G2 with `vllm_dtype=auto`, or `gpu = "t4"` on N1 with `vllm_dtype=float16` and `qwen3-4b` only), then from `pipelines/synthetic-llm-dataflow-bigquery` run `scripts/01_build_and_push_container.sh`, `02_stage_models.sh` (Hugging Face, or `MODEL_SOURCE=modelscope`), `03_build_flex_template.sh`, `04_run_dataflow.sh` (or `terraform apply -var launch_job=true`) and `05_verify_run.sh RUN_ID`. Workers use private IPs and `synthetic-llm-dataflow-sa`; Cloud Build uses `synthetic-llm-build-sa`. The pipeline is developed at https://github.com/albertols/synthetic-llm-dataflow-bigquery, and its README names the release and commit this copy corresponds to. Report live-cloud verification separately from local tests.
+<!-- dsg-sync:synthetic-llm-dataflow-bigquery:end -->

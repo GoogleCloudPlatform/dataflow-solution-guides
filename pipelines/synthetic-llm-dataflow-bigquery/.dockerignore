@@ -1,0 +1,16 @@
+# Docker build context (local builds); mirrors .gcloudignore.
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+*.egg-info
+build/
+dist/
+docs/
+tests/
+scripts/
+packages/sdfb-tests/tests/
+packages/sdfb-tests/fixtures/
+packages/sdfb-tests/src/

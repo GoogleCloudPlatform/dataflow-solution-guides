@@ -38,3 +38,4 @@ These are the pipelines included in this directory
 | Clickstream Analytics  |         Java         | [clickstream_analytics_java](./clickstream_analytics_java/) |
 |     IoT Analytics      |        Python        |            [iot_analytics](./iot_analytics/)                |
 |   Gaming Analytics     |         Java         |     [gaming_analytics_java](./gaming_analytics_java/)       |
+| Synthetic Data Generation | Python | [synthetic-llm-dataflow-bigquery](./synthetic-llm-dataflow-bigquery/) |

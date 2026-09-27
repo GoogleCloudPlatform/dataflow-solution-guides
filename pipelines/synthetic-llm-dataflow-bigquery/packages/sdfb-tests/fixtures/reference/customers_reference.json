@@ -1,0 +1,12 @@
+[
+  {"customer_id": 1, "email": "alice@example.com", "signup_at": "2025-06-15T10:30:00Z", "country": "DE", "tier": "ENTERPRISE", "lifetime_value": "1250.50"},
+  {"customer_id": 2, "email": "bob@example.com", "signup_at": "2025-07-20T14:15:00Z", "country": "GB", "tier": "SMB", "lifetime_value": "850.00"},
+  {"customer_id": 3, "email": "carol@example.com", "signup_at": "2025-08-05T09:00:00Z", "country": "FR", "tier": "STARTUP", "lifetime_value": null},
+  {"customer_id": 4, "email": "dave@example.com", "signup_at": "2025-09-10T16:45:00Z", "country": "US", "tier": "ENTERPRISE", "lifetime_value": "4200.75"},
+  {"customer_id": 5, "email": "eve@example.com", "signup_at": "2025-10-22T11:30:00Z", "country": "DE", "tier": "SMB", "lifetime_value": "320.25"},
+  {"customer_id": 6, "email": "frank@example.com", "signup_at": "2025-11-08T13:20:00Z", "country": "ES", "tier": "STARTUP", "lifetime_value": "1875.00"},
+  {"customer_id": 7, "email": "grace@example.com", "signup_at": "2025-12-14T08:00:00Z", "country": "IT", "tier": "SMB", "lifetime_value": "650.50"},
+  {"customer_id": 8, "email": "henry@example.com", "signup_at": "2026-01-03T15:30:00Z", "country": "NL", "tier": "FREE", "lifetime_value": null},
+  {"customer_id": 9, "email": "iris@example.com", "signup_at": "2026-02-19T12:15:00Z", "country": "DE", "tier": "ENTERPRISE", "lifetime_value": "2100.00"},
+  {"customer_id": 10, "email": "jack@example.com", "signup_at": "2026-03-25T17:45:00Z", "country": "PL", "tier": "STARTUP", "lifetime_value": "475.25"}
+]

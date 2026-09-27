@@ -1,0 +1,10 @@
+[
+  {"name": "dlq_inserted_at", "type": "TIMESTAMP", "mode": "REQUIRED", "description": "Row write time (UTC); DAY partition key."},
+  {"name": "run_id", "type": "STRING", "mode": "REQUIRED", "description": "Pipeline run id; joins to validation_runs.run_id."},
+  {"name": "raw_record", "type": "STRING", "mode": "NULLABLE", "description": "JSON-encoded rejected payload (PARSE_JSON to query)."},
+  {"name": "error_type", "type": "STRING", "mode": "NULLABLE", "description": "pydantic | pandera | engine | uniqueness | bq_load."},
+  {"name": "error_detail", "type": "STRING", "mode": "NULLABLE", "description": "JSON-encoded structured error context."},
+  {"name": "rule_id", "type": "STRING", "mode": "NULLABLE", "description": "Check-catalog rule id (e.g. schema.types, schema.batch)."},
+  {"name": "pipeline_step", "type": "STRING", "mode": "NULLABLE", "description": "DoFn that produced the rejection."},
+  {"name": "stage", "type": "STRING", "mode": "NULLABLE", "description": "Always pre_write in Mode A."}
+]
