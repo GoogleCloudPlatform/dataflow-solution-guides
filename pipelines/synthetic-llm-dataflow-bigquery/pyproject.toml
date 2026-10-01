@@ -24,7 +24,7 @@
 name = "synthetic-dataflow-bigquery"
 version = "0.1.0"
 description = "Synthetic data generation for BigQuery via Apache Beam on Dataflow, powered by self-hosted open-weight LLMs (Gemma 4 family) on L4 GPU workers."
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.14,<3.15"
 license = { text = "Apache-2.0" }
 readme = "README.md"
 authors = [{ name = "Alberto López Serna" }]
@@ -36,7 +36,7 @@ Repository = "https://github.com/albertols/synthetic-llm-dataflow-bigquery"
 [tool.uv]
 package = false
 
-# apache-beam 2.74.0 → envoy-data-plane >=1.0.3 → betterproto==2.0.0b6, a
+# apache-beam 2.76.0 → envoy-data-plane >=1.0.3 → betterproto==2.0.0b6, a
 # PRE-RELEASE. uv's default strategy (if-necessary-or-explicit) only accepts
 # pre-releases pinned explicitly in first-party requirements or constraints —
 # a transitive pin does not qualify and resolution fails with "no version of
@@ -76,7 +76,7 @@ dev = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py314"
 extend-exclude = ["packages/sdfb-tests/fixtures"]
 
 [tool.ruff.lint]
@@ -86,7 +86,7 @@ select = ["E", "F", "B", "UP", "N", "RUF", "SIM", "PL"]
 # PLC0415: deferred (function-level) imports are an architectural pattern here —
 # sdfb-core stays import-light and engines/handlers defer heavy/optional deps
 # (faiss, sdgx, torch, vllm, mlx) so the package imports without them.
-ignore = ["E501", "PLR0913", "PLC0415"]
+ignore = ["E501", "PLR0913", "PLR0917", "PLC0415"]
 
 [tool.ruff.lint.per-file-ignores]
 # PLR2004: magic-number checks are noise in tests.
@@ -101,7 +101,7 @@ based_on_style = "yapf"
 ignore_patterns = [".venv/**", "packages/sdfb-tests/fixtures/**"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 warn_unused_ignores = true

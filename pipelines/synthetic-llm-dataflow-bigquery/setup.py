@@ -56,5 +56,5 @@ setup(
     package_dir=_SOURCES,
     include_package_data=True,
     install_requires=_requirements(),
-    python_requires=">=3.11,<3.12",
+    python_requires=">=3.14,<3.15",
 )
