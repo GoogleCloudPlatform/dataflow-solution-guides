@@ -104,7 +104,7 @@ pandas==3.0.3
 pandera==0.31.1
 pathspec==1.1.1
 pg8000==1.31.5
-pillow==12.2.0
+pillow==12.3.0
 platformdirs==3.11.0
 pluggy==1.6.0
 propcache==0.5.2
