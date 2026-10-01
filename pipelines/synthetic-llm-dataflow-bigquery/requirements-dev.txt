@@ -132,7 +132,7 @@ regex==2026.5.9
 requests==2.34.2
 rsa==4.9.1
 ruff==0.15.13
-scramp==1.4.8
+scramp==1.4.17
 secretstorage==3.5.0 ; sys_platform == 'linux'
 six==1.17.0
 sniffio==1.3.1
