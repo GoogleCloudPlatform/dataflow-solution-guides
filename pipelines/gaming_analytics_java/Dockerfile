@@ -37,7 +37,7 @@
 # Python minor version must match the environment that the expansion service
 # declares at pipeline construction time, otherwise the override above will not
 # match and Dataflow will silently fall back to the stock Docker Hub harness.
-FROM apache/beam_python3.13_sdk:2.76.0
+FROM apache/beam_python3.13_sdk:2.77.0
 
 ARG MODEL_PATH=/opt/gaming_analytics/recommender.pkl
 ARG TRAINING_SAMPLES=20000

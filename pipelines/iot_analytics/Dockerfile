@@ -35,7 +35,7 @@ RUN pip install --upgrade --no-cache-dir pip \
 ENV PYTHONPATH="/workspace:${PYTHONPATH}"
 
 # Copy Apache Beam boot entrypoint binaries
-COPY --from=apache/beam_python3.14_sdk:2.76.0 /opt/apache/beam /opt/apache/beam
+COPY --from=apache/beam_python3.14_sdk:2.77.0 /opt/apache/beam /opt/apache/beam
 
 # Set the entrypoint to Apache Beam SDK launcher.
 ENTRYPOINT ["/opt/apache/beam/boot"]
