@@ -121,7 +121,7 @@ typing-extensions==4.15.0
 typing-inspect==0.9.0
 typing-inspection==0.4.2
 tzdata==2026.2 ; sys_platform == 'emscripten' or sys_platform == 'win32'
-urllib3==2.7.0
+urllib3==2.8.0
 websockets==16.0
 whylabs-client==0.6.16
 whylogs==1.6.4
