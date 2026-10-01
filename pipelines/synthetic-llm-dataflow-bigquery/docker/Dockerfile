@@ -37,9 +37,9 @@
 # ADR-0015 (Artifact Registry) carry the locked decisions.
 #
 # Base images (both public; override with --build-arg to use a mirror):
-#   Beam SDK: apache/beam_python3.11_sdk:2.74.0 (Docker Hub)
+#   Beam SDK: apache/beam_python3.11_sdk:2.76.0 (Docker Hub)
 #     → amd64, Debian-based, Python 3.11, /opt/apache/beam/boot included
-#     → apache-beam pinned ==2.74.0 in packages/sdfb-beam to match (Runner v2
+#     → apache-beam pinned ==2.76.0 in packages/sdfb-beam to match (Runner v2
 #       needs the boot binary and the wheel at the same version)
 #   Launcher: gcr.io/dataflow-templates-base/python311-template-launcher-base
 #     → only /opt/google/dataflow/python_template_launcher is copied from it
@@ -49,7 +49,7 @@
 # Dataflow's `install-nvidia-driver` experiment (mounted at /usr/local/nvidia/).
 # ---------------------------------------------------------------------------
 
-ARG BEAM_SDK_IMAGE="apache/beam_python3.11_sdk:2.74.0"
+ARG BEAM_SDK_IMAGE="apache/beam_python3.11_sdk:2.76.0"
 ARG LAUNCHER_IMAGE="gcr.io/dataflow-templates-base/python311-template-launcher-base"
 
 # ---------------------------------------------------------------------------
