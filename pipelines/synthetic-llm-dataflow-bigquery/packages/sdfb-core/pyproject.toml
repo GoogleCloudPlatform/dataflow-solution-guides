@@ -16,7 +16,7 @@
 name = "sdfb-core"
 version = "0.1.0"
 description = "Pure-Python core for synthetic-dataflow-bigquery: contracts, codegen, engine ABC, prompt templates."
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.14,<3.15"
 license = { text = "Apache-2.0" }
 readme = { content-type = "text/markdown", text = "Pure-Python core. No Beam, no GCP, no torch dependencies." }
 

@@ -16,7 +16,7 @@
 name = "sdfb-tests"
 version = "0.1.0"
 description = "Test suite (unit + DirectRunner integration) for synthetic-dataflow-bigquery."
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.14,<3.15"
 license = { text = "Apache-2.0" }
 readme = { content-type = "text/markdown", text = "Tests. Helpers in src/sdfb_tests; pytest discovery rooted at tests/." }
 
