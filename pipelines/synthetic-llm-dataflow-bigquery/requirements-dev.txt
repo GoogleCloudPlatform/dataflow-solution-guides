@@ -74,7 +74,7 @@ hypothesis==6.152.8
 idna==3.15
 importlib-metadata==9.0.0
 iniconfig==2.3.0
-isort==9.0.1
+isort==9.0.2
 jaraco-classes==3.4.0
 jaraco-context==6.1.2
 jaraco-functools==4.5.0
