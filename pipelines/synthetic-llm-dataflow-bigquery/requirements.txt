@@ -99,7 +99,7 @@ pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementatio
 pydantic==2.13.4
 pydantic-core==2.46.4
 pymongo==4.17.0
-pymysql==1.2.0
+pymysql==1.2.3
 pyparsing==3.3.2
 python-dateutil==2.9.0.post0
 python-tds==1.17.1
