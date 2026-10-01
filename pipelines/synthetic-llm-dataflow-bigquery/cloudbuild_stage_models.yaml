@@ -27,7 +27,7 @@
 # Only the files vLLM and the embedder load are copied.
 steps:
   - id: download-and-validate
-    name: python:3.11-slim
+    name: python:3.14-slim
     env:
       - MODEL=${_MODEL}
       - SOURCE=${_SOURCE}

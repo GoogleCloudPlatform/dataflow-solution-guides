@@ -16,20 +16,19 @@
 name = "sdfb-beam"
 version = "0.1.0"
 description = "Apache Beam pipeline + DoFns for synthetic-dataflow-bigquery."
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.14,<3.15"
 license = { text = "Apache-2.0" }
 readme = { content-type = "text/markdown", text = "Beam pipeline package. Imports sdfb-core; adds Beam + GCP + validation libs." }
 
 dependencies = [
     "sdfb-core",
-    # Pinned EXACTLY to the Beam SDK base image (apache/beam_python3.11_sdk:2.74.0
+    # Pinned EXACTLY to the Beam SDK base image (apache/beam_python3.14_sdk:2.76.0
     # on Docker Hub, docker/Dockerfile BEAM_SDK_IMAGE). Runner v2 requires the
     # worker boot binary and the apache-beam wheel to be the same version.
-    # Bump in lockstep with the SDK base image. 2.74.0 still ships
+    # Bump in lockstep with the SDK base image. 2.76.0 still ships
     # apache_beam.ml.inference.vllm_inference (added 2.60.0).
-    "apache-beam[gcp]==2.74.0",
+    "apache-beam[gcp]==2.76.0",
     "pandera>=0.20.0",
-    "whylogs>=1.5.0",
     "pandas>=2.2.0",
     "google-cloud-bigquery>=3.20.0",
     "pyyaml>=6.0",

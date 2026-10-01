@@ -68,7 +68,7 @@ Terraform directory.
 [![CI](https://github.com/albertols/synthetic-llm-dataflow-bigquery/actions/workflows/ci.yml/badge.svg)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/albertols/synthetic-llm-dataflow-bigquery?label=release&color=0f9d58)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/releases)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11-blue.svg)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.14-blue.svg)](pyproject.toml)
 [![Apache Beam](https://img.shields.io/badge/Apache%20Beam-Dataflow-ff6d00.svg)](https://beam.apache.org/)
 [![LLM](https://img.shields.io/badge/LLM-self--hosted%20vLLM-6f42c1.svg)](#cpugpu-split--vllm-serving)
 [![Beam Summit](https://img.shields.io/badge/Beam%20Summit-2025-4285f4.svg)](https://beamsummit.org)
