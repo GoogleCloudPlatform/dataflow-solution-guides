@@ -193,7 +193,7 @@ flowchart LR
   B7 -->|"next run is warm, no call and no server"| B6
 ```
 
-| | Beam `vllm_inference` (2.74.0) | `VLLMModelClient` |
+| | Beam `vllm_inference` (2.76.0) | `VLLMModelClient` |
 | :-- | :-- | :-- |
 | **What flows through the LLM step** | Prompts: inference is a `PTransform` between two `PCollection`s | Nothing. The `PCollection` carries row batches; the model is called from inside `generate_batch()` and returns to the caller |
 | **Who decides the next prompt** | The graph: every prompt exists before inference starts | The engine: each round takes the next sampling level (`temperature`, `top_p`, `top_k`), filters the answer by format and by novelty against the source domain (§5), then decides whether to ask again |
