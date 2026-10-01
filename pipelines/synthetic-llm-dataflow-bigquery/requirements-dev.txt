@@ -119,7 +119,7 @@ pydantic-core==2.46.4
 pygments==2.20.0
 pylint==4.0.8
 pymongo==4.17.0
-pymysql==1.2.0
+pymysql==1.2.3
 pyparsing==3.3.2
 pytest==9.0.3
 pytest-cov==7.1.0
