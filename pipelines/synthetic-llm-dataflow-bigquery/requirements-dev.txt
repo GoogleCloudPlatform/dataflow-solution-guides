@@ -139,7 +139,7 @@ tomlkit==0.15.1
 typeguard==4.6.0
 typing-extensions==4.15.0
 typing-inspect==0.9.0
-typing-inspection==0.4.2
+typing-inspection==0.4.4
 tzdata==2026.4 ; sys_platform == 'emscripten' or sys_platform == 'win32'
 urllib3==2.8.0
 websockets==16.1.1
