@@ -18,7 +18,7 @@
 plugins {
   id 'application'
   id "maven-publish"
-  id "com.diffplug.spotless" version "8.10.2"
+  id "com.diffplug.spotless" version "8.10.3"
   id 'com.palantir.git-version' version '5.1.0'
   id 'net.ltgt.errorprone' version "5.1.1"
 }
@@ -37,7 +37,7 @@ ext {
 
   beamVersion = "2.76.0"
 
-  slf4jVersion = "2.0.19"
+  slf4jVersion = "2.0.20"
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
   autoValueVersion = '1.11.1'
