@@ -72,7 +72,7 @@ httplib2==0.31.2
 httpx==0.28.1
 hypothesis==6.152.8
 idna==3.15
-importlib-metadata==9.0.0
+importlib-metadata==9.0.1
 iniconfig==2.3.0
 isort==9.0.2
 jaraco-classes==3.4.0
@@ -82,7 +82,7 @@ jeepney==0.9.0 ; sys_platform == 'linux'
 jsonpickle==3.4.2
 keyring==25.7.0
 keyrings-google-artifactregistry-auth==1.1.2
-kiwisolver==1.5.0
+kiwisolver==1.5.1
 librt==0.11.0 ; platform_python_implementation != 'PyPy'
 matplotlib==3.10.9
 mccabe==0.7.0
@@ -107,8 +107,8 @@ pg8000==1.31.5
 pillow==12.3.0
 platformdirs==3.11.0
 pluggy==1.6.0
-propcache==0.5.2
-proto-plus==1.28.0
+propcache==0.5.4
+proto-plus==1.29.0
 protobuf==6.33.6
 pyarrow==23.0.1
 pyasn1==0.6.4
@@ -146,7 +146,7 @@ typing-extensions==4.15.0
 typing-inspect==0.9.0
 typing-inspection==0.4.2
 tzdata==2026.2 ; sys_platform == 'emscripten' or sys_platform == 'win32'
-urllib3==2.7.0
+urllib3==2.8.0
 websockets==16.0
 whylabs-client==0.6.16
 whylogs==1.6.4
