@@ -127,7 +127,7 @@ pyyaml==6.0.3
 regex==2026.9.29
 requests==2.34.2
 rsa==4.9.1
-ruff==0.16.9
+ruff==0.16.10
 scramp==1.4.17
 secretstorage==3.5.0 ; sys_platform == 'linux'
 six==1.17.0
