@@ -9,7 +9,7 @@ annotated-types==0.8.0
 anyio==4.14.2
 apache-beam==2.76.0
 asn1crypto==1.5.1
-ast-serialize==0.11.2
+ast-serialize==0.12.1
 astroid==4.3.3
 attrs==26.1.0
 beartype==0.22.9
