@@ -2,11 +2,11 @@
 -e ./packages/sdfb-beam
 -e ./packages/sdfb-core
 -e ./packages/sdfb-tests
-aiohappyeyeballs==2.6.1
+aiohappyeyeballs==2.7.1
 aiohttp==3.14.3
 aiosignal==1.4.0
-annotated-types==0.7.0
-anyio==4.14.2
+annotated-types==0.8.0
+anyio==4.15.1
 apache-beam==2.76.0
 asn1crypto==1.5.1
 ast-serialize==0.11.2
@@ -36,7 +36,7 @@ google-apitools==0.5.35
 google-auth==2.59.1
 google-auth-httplib2==0.4.4
 google-cloud-aiplatform==1.134.0
-google-cloud-bigquery==3.45.2
+google-cloud-bigquery==3.46.1
 google-cloud-bigquery-storage==2.41.0
 google-cloud-bigtable==2.48.0
 google-cloud-build==3.39.0
@@ -127,7 +127,7 @@ pyyaml==6.0.3
 regex==2026.9.29
 requests==2.34.2
 rsa==4.9.1
-ruff==0.16.9
+ruff==0.16.10
 scramp==1.4.17
 secretstorage==3.5.0 ; sys_platform == 'linux'
 six==1.17.0
@@ -137,7 +137,7 @@ sqlparse==0.6.0
 tenacity==9.1.4
 tomlkit==0.15.1
 typeguard==4.6.0
-typing-extensions==4.15.0
+typing-extensions==4.16.0
 typing-inspect==0.9.0
 typing-inspection==0.4.4
 tzdata==2026.4 ; sys_platform == 'emscripten' or sys_platform == 'win32'
