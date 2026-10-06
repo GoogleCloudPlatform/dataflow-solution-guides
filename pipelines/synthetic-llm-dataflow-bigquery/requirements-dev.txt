@@ -39,7 +39,7 @@ google-cloud-aiplatform==1.134.0
 google-cloud-bigquery==3.46.1
 google-cloud-bigquery-storage==2.41.0
 google-cloud-bigtable==2.48.0
-google-cloud-build==3.39.0
+google-cloud-build==3.40.0
 google-cloud-core==2.8.0
 google-cloud-dataflow-client==0.13.0
 google-cloud-datastore==2.26.1
