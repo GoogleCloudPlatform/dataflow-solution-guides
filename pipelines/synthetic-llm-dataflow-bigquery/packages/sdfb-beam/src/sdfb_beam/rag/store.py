@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from sdfb_core.rag.chunking import Chunk
+from sdfb_core.rag.chunking import CHUNK_KIND_ROW_DOC, Chunk
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
   pass
@@ -72,6 +72,28 @@ class BigQueryChunkStore:
             },
         ))
     return len(rows) > 0
+
+  def row_doc_digests(self, reference_digest: str, embedder_id: str,
+                      embedder_version: str) -> set[str]:
+    sql = (f"SELECT DISTINCT row_digest FROM `{self.table_fqn}` "
+           "WHERE reference_digest = @reference_digest "
+           "AND chunk_kind = @chunk_kind "
+           "AND embedder_id = @embedder_id "
+           "AND embedder_version = @embedder_version")
+    rows = self._query(
+        sql,
+        {
+            "reference_digest": reference_digest,
+            "chunk_kind": CHUNK_KIND_ROW_DOC,
+            "embedder_id": embedder_id,
+            "embedder_version": embedder_version,
+        },
+    )
+    return {self._get(r, "row_digest") for r in rows}
+
+  @staticmethod
+  def _get(row, key: str):
+    return row.get(key) if isinstance(row, dict) else getattr(row, key, None)
 
   def fetch(
       self,

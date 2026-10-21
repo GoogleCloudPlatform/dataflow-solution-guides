@@ -4,7 +4,7 @@
 > the choice is fully validated on the M4 it folds into this package's
 > `README.md` (charter AC #2 / DRY policy). No bake-off was run — the
 > decision was made on license + maintenance + spine-fit grounds (see
-> [ADR 0013](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0013-distribution-estimator-spine.md)).
+> [ADR 0013](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0013-distribution-estimator-spine.md)).
 
 ## Decision
 

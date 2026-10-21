@@ -204,3 +204,25 @@ class TestAstronomicalCapacity:
   def test_max_rows_under_the_gate_is_far_beyond_ten_million(self):
     skewed = [40, 20, 12, 8, 6, 4, 3, 2, 2, 1, 1, 1]
     assert max_rows_under_share(self._D_COL_001, 0.2, skewed) > 10**20
+
+
+class TestEffectiveCellsAcrossInterpreters:
+  """`effective_cells` sums p squared over the cells. CPython 3.12 made the
+    builtin `sum()` of floats compensated; for six EQUAL cells that turned
+    5.999999999999999 into 6.0. The FK key-sample cap is the ceil() of a
+    quotient that is then an exact integer, so a balanced sample asked for
+    one parent key fewer than on 3.11, and a different key pool changes
+    every FK draw after it. The sum is a plain left-to-right loop: these
+    are the values CPython 3.11 computed."""
+
+  def test_six_equal_cells_keep_the_value_python_3_11_computed(self):
+    from sdfb_core.engines.pk_capacity import effective_cells
+
+    assert effective_cells([7.0] * 6).hex() == "0x1.7ffffffffffffp+2"
+
+  def test_the_key_sample_cap_of_a_balanced_sample_is_unchanged(self):
+    from sdfb_core.engines.pk_capacity import effective_cells
+
+    assert fk_key_sample_cap(600_000, 2 * effective_cells([7.0] * 6)) == 500_001
+    assert fk_key_sample_cap(1_200_000,
+                             10 * effective_cells([3.0] * 6)) == 200_001

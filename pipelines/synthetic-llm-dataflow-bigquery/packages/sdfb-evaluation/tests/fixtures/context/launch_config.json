@@ -1,0 +1,70 @@
+{
+  "autoscaling": "fixed",
+  "batch_size": 16,
+  "build_pool_layer": "true",
+  "build_rag_layer": "true",
+  "client_type": "vllm",
+  "create_if_not_exists": "false",
+  "ddl_uri": "",
+  "dlq_table": "demo-project.synthetic_data_quality.dead_letter",
+  "driven_uniqueness_mode": "exact",
+  "embedder_uri": "gs://demo-bucket/synthetic/models/embedders/bge-small-en-v1.5/v1/",
+  "engine": "b1_rag",
+  "env": "dev",
+  "fk_candidate_cap": 64,
+  "fk_fanout_stats_table": "",
+  "fk_parent_landing": "",
+  "freetext_expansion": "identifiers",
+  "freetext_pools_table": "demo-project.synthetic_data_quality.freetext_pools",
+  "generate_fk_relationships": "true",
+  "identity_cols": "",
+  "initial_workers": "1",
+  "landing_table": "demo-project.thelook_synthetic.order_items",
+  "model_uri": "gs://demo-bucket/synthetic/models/qwen/qwen2.5-3b-instruct/v1/",
+  "multi_table_mode": "single_job",
+  "num_rows": 5000,
+  "pk_cols": "",
+  "pool_pattern_guidance": "true",
+  "pool_seed_strategy": "kcenter",
+  "prompt_constraints": "true",
+  "prompt_debug": "off",
+  "rag_chunks_table": "demo-project.synthetic_data_quality.rag_chunks",
+  "reference_rows_limit": 10000,
+  "reference_table": "",
+  "relationships_uri": "gs://demo-bucket/synthetic/relationships/",
+  "resolved": {
+    "fk_parent_landing_derived": [
+      "(none)",
+      "demo-project.thelook_synthetic",
+      "demo-project.thelook_synthetic"
+    ],
+    "generate_fk_relationships": true,
+    "multi_table_mode": "single_job",
+    "run_ids": [
+      "thelook-0913-a1b2c3-00-users",
+      "thelook-0913-a1b2c3-01-orders",
+      "thelook-0913-a1b2c3-02-order_items"
+    ],
+    "scenario": "relational_closure",
+    "tables_in_order": [
+      "demo-project.thelook_synthetic.users",
+      "demo-project.thelook_synthetic.orders",
+      "demo-project.thelook_synthetic.order_items"
+    ],
+    "warnings": [
+      "the relational model expanded this launch to ['demo-project.thelook_synthetic.users', 'demo-project.thelook_synthetic.orders'] (declared in config/relationships; parents generate first)"
+    ]
+  },
+  "run_id": "thelook-0913-a1b2c3",
+  "seed": "",
+  "similarity": 0.5,
+  "source_stats": "exact",
+  "source_stats_json": "",
+  "source_stats_table": "",
+  "thresholds_uri": "config/thresholds.yml",
+  "uniqueness_mode": "exact",
+  "validation_runs_table": "demo-project.synthetic_data_quality.validation_runs",
+  "vllm_dtype": "float16",
+  "vllm_max_model_len": "",
+  "write_disposition": "append"
+}

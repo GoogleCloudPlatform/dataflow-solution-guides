@@ -109,7 +109,14 @@ def effective_cells(cell_weights: Sequence[float]) -> float:
     likely cells that would collide as often as these skewed ones; the
     factor the FK key-sample sizing must use instead of the distinct
     count."""
-  return 1.0 / sum(p * p for p in _normalised(cell_weights))
+  # A plain left-to-right sum, not the builtin: CPython 3.12 made float
+  # sum() compensated, which moves this value's last bit. For equal
+  # cells that is the difference between 5.999999999999999 and 6.0, and
+  # `fk_key_sample_cap` takes the ceil() of a quotient of it.
+  total = 0.0
+  for p in _normalised(cell_weights):
+    total += p * p
+  return 1.0 / total
 
 
 def fk_key_sample_cap(num_rows: int, other_capacity: float | None) -> int:
