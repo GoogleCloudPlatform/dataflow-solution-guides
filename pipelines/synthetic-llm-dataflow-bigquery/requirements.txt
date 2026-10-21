@@ -10,7 +10,7 @@ anyio==4.15.1
 apache-beam==2.76.0
 asn1crypto==1.5.1
 attrs==26.1.0
-beartype==0.22.9
+beartype==0.23.1
 cachetools==6.2.6
 certifi==2026.10.19
 cffi==2.1.1 ; platform_python_implementation != 'PyPy'
