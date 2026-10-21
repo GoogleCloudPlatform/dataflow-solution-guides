@@ -1,6 +1,6 @@
 # Terraform Directory — Agent Guidelines
 
-This directory contains Terraform infrastructure definitions for each solution guide, built using **Google Cloud Foundation Fabric** (v56.2.0) modules.
+This directory contains Terraform infrastructure definitions for each solution guide, built using **Google Cloud Foundation Fabric** (v58.0.0) modules.
 
 ---
 
@@ -30,9 +30,9 @@ resource "local_file" "variables_script" {
   filename        = "${path.module}/../../pipelines/<use_case>/scripts/01_set_variables.sh"
   file_permission = "0644"
   content         = <<FILE
-export PROJECT=${module.google_cloud_project.project_id}
+export PROJECT=${local.project_id}
 export REGION=${var.region}
-export NETWORK=regions/${var.region}/subnetworks/${var.network_prefix}-subnet
+export SUBNETWORK=${local.subnetwork_path}
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 ...
 FILE
@@ -48,13 +48,13 @@ FILE
 
 1. **Cloud Foundation Fabric Modules**:
    Always use standard Fabric module sources:
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v56.2.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v58.0.0`
 
 2. **Network Security**:
    - Every VPC module creates a private subnet with `enable_private_access = true`.

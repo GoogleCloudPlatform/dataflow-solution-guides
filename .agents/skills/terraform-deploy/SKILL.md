@@ -25,6 +25,11 @@ Before executing Terraform operations:
    ```bash
    gcloud iam service-accounts list --project=$PROJECT --filter="email:<sa-name>"
    ```
+4. Check whether the project uses a local VPC or a **Shared VPC**:
+   ```bash
+   gcloud compute networks list --project=$PROJECT
+   gcloud compute shared-vpc get-host-project $PROJECT
+   ```
 
 ---
 
@@ -43,6 +48,8 @@ Available use cases:
 - `clickstream_analytics`
 - `iot_analytics`
 - `log_replication_splunk`
+- `gaming_analytics`
+- `synthetic-llm-dataflow-bigquery`
 
 ### Step 2: Configure `terraform.tfvars`
 Create or inspect `terraform.tfvars`:
