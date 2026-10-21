@@ -66,7 +66,7 @@ Every Terraform module in `terraform/<use_case>/` contains a `resource "local_fi
 | **Dataflow / Beam** | Stream processing runtime | Apache Beam Python SDK 2.50+, Apache Beam Java SDK 2.50+ |
 | **Python** | Pipeline development | Python 3.13 / 3.14, `yapf`, `pylint`, `pipenv` / `venv` |
 | **Java** | Pipeline development | OpenJDK 25, Gradle Wrapper (`./gradlew`), Spotless |
-| **Terraform** | Infrastructure as Code | Terraform >= 1.5, Google Cloud Foundation Fabric v56.2.0 |
+| **Terraform** | Infrastructure as Code | Terraform >= 1.5, Google Cloud Foundation Fabric v58.0.0 |
 | **Containers & CI** | Worker environment & CI | Docker, Google Cloud Build (`cloudbuild.yaml`), GitHub Actions |
 | **Google Cloud** | Managed platform | Dataflow, Pub/Sub, Cloud Storage, BigQuery, Spanner, Bigtable, Vertex AI |
 
@@ -166,7 +166,7 @@ When assisting a user with deploying a solution guide, follow this structured 7-
 
 1. **Infrastructure Provisioning**:
    - Navigate to `terraform/<use_case>/`.
-   - Ensure `terraform.tfvars` defines `project_id`, `region`, and `billing_account`.
+   - Ensure `terraform.tfvars` defines `project_id`, `region`, and optional `subnetwork` (including Shared VPC subnet paths) or `bucket_name`.
    - Run `terraform init` and `terraform apply`.
 2. **Environment Variable Loading**:
    - Navigate to `pipelines/<use_case>/`.
@@ -201,7 +201,7 @@ The repository includes specialized workspace skills located in `.agents/skills/
 
 - **`dataflow-pipeline-dev`**: Runbooks and procedures for developing, linting, packaging, and locally testing Beam pipelines.
 - **`terraform-deploy`**: Procedures for provisioning, validating, planning, and managing Cloud Foundation Fabric Terraform modules.
-- **`use-case-deployment`**: Matrix and step-by-step guides for end-to-end execution of any of the 8 solution guides.
+- **`use-case-deployment`**: Matrix and step-by-step guides for end-to-end execution of any of the 10 solution guides.
 - **`dataflow-troubleshooting`**: Diagnostic playbooks for resolving common Dataflow worker, IAM, quota, networking, and serialization errors.
 - **`pr-review`**: Procedures for reviewing Pull Requests, monitoring CI builds, verifying security guardrails and code style policies, approving, merging, or providing corrective feedback.
 
@@ -213,5 +213,5 @@ Anomaly detection implements synthetic data â†’ managed CPU Vertex AI training â
 <!-- dsg-sync:synthetic-llm-dataflow-bigquery:start -->
 ### Synthetic data generation deployment
 
-Batch, not streaming: `terraform apply` in `terraform/synthetic-llm-dataflow-bigquery` (US BigQuery, a region with the chosen GPU: `gpu = "l4"` on G2 with `vllm_dtype=auto`, or `gpu = "t4"` on N1 with `vllm_dtype=float16` and `qwen3-4b` only), then from `pipelines/synthetic-llm-dataflow-bigquery` run `scripts/01_build_and_push_container.sh`, `02_stage_models.sh` (Hugging Face, or `MODEL_SOURCE=modelscope`), `03_build_flex_template.sh`, `04_run_dataflow.sh` (or `terraform apply -var launch_job=true`) and `05_verify_run.sh RUN_ID`. Workers use private IPs and `synthetic-llm-dataflow-sa`; Cloud Build uses `synthetic-llm-build-sa`. The pipeline is developed at https://github.com/albertols/synthetic-llm-dataflow-bigquery, and its README names the release and commit this copy corresponds to. Report live-cloud verification separately from local tests.
+Batch, not streaming: `terraform apply` in `terraform/synthetic-llm-dataflow-bigquery` (US BigQuery, a region with the chosen GPU: `gpu = "l4"` on G2 with `vllm_dtype=auto`, or `gpu = "t4"` on N1 with `vllm_dtype=float16` and `qwen3-4b` only), then from `pipelines/synthetic-llm-dataflow-bigquery` run `scripts/01_build_and_push_container.sh`, `02_stage_models.sh` (Hugging Face, or `MODEL_SOURCE=modelscope`), `03_build_flex_template.sh`, `04_run_dataflow.sh` (or `terraform apply -var launch_job=true`), `05_verify_run.sh RUN_ID` and `06_run_evaluation.sh RUN_ID` (a CPU-only job from the same template that scores the landed tables against their sources into `synthetic_data_quality.evaluation_*`). Workers use private IPs and `synthetic-llm-dataflow-sa`; Cloud Build uses `synthetic-llm-build-sa`. The pipeline is developed at https://github.com/albertols/synthetic-llm-dataflow-bigquery, and its README names the release and commit this copy corresponds to. Report live-cloud verification separately from local tests.
 <!-- dsg-sync:synthetic-llm-dataflow-bigquery:end -->

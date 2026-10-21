@@ -36,7 +36,7 @@ import pytest
 from sdfb_core.contracts import TableSchema
 from sdfb_core.engines import GenerationContext
 from sdfb_core.engines.b1_rag import B1RagEngine, HashingEmbedder
-from sdfb_core.engines.b1_rag.engine import _MAX_EMBED_ROWS
+from sdfb_core.rag.chunking import MAX_ROW_DOC_ROWS as _MAX_EMBED_ROWS
 
 
 class _NovelClient:
@@ -98,7 +98,8 @@ def test_setup_embeds_at_most_the_row_cap(big_ctx):
   # WS2 §4b.3: `_column_seed_examples` adds a second, independently
   # bounded embed() call per free-text column (locally-embedded column
   # values, no chunk_store here) alongside the row-doc embed — both stay
-  # capped at _MAX_EMBED_ROWS, which is the invariant this test guards.
+  # capped at the default rag_row_docs_limit (MAX_ROW_DOC_ROWS), which is
+  # the invariant this test guards.
   embedder = _CountingEmbedder()
   engine = B1RagEngine(embedder=embedder)
   engine.setup(_NovelClient(), big_ctx)

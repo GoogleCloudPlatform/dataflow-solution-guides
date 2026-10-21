@@ -1,0 +1,1139 @@
+{
+  "exposure_rows": 1024,
+  "is_sample_model": {
+    "config/relationships/bar_example.yml": true,
+    "config/relationships/example_retail.yaml": true,
+    "config/relationships/foo.example.yaml": true,
+    "config/relationships/gcp_public_fk_example.yaml": true,
+    "config/relationships/retail_private.yaml": false,
+    "gs://bucket/models/retail.yaml": false
+  },
+  "models": {
+    "example_retail": {
+      "component": {
+        "A_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "B_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "C_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "D_TABLE": [
+          "D_TABLE"
+        ],
+        "E_TABLE": [
+          "E_TABLE"
+        ]
+      },
+      "derived_widenings": [],
+      "enforced_edges": {
+        "A_TABLE": [],
+        "B_TABLE": [
+          [
+            [
+              "B_COL_006",
+              "B_COL_007"
+            ],
+            "A_TABLE",
+            [
+              "A_COL_001",
+              "A_COL_002"
+            ],
+            true,
+            false
+          ]
+        ],
+        "C_TABLE": [
+          [
+            [
+              "C_COL_004"
+            ],
+            "B_TABLE",
+            [
+              "B_COL_001"
+            ],
+            true,
+            false
+          ]
+        ],
+        "D_TABLE": [],
+        "E_TABLE": [
+          [
+            [
+              "E_COL_002"
+            ],
+            "warehouse_ds.EXT_TABLE",
+            [
+              "EXT_ID"
+            ],
+            true,
+            false
+          ]
+        ]
+      },
+      "generation_order": {
+        "A_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "B_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "C_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "D_TABLE": [
+          "D_TABLE"
+        ],
+        "E_TABLE": [
+          "E_TABLE"
+        ]
+      },
+      "sha12": "3f4df8793c4f",
+      "sources": [
+        [
+          "config/relationships/example_retail.yaml",
+          "#  Copyright 2026 Google LLC\n#\n#  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may not use this file except in compliance with the License.\n#  You may obtain a copy of the License at\n#\n#      https://www.apache.org/licenses/LICENSE-2.0\n#\n#  Unless required by applicable law or agreed to in writing, software\n#  distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the License for the specific language governing permissions and\n#  limitations under the License.\n\n# Example relational model \u2014 the single source of truth for PK/FK/identity\n# (ADR 0032). Copy this file, rename it, edit it: nothing else declares\n# relationships, and no `bq update` / `terraform apply` is involved.\n#\n# Names here are ALIASES on purpose. Real table/column names must never be\n# committed (see config/relationships/README.md): drop your real model next\n# to this file (the folder is gitignored apart from the examples) or pass\n# --relationships_uri=gs://... at launch.\n\nmodel: example_retail\ndescription: accounts -> orders -> order lines, plus an unrelated ledger\n\ntables:\n\n  # A parent: no FK edges, so it generates first.\n  A_TABLE:\n    pk: [A_COL_001, A_COL_002]      # composite PK is fine\n    identity: [A_COL_009]           # unique-but-not-key columns\n    note: account master\n\n  # A child: every row takes a WHOLE key tuple that A_TABLE landed\n  # (ADR 0031), so orphans are impossible by construction.\n  B_TABLE:\n    pk: [B_COL_001]\n    fk:\n      - cols:     [B_COL_006, B_COL_007]\n        ref:      A_TABLE                  # bare name = a table in THIS model\n        ref_cols: [A_COL_001, A_COL_002]   # need NOT be the parent's full PK\n\n  C_TABLE:\n    pk: [C_COL_001]\n    fk:\n      - cols:     [C_COL_004]\n        ref:      B_TABLE\n        ref_cols: [B_COL_001]\n\n      # A relationship that is real in the business model but whose join\n      # key is not in the DDL: drawn in the card and the diagram, never a\n      # source of keys.\n      - cols:     [JOIN_KEY]\n        ref:      A_TABLE\n        ref_cols: [JOIN_KEY]\n        enforced: false\n        note: reporting-only link, key not materialised\n\n  # Flip to false to DETACH this table: it stops travelling with the model,\n  # and anything that reached the rest only through it detaches too. It\n  # still generates when you target it explicitly.\n  D_TABLE:\n    enabled: false\n    pk: [D_COL_001]\n    fk:\n      - cols:     [D_COL_002]\n        ref:      C_TABLE\n        ref_cols: [C_COL_001]\n\n  # A parent OUTSIDE this model (already landed by another run) is\n  # referenced dataset-qualified and needs no entry of its own.\n  E_TABLE:\n    pk: [E_COL_001]\n    fk:\n      - cols:     [E_COL_002]\n        ref:      warehouse_ds.EXT_TABLE\n        ref_cols: [EXT_ID]\n"
+        ]
+      ]
+    },
+    "example_star_diamond": {
+      "component": {
+        "bottom": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "dim_a": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "dim_b": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "fact": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "left": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "right": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "top": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ]
+      },
+      "derived_widenings": [],
+      "enforced_edges": {
+        "bottom": [
+          [
+            [
+              "T",
+              "L"
+            ],
+            "left",
+            [
+              "T",
+              "L"
+            ],
+            true,
+            true
+          ],
+          [
+            [
+              "T",
+              "R"
+            ],
+            "right",
+            [
+              "T",
+              "R"
+            ],
+            true,
+            false
+          ]
+        ],
+        "dim_a": [],
+        "dim_b": [],
+        "fact": [
+          [
+            [
+              "A_KEY"
+            ],
+            "dim_a",
+            [
+              "A_KEY"
+            ],
+            true,
+            false
+          ],
+          [
+            [
+              "B_KEY"
+            ],
+            "dim_b",
+            [
+              "B_KEY"
+            ],
+            true,
+            false
+          ]
+        ],
+        "left": [
+          [
+            [
+              "T"
+            ],
+            "top",
+            [
+              "T"
+            ],
+            true,
+            false
+          ]
+        ],
+        "right": [
+          [
+            [
+              "T"
+            ],
+            "top",
+            [
+              "T"
+            ],
+            true,
+            false
+          ]
+        ],
+        "top": []
+      },
+      "generation_order": {
+        "bottom": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "dim_a": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "dim_b": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "fact": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "left": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "right": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "top": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ]
+      },
+      "sha12": "699326e27ea6",
+      "sources": [
+        [
+          "config/relationships/example_star_diamond.yaml",
+          "#  Copyright 2026 Google LLC\n#\n#  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may not use this file except in compliance with the License.\n#  You may obtain a copy of the License at\n#\n#      https://www.apache.org/licenses/LICENSE-2.0\n#\n#  Unless required by applicable law or agreed to in writing, software\n#  distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the License for the specific language governing permissions and\n#  limitations under the License.\n\n# Example relational model \u2014 the two MULTI-PARENT shapes (ADR 0037).\n#\n# `example_*.yaml` files are DOCUMENTATION: a directory scan skips them\n# (`relationships_example_skipped` in the launcher log), so a real model\n# next to this file may reuse the same generic names. To load this one on\n# purpose, point --relationships_uri at the FILE:\n#\n#   uv run --no-sync python3 scripts/relationships/card.py \\\n#     --relationships-uri config/relationships/example_star_diamond.yaml --all\n#\n# Names here are generic on purpose \u2014 real table/column names are never\n# committed (see README.md \u00a7 \"Real names stay out of git\").\n#\n# Two shapes in one model, deliberately disconnected:\n#\n#   star      dim_a \u2190\u2500\u2500 fact \u2500\u2500\u2192 dim_b        (no ancestry between the dims)\n#   diamond     top \u2190\u2500\u2500 left \u2190\u2500\u2500 bottom \u2500\u2500\u2192 right \u2500\u2500\u2192 top\n\nmodel: example_star_diamond\ndescription: a star-schema fact and a true diamond \u2014 the two ADR 0037 shapes\n\ntables:\n\n  # ---------------------------------------------------------------- star\n  # Two independent dimensions. Neither descends from the other, so the\n  # driving rule falls through to step 4 (ruling A): the FIRST DECLARED\n  # enforced edge of `fact` drives, and the launcher logs\n  # `fk_driving_edge_defaulted` (WARNING). Add `drives: true` to the edge\n  # you want if the default is not the one you meant.\n\n  dim_a:\n    pk: [A_KEY]\n    note: dimension \u2014 a root, generated first\n\n  dim_b:\n    pk: [B_KEY]\n    note: dimension \u2014 a second root, unrelated to dim_a\n\n  fact:\n    pk: [A_KEY, B_KEY, LINE_NO]     # per-(A,B) line number completes the PK\n    fk:\n      # DRIVING (first declared, ruling A): `fact` rows are generated FROM\n      # dim_a's landed keys \u2014 one request stream, one key tuple per child\n      # (ADR 0036).  Card tag:\n      #   [enforced, DRIVES (first declared \u2014 mark drives: true to choose)]\n      - cols:     [A_KEY]\n        ref:      dim_a\n        ref_cols: [A_KEY]\n        note: the parent whose keys drive generation\n\n      # INDEPENDENT: shares NO column with the driving edge, so it keeps\n      # the ADR 0030/0031 side-input key pool \u2014 a whole dim_b key tuple is\n      # drawn per row, and the fk.orphan gate measures it.\n      #   [enforced, independent]\n      - cols:     [B_KEY]\n        ref:      dim_b\n        ref_cols: [B_KEY]\n        note: a star-schema dimension \u2014 drawn from the sampled key pool\n\n  # ------------------------------------------------------------- diamond\n  # `bottom` reaches `top` twice: once through `left`, once through\n  # `right`. Both branches carry T, so T must be ONE value that satisfies\n  # both parents \u2014 that is what a conditional edge buys.\n\n  top:\n    pk: [T]\n    note: the shared ancestor of both branches\n\n  left:\n    pk: [T, L]\n    fk:\n      - cols:     [T]\n        ref:      top\n        ref_cols: [T]\n\n  right:\n    pk: [T, R]\n    fk:\n      - cols:     [T]\n        ref:      top\n        ref_cols: [T]\n\n  bottom:\n    pk: [T, L, R]\n    fk:\n      # DRIVING: bottom is generated from left's landed (T, L) tuples, so\n      # T and L are inherited from the key \u2014 never sampled.\n      #   [enforced, DRIVES]\n      - cols:     [T, L]\n        ref:      left\n        ref_cols: [T, L]\n        drives:   true\n\n      # CONDITIONAL on (T): shares T with the driving edge and adds R.\n      # T comes from the driving key; R is one candidate that exists in\n      # `right` FOR that T, picked from a co-partitioned CoGroupByKey on T\n      # (Top-M per shared value, M = --fk_candidate_cap, default 64).\n      #   [enforced, conditional on (T)]\n      # If `right` holds no row for a T: R = NULL when R is NULLABLE in\n      # the landing schema, else the key is dropped before generation and\n      # reported as `fk.unmatched` (ruling B).\n      - cols:     [T, R]\n        ref:      right\n        ref_cols: [T, R]\n        note: the diamond's other branch \u2014 conditional on the shared T\n"
+        ]
+      ]
+    },
+    "gcp_public_fk_example": {
+      "component": {
+        "order_items": [
+          "users",
+          "orders",
+          "order_items"
+        ],
+        "orders": [
+          "users",
+          "orders",
+          "order_items"
+        ],
+        "users": [
+          "users",
+          "orders",
+          "order_items"
+        ]
+      },
+      "derived_widenings": [],
+      "enforced_edges": {
+        "order_items": [
+          [
+            [
+              "order_id",
+              "user_id"
+            ],
+            "orders",
+            [
+              "order_id",
+              "user_id"
+            ],
+            true,
+            true
+          ],
+          [
+            [
+              "user_id"
+            ],
+            "users",
+            [
+              "id"
+            ],
+            true,
+            false
+          ],
+          [
+            [
+              "product_id"
+            ],
+            "synthetic_data.products",
+            [
+              "id"
+            ],
+            true,
+            false
+          ]
+        ],
+        "orders": [
+          [
+            [
+              "user_id"
+            ],
+            "users",
+            [
+              "id"
+            ],
+            true,
+            false
+          ]
+        ],
+        "users": []
+      },
+      "generation_order": {
+        "order_items": [
+          "users",
+          "orders",
+          "order_items"
+        ],
+        "orders": [
+          "users",
+          "orders",
+          "order_items"
+        ],
+        "users": [
+          "users",
+          "orders",
+          "order_items"
+        ]
+      },
+      "sha12": "eeb64408371e",
+      "sources": [
+        [
+          "config/relationships/gcp_public_fk_example.yaml",
+          "#  Copyright 2026 Google LLC\n#\n#  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may not use this file except in compliance with the License.\n#  You may obtain a copy of the License at\n#\n#      https://www.apache.org/licenses/LICENSE-2.0\n#\n#  Unless required by applicable law or agreed to in writing, software\n#  distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the License for the specific language governing permissions and\n#  limitations under the License.\n\n# Public foreign-key example (ADR 0040) over the fictitious e-commerce dataset\n# `bigquery-public-data.thelook_ecommerce`. The Dataflow Solution Guides\n# deployment launches with it, from gcloud (`scripts/04_run_dataflow.sh`) or\n# from Terraform (`launch_job = true`):\n#\n#   users \u2500\u2500< orders \u2500\u2500< order_items >\u2500\u2500 products (catalog, already landed)\n#\n# Terraform snapshots users, orders and order_items into `synthetic_source`\n# with their exact public schemas, pre-creates the landing tables in\n# `synthetic_data` with the same names and schemas, and copies `products`\n# into `synthetic_data` as the parent that `order_items.product_id` draws\n# from. A launch that targets order_items generates the whole component:\n# users (num_rows), then orders from the users' landed keys, then\n# order_items from the orders' landed keys.\n#\n# Files named `*_example.yaml` are samples: a directory scan skips them, so\n# this model joins only a launch that names it with --relationships_uri.\nmodel: gcp_public_thelook\ndescription: users -> orders -> order_items, product_id from the landed products catalog\n\ntables:\n\n  users:\n    pk: [id]\n    identity: [id]          # fresh per-row keys; a sampled numeric PK would collide\n    note: root, generated with num_rows rows\n\n  orders:\n    pk: [order_id]\n    identity: [order_id]\n    fk:\n      - cols:     [user_id]\n        ref:      users\n        ref_cols: [id]\n\n  order_items:\n    pk: [id]\n    identity: [id]\n    fk:\n      # Driving edge widened with user_id, so every item copies the user of\n      # its order instead of drawing one (ADR 0036).\n      - cols:     [order_id, user_id]\n        ref:      orders\n        ref_cols: [order_id, user_id]\n        drives:   true\n      # Implied: orders already carries user_id from users.\n      - cols:     [user_id]\n        ref:      users\n        ref_cols: [id]\n      # External: the catalog is not generated; keys are drawn from the\n      # landing dataset's products table.\n      - cols:     [product_id]\n        ref:      synthetic_data.products\n        ref_cols: [id]\n"
+        ]
+      ]
+    },
+    "invented_widening": {
+      "component": {
+        "C": [
+          "G",
+          "P",
+          "C"
+        ],
+        "G": [
+          "G",
+          "P",
+          "C"
+        ],
+        "P": [
+          "G",
+          "P",
+          "C"
+        ]
+      },
+      "derived_widenings": [
+        [
+          "P",
+          "G",
+          "C",
+          [
+            [
+              "PG2",
+              "G2"
+            ]
+          ]
+        ]
+      ],
+      "enforced_edges": {
+        "C": [
+          [
+            [
+              "CG"
+            ],
+            "P",
+            [
+              "PG2"
+            ],
+            true,
+            true
+          ],
+          [
+            [
+              "CG"
+            ],
+            "G",
+            [
+              "G2"
+            ],
+            true,
+            false
+          ]
+        ],
+        "G": [],
+        "P": [
+          [
+            [
+              "PG1",
+              "PG2"
+            ],
+            "G",
+            [
+              "G1",
+              "G2"
+            ],
+            true,
+            false
+          ]
+        ]
+      },
+      "generation_order": {
+        "C": [
+          "G",
+          "P",
+          "C"
+        ],
+        "G": [
+          "G",
+          "P",
+          "C"
+        ],
+        "P": [
+          "G",
+          "P",
+          "C"
+        ]
+      },
+      "sha12": "4096ad7d17a1",
+      "sources": [
+        [
+          "<invented>/widening.yaml",
+          "model: invented_widening\ntables:\n  G:\n    pk: [G1, G2]\n  P:\n    pk: [PG1]\n    fk:\n      - cols: [PG1]\n        ref: G\n        ref_cols: [G1]\n  C:\n    pk: [CG]\n    fk:\n      - cols: [CG]\n        ref: P\n        ref_cols: [PG2]\n        drives: true\n      - cols: [CG]\n        ref: G\n        ref_cols: [G2]\n"
+        ]
+      ]
+    },
+    "retail_and_star_diamond": {
+      "component": {
+        "A_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "B_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "C_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "D_TABLE": [
+          "D_TABLE"
+        ],
+        "E_TABLE": [
+          "E_TABLE"
+        ],
+        "bottom": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "dim_a": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "dim_b": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "fact": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "left": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "right": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "top": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ]
+      },
+      "derived_widenings": [],
+      "enforced_edges": {
+        "A_TABLE": [],
+        "B_TABLE": [
+          [
+            [
+              "B_COL_006",
+              "B_COL_007"
+            ],
+            "A_TABLE",
+            [
+              "A_COL_001",
+              "A_COL_002"
+            ],
+            true,
+            false
+          ]
+        ],
+        "C_TABLE": [
+          [
+            [
+              "C_COL_004"
+            ],
+            "B_TABLE",
+            [
+              "B_COL_001"
+            ],
+            true,
+            false
+          ]
+        ],
+        "D_TABLE": [],
+        "E_TABLE": [
+          [
+            [
+              "E_COL_002"
+            ],
+            "warehouse_ds.EXT_TABLE",
+            [
+              "EXT_ID"
+            ],
+            true,
+            false
+          ]
+        ],
+        "bottom": [
+          [
+            [
+              "T",
+              "L"
+            ],
+            "left",
+            [
+              "T",
+              "L"
+            ],
+            true,
+            true
+          ],
+          [
+            [
+              "T",
+              "R"
+            ],
+            "right",
+            [
+              "T",
+              "R"
+            ],
+            true,
+            false
+          ]
+        ],
+        "dim_a": [],
+        "dim_b": [],
+        "fact": [
+          [
+            [
+              "A_KEY"
+            ],
+            "dim_a",
+            [
+              "A_KEY"
+            ],
+            true,
+            false
+          ],
+          [
+            [
+              "B_KEY"
+            ],
+            "dim_b",
+            [
+              "B_KEY"
+            ],
+            true,
+            false
+          ]
+        ],
+        "left": [
+          [
+            [
+              "T"
+            ],
+            "top",
+            [
+              "T"
+            ],
+            true,
+            false
+          ]
+        ],
+        "right": [
+          [
+            [
+              "T"
+            ],
+            "top",
+            [
+              "T"
+            ],
+            true,
+            false
+          ]
+        ],
+        "top": []
+      },
+      "generation_order": {
+        "A_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "B_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "C_TABLE": [
+          "A_TABLE",
+          "B_TABLE",
+          "C_TABLE"
+        ],
+        "D_TABLE": [
+          "D_TABLE"
+        ],
+        "E_TABLE": [
+          "E_TABLE"
+        ],
+        "bottom": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "dim_a": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "dim_b": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "fact": [
+          "dim_a",
+          "dim_b",
+          "fact"
+        ],
+        "left": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "right": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ],
+        "top": [
+          "top",
+          "left",
+          "right",
+          "bottom"
+        ]
+      },
+      "sha12": "bde664f0805e",
+      "sources": [
+        [
+          "config/relationships/example_retail.yaml",
+          "#  Copyright 2026 Google LLC\n#\n#  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may not use this file except in compliance with the License.\n#  You may obtain a copy of the License at\n#\n#      https://www.apache.org/licenses/LICENSE-2.0\n#\n#  Unless required by applicable law or agreed to in writing, software\n#  distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the License for the specific language governing permissions and\n#  limitations under the License.\n\n# Example relational model \u2014 the single source of truth for PK/FK/identity\n# (ADR 0032). Copy this file, rename it, edit it: nothing else declares\n# relationships, and no `bq update` / `terraform apply` is involved.\n#\n# Names here are ALIASES on purpose. Real table/column names must never be\n# committed (see config/relationships/README.md): drop your real model next\n# to this file (the folder is gitignored apart from the examples) or pass\n# --relationships_uri=gs://... at launch.\n\nmodel: example_retail\ndescription: accounts -> orders -> order lines, plus an unrelated ledger\n\ntables:\n\n  # A parent: no FK edges, so it generates first.\n  A_TABLE:\n    pk: [A_COL_001, A_COL_002]      # composite PK is fine\n    identity: [A_COL_009]           # unique-but-not-key columns\n    note: account master\n\n  # A child: every row takes a WHOLE key tuple that A_TABLE landed\n  # (ADR 0031), so orphans are impossible by construction.\n  B_TABLE:\n    pk: [B_COL_001]\n    fk:\n      - cols:     [B_COL_006, B_COL_007]\n        ref:      A_TABLE                  # bare name = a table in THIS model\n        ref_cols: [A_COL_001, A_COL_002]   # need NOT be the parent's full PK\n\n  C_TABLE:\n    pk: [C_COL_001]\n    fk:\n      - cols:     [C_COL_004]\n        ref:      B_TABLE\n        ref_cols: [B_COL_001]\n\n      # A relationship that is real in the business model but whose join\n      # key is not in the DDL: drawn in the card and the diagram, never a\n      # source of keys.\n      - cols:     [JOIN_KEY]\n        ref:      A_TABLE\n        ref_cols: [JOIN_KEY]\n        enforced: false\n        note: reporting-only link, key not materialised\n\n  # Flip to false to DETACH this table: it stops travelling with the model,\n  # and anything that reached the rest only through it detaches too. It\n  # still generates when you target it explicitly.\n  D_TABLE:\n    enabled: false\n    pk: [D_COL_001]\n    fk:\n      - cols:     [D_COL_002]\n        ref:      C_TABLE\n        ref_cols: [C_COL_001]\n\n  # A parent OUTSIDE this model (already landed by another run) is\n  # referenced dataset-qualified and needs no entry of its own.\n  E_TABLE:\n    pk: [E_COL_001]\n    fk:\n      - cols:     [E_COL_002]\n        ref:      warehouse_ds.EXT_TABLE\n        ref_cols: [EXT_ID]\n"
+        ],
+        [
+          "config/relationships/example_star_diamond.yaml",
+          "#  Copyright 2026 Google LLC\n#\n#  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may not use this file except in compliance with the License.\n#  You may obtain a copy of the License at\n#\n#      https://www.apache.org/licenses/LICENSE-2.0\n#\n#  Unless required by applicable law or agreed to in writing, software\n#  distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the License for the specific language governing permissions and\n#  limitations under the License.\n\n# Example relational model \u2014 the two MULTI-PARENT shapes (ADR 0037).\n#\n# `example_*.yaml` files are DOCUMENTATION: a directory scan skips them\n# (`relationships_example_skipped` in the launcher log), so a real model\n# next to this file may reuse the same generic names. To load this one on\n# purpose, point --relationships_uri at the FILE:\n#\n#   uv run --no-sync python3 scripts/relationships/card.py \\\n#     --relationships-uri config/relationships/example_star_diamond.yaml --all\n#\n# Names here are generic on purpose \u2014 real table/column names are never\n# committed (see README.md \u00a7 \"Real names stay out of git\").\n#\n# Two shapes in one model, deliberately disconnected:\n#\n#   star      dim_a \u2190\u2500\u2500 fact \u2500\u2500\u2192 dim_b        (no ancestry between the dims)\n#   diamond     top \u2190\u2500\u2500 left \u2190\u2500\u2500 bottom \u2500\u2500\u2192 right \u2500\u2500\u2192 top\n\nmodel: example_star_diamond\ndescription: a star-schema fact and a true diamond \u2014 the two ADR 0037 shapes\n\ntables:\n\n  # ---------------------------------------------------------------- star\n  # Two independent dimensions. Neither descends from the other, so the\n  # driving rule falls through to step 4 (ruling A): the FIRST DECLARED\n  # enforced edge of `fact` drives, and the launcher logs\n  # `fk_driving_edge_defaulted` (WARNING). Add `drives: true` to the edge\n  # you want if the default is not the one you meant.\n\n  dim_a:\n    pk: [A_KEY]\n    note: dimension \u2014 a root, generated first\n\n  dim_b:\n    pk: [B_KEY]\n    note: dimension \u2014 a second root, unrelated to dim_a\n\n  fact:\n    pk: [A_KEY, B_KEY, LINE_NO]     # per-(A,B) line number completes the PK\n    fk:\n      # DRIVING (first declared, ruling A): `fact` rows are generated FROM\n      # dim_a's landed keys \u2014 one request stream, one key tuple per child\n      # (ADR 0036).  Card tag:\n      #   [enforced, DRIVES (first declared \u2014 mark drives: true to choose)]\n      - cols:     [A_KEY]\n        ref:      dim_a\n        ref_cols: [A_KEY]\n        note: the parent whose keys drive generation\n\n      # INDEPENDENT: shares NO column with the driving edge, so it keeps\n      # the ADR 0030/0031 side-input key pool \u2014 a whole dim_b key tuple is\n      # drawn per row, and the fk.orphan gate measures it.\n      #   [enforced, independent]\n      - cols:     [B_KEY]\n        ref:      dim_b\n        ref_cols: [B_KEY]\n        note: a star-schema dimension \u2014 drawn from the sampled key pool\n\n  # ------------------------------------------------------------- diamond\n  # `bottom` reaches `top` twice: once through `left`, once through\n  # `right`. Both branches carry T, so T must be ONE value that satisfies\n  # both parents \u2014 that is what a conditional edge buys.\n\n  top:\n    pk: [T]\n    note: the shared ancestor of both branches\n\n  left:\n    pk: [T, L]\n    fk:\n      - cols:     [T]\n        ref:      top\n        ref_cols: [T]\n\n  right:\n    pk: [T, R]\n    fk:\n      - cols:     [T]\n        ref:      top\n        ref_cols: [T]\n\n  bottom:\n    pk: [T, L, R]\n    fk:\n      # DRIVING: bottom is generated from left's landed (T, L) tuples, so\n      # T and L are inherited from the key \u2014 never sampled.\n      #   [enforced, DRIVES]\n      - cols:     [T, L]\n        ref:      left\n        ref_cols: [T, L]\n        drives:   true\n\n      # CONDITIONAL on (T): shares T with the driving edge and adds R.\n      # T comes from the driving key; R is one candidate that exists in\n      # `right` FOR that T, picked from a co-partitioned CoGroupByKey on T\n      # (Top-M per shared value, M = --fk_candidate_cap, default 64).\n      #   [enforced, conditional on (T)]\n      # If `right` holds no row for a T: R = NULL when R is NULLABLE in\n      # the landing schema, else the key is dropped before generation and\n      # reported as `fk.unmatched` (ruling B).\n      - cols:     [T, R]\n        ref:      right\n        ref_cols: [T, R]\n        note: the diamond's other branch \u2014 conditional on the shared T\n"
+        ]
+      ]
+    }
+  },
+  "parse_verdicts": [
+    {
+      "accept": true,
+      "case": "minimal_valid",
+      "error_class": null,
+      "sha12": "4506b36ada0b",
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    pk: [A1]\n"
+        ]
+      ]
+    },
+    {
+      "accept": true,
+      "case": "model_empty_string_id",
+      "error_class": null,
+      "sha12": "e3b0c44298fc",
+      "sources": [
+        [
+          "a.yaml",
+          "model: ''\ntables: {}\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "model_int_id_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: 7\ntables: {}\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "model_missing_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "tables: {}\n"
+        ]
+      ]
+    },
+    {
+      "accept": true,
+      "case": "enabled_quoted_false",
+      "error_class": null,
+      "sha12": "744976eb4bfa",
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    enabled: 'false'\n"
+        ]
+      ]
+    },
+    {
+      "accept": true,
+      "case": "enabled_int_zero",
+      "error_class": null,
+      "sha12": "744976eb4bfa",
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    enabled: 0\n"
+        ]
+      ]
+    },
+    {
+      "accept": true,
+      "case": "enabled_int_one",
+      "error_class": null,
+      "sha12": "75ccd8111b73",
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    enabled: 1\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "enabled_int_two_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    enabled: 2\n"
+        ]
+      ]
+    },
+    {
+      "accept": true,
+      "case": "enabled_yes",
+      "error_class": null,
+      "sha12": "75ccd8111b73",
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    enabled: 'yes'\n"
+        ]
+      ]
+    },
+    {
+      "accept": true,
+      "case": "enabled_on",
+      "error_class": null,
+      "sha12": "75ccd8111b73",
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    enabled: 'on'\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "pk_scalar_string_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    pk: A1\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "pk_list_of_ints_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    pk: [1, 2]\n"
+        ]
+      ]
+    },
+    {
+      "accept": true,
+      "case": "pk_empty_list",
+      "error_class": null,
+      "sha12": "75ccd8111b73",
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    pk: []\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "pk_null_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    pk: null\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "unknown_table_key_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    unknown_key: 1\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "unknown_top_level_key_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\nextra_top: 1\ntables: {}\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "unknown_fk_key_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    fk:\n      - cols: [A1]\n        ref: B\n        ref_cols: [B1]\n        unknown: 1\n  B:\n    pk: [B1]\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "fk_cols_empty_list_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  B:\n    fk:\n      - cols: []\n        ref: A\n        ref_cols: []\n  A: {}\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "fk_as_dict_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  B:\n    fk: {}\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "table_value_null_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A: null\n"
+        ]
+      ]
+    },
+    {
+      "accept": true,
+      "case": "tables_omitted",
+      "error_class": null,
+      "sha12": "e3b0c44298fc",
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "self_reference_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    fk:\n      - cols: [A1]\n        ref: A\n        ref_cols: [A1]\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "fk_missing_ref_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    fk:\n      - cols: [A1]\n        ref_cols: [A1]\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "duplicate_table_across_models_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m1\ntables:\n  A:\n    pk: [A1]\n"
+        ],
+        [
+          "b.yaml",
+          "model: m2\ntables:\n  A:\n    pk: [A1]\n"
+        ]
+      ]
+    },
+    {
+      "accept": false,
+      "case": "enforced_edge_cycle_invalid",
+      "error_class": "RelationshipError",
+      "sha12": null,
+      "sources": [
+        [
+          "a.yaml",
+          "model: m\ntables:\n  A:\n    fk:\n      - cols: [X]\n        ref: B\n        ref_cols: [X]\n  B:\n    fk:\n      - cols: [X]\n        ref: A\n        ref_cols: [X]\n"
+        ]
+      ]
+    }
+  ],
+  "reference_digest": {
+    "digest": "fb1243a2e9bd0c0c521b97fe6fa763c1271f6d569b711a6715f5512ffe304c46",
+    "rows": [
+      {
+        "avatar": {
+          "$bytes": "iVBORw0KGgo="
+        },
+        "balance": {
+          "$decimal": "1.50"
+        },
+        "birth_date": {
+          "$date": "1990-05-20"
+        },
+        "city": "S\u00e3o Paulo",
+        "created_at": {
+          "$datetime": "2026-01-15T10:30:00+00:00"
+        },
+        "email": "ava.brown@example.com",
+        "first_name": "Ava",
+        "id": 1001,
+        "last_name": "Brown",
+        "profile": {
+          "channels": [
+            "email",
+            "sms"
+          ],
+          "newsletter": true
+        },
+        "referred_by": null
+      },
+      {
+        "avatar": {
+          "$bytes": "/9j/4A=="
+        },
+        "balance": {
+          "$decimal": "1.5"
+        },
+        "birth_date": {
+          "$date": "1985-11-02"
+        },
+        "city": "Z\u00fcrich",
+        "created_at": {
+          "$datetime": "2026-02-01T08:00:00"
+        },
+        "email": "wei.liu@example.com",
+        "first_name": "Wei",
+        "id": 1002,
+        "last_name": "Liu",
+        "profile": {
+          "channels": [
+            "push"
+          ],
+          "newsletter": false
+        },
+        "referred_by": 1001
+      },
+      {
+        "avatar": null,
+        "balance": {
+          "$decimal": "0"
+        },
+        "birth_date": {
+          "$date": "1998-07-04"
+        },
+        "city": "Montr\u00e9al",
+        "created_at": {
+          "$datetime": "2026-03-10T14:45:00+00:00"
+        },
+        "email": "noor.haidari@example.com",
+        "first_name": "Noor",
+        "id": 1003,
+        "last_name": "Haidari",
+        "profile": {
+          "channels": [],
+          "newsletter": true
+        },
+        "referred_by": null
+      }
+    ]
+  },
+  "reference_sql": {
+    "limit": 10000,
+    "sql": "SELECT * FROM `p.d.t` AS ref  ORDER BY FARM_FINGERPRINT(TO_JSON_STRING(ref)) LIMIT 10000",
+    "table": "p.d.t"
+  }
+}

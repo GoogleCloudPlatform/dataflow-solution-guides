@@ -34,8 +34,8 @@ Design: docs/DESIGN.md §4 Relational generation; §5 Fidelity; §8 Configuratio
 (ADR 0024, 0026, 0028, 0029, 0030, 0031, 0032, 0035, 0036, 0037, 0038).
 """
 
-# f-string fields keep single quotes while Python 3.11 is supported;
-# pylint on Python >= 3.12 reads those quotes as inconsistent.
+# f-string fields keep single quotes: yapf 0.43 cannot parse PEP 701
+# quote reuse, and pylint reads those quotes as inconsistent.
 # pylint: disable=inconsistent-quotes
 
 from __future__ import annotations

@@ -325,6 +325,13 @@ class GenerationContext(BaseModel):
   # the DoFn does ctx.model_copy(update={"chunk_store": store}).
   rag_chunks_table: str = ""
   chunk_store: object | None = None
+  # `--rag_row_docs_limit`: how many fingerprint-ordered reference rows
+  # B.1 embeds as row documents — the in-worker index, the persisted
+  # row_doc prefix it reads back, and the local seed-value fallback all
+  # slice `reference_rows[:rag_row_docs_limit]`. The default is
+  # `sdfb_core.rag.chunking.MAX_ROW_DOC_ROWS` (a literal here keeps this
+  # module free of rag imports; a test pins the two together).
+  rag_row_docs_limit: int = Field(default=1024, ge=1)
 
 
 class GenerationEngine(ABC):

@@ -1,0 +1,14 @@
+[
+  {"name": "evaluation_id", "type": "STRING", "mode": "REQUIRED", "description": "Evaluation run id this flag belongs to; joins to evaluation_data_history.evaluation_id."},
+  {"name": "evaluated_at", "type": "TIMESTAMP", "mode": "REQUIRED", "description": "Evaluation start time; partition key."},
+  {"name": "table_name", "type": "STRING", "mode": "REQUIRED", "description": "Table this flagged row belongs to."},
+  {"name": "check", "type": "STRING", "mode": "REQUIRED", "description": "exact_copy | near_copy | nearest_record | detectable"},
+  {"name": "rank", "type": "INT64", "mode": "REQUIRED", "description": "Rank of this flagged row within its check (1 = most extreme)."},
+  {"name": "synthetic_key", "type": "JSON", "mode": "NULLABLE", "description": "The synthetic row's handle: its primary-key tuple, else its identity tuple, as JSON (NULL when the table declares neither). It is the synthetic table's own key, so for a full-row copy it equals the copied source row's key."},
+  {"name": "source_key_hash", "type": "STRING", "mode": "NULLABLE", "description": "Keyed hash (the evaluation's label key, h:<8 hex>) of the matched source record: its primary-key hash, else its identity hash, else its record hash; NULL for a full-source copy whose source key is not known."},
+  {"name": "source_key", "type": "JSON", "mode": "NULLABLE", "description": "Always NULL: raw source keys are never written."},
+  {"name": "source_set", "type": "STRING", "mode": "NULLABLE", "description": "R | E | H | source"},
+  {"name": "distance", "type": "FLOAT64", "mode": "NULLABLE", "description": "Distance between the synthetic row and its matched source row."},
+  {"name": "score", "type": "FLOAT64", "mode": "NULLABLE", "description": "Normalized score derived from distance (0-1)."},
+  {"name": "detail", "type": "JSON", "mode": "NULLABLE", "description": "Check-specific structured detail."}
+]

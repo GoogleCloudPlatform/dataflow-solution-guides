@@ -63,10 +63,6 @@ run "deployment_contract" {
     error_message = "Gemma 4 E4B-it from Hugging Face on an L4 (G2, dtype auto) is the default."
   }
   assert {
-    condition     = endswith(local.gpu.accelerator, "install-nvidia-driver:latest")
-    error_message = "The L4 needs Dataflow's latest driver: the image's CUDA 13 torch wheels need driver 580+, and the default driver (535, CUDA 12.2) leaves torch without a GPU."
-  }
-  assert {
     condition     = length(module.buckets) == 0 && length(google_compute_subnetwork_iam_member.dataflow_network_user) == 0 && length(google_dataflow_flex_template_job.generation) == 0
     error_message = "Existing bucket, default network and no Terraform launch are the defaults."
   }
@@ -77,6 +73,41 @@ run "deployment_contract" {
   assert {
     condition     = local.launch_parameters.create_if_not_exists == "false" && local.launch_parameters.relationships_uri == "config/relationships/gcp_public_fk_example.yaml"
     error_message = "The launch writes into the Terraform-created tables and generates the thelook model."
+  }
+}
+
+run "evaluation_registry" {
+  command = plan
+
+  assert {
+    condition = toset(keys(google_bigquery_table.evaluation)) == toset([
+      "evaluation_data_history", "evaluation_metrics", "evaluation_profiles", "evaluation_row_flags",
+    ]) && toset(keys(local.evaluation_layout)) == toset(keys(local.evaluation_tables))
+    error_message = "The evaluation tables must be exactly the evaluator's schema files, each with a partitioning and clustering."
+  }
+  assert {
+    condition = alltrue([for t, s in google_bigquery_table.evaluation :
+      s.dataset_id == "synthetic_data_quality" && s.schema == file("${local.evaluation_schema_dir}/${t}.schema.json")
+    ])
+    error_message = "An evaluation table takes its name and schema from the evaluator's own schema file, in synthetic_data_quality."
+  }
+  assert {
+    condition     = google_bigquery_table.evaluation["evaluation_data_history"].time_partitioning[0].type == "DAY" && google_bigquery_table.evaluation["evaluation_data_history"].time_partitioning[0].field == "recorded_at" && local.evaluation_layout["evaluation_data_history"].expiration_days == null && google_bigquery_table.evaluation["evaluation_metrics"].time_partitioning[0].type == "MONTH" && google_bigquery_table.evaluation["evaluation_metrics"].clustering == tolist(["table_name", "metric_id", "evaluation_id"])
+    error_message = "Evaluation tables must be partitioned and clustered as `sdfb-eval schemas` creates them."
+  }
+  assert {
+    condition     = google_bigquery_table.evaluation["evaluation_row_flags"].time_partitioning[0].expiration_ms == 180 * 86400000
+    error_message = "Row-flag partitions expire after 180 days."
+  }
+  assert {
+    condition = toset(keys(google_bigquery_table.evaluation_view)) == toset(["evaluation_latest", "evaluation_latest_per_job"]) && alltrue([for v in google_bigquery_table.evaluation_view :
+      startswith(v.view[0].query, "SELECT") && strcontains(v.view[0].query, "FROM `synthetic-test-project.synthetic_data_quality.evaluation_data_history`") && !strcontains(v.view[0].query, "{") && !strcontains(v.view[0].query, ";")
+    ])
+    error_message = "The two views come from the evaluator's views.sql, rendered for this project's quality dataset."
+  }
+  assert {
+    condition     = contains(local.dataflow_sa_roles, "roles/dataflow.developer") && contains(local.dataflow_sa_roles, "roles/bigquery.dataEditor") && contains(local.dataflow_sa_roles, "roles/bigquery.readSessionUser") && length(setintersection(toset(local.dataflow_sa_roles), toset(["roles/bigquery.dataOwner", "roles/bigquery.admin", "roles/logging.viewer", "roles/bigquery.resourceViewer"]))) == 0
+    error_message = "The evaluation runs as the Dataflow service account: job window (dataflow.developer covers dataflow.viewer), BigQuery data and read sessions, and nothing broader."
   }
 }
 

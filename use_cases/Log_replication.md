@@ -42,3 +42,31 @@ with minimal delay (in the order of single digit seconds).
   performance of your pipeline, and can catch any stuckness or slowness
   issues before they turn into outages.
 
+## How to deploy (Agentic or Manual)
+
+### Option 1: Deploy with an AI Coding Harness (Recommended)
+
+Open this repository in your AI coding harness and prompt it to provision the Pub/Sub logging sink, Secret Manager HEC token, and optional Splunk demo VM, launch the Pub/Sub-to-Splunk Dataflow template, and verify end-to-end log delivery:
+
+> *"Deploy the Log Replication & Analytics guide in project `my-gcp-project` and region `us-central1` (discover any Shared VPC subnet if needed). Provision the Terraform infrastructure with the demo Splunk instance enabled, launch the Pub/Sub to Splunk Dataflow pipeline with private IPs, publish a test log event, verify delivery with zero dead-letter messages, and clean up the resources afterward."*
+
+### Option 2: Manual CLI Deployment
+
+Follow the step-by-step instructions in the [Terraform module README](../terraform/log_replication_splunk/README.md) and [Pipeline README](../pipelines/log_replication_splunk/README.md):
+
+```bash
+# 1. Provision Pub/Sub, Logging Sink, Secret Manager & optional Splunk VM
+cd terraform/log_replication_splunk
+terraform init && terraform apply
+
+# 2. Launch the Pub/Sub to Splunk Dataflow Flex Template
+cd ../../pipelines/log_replication_splunk
+source scripts/00_set_variables.sh
+./scripts/01_launch_ps_to_splunk.sh
+
+# 3. Publish a test log event & check dead-letter subscription
+gcloud pubsub topics publish all-logs --project="$PROJECT" --message='{"message": "Test replication log", "severity": "INFO"}'
+```
+
+To tear down the deployment, cancel the active Dataflow job first, then run `terraform destroy` in `terraform/log_replication_splunk`.
+

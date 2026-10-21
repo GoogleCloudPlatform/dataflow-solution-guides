@@ -21,8 +21,9 @@ design doc records this delta from the 2026-07-07 diagram.
 
 **Scope — the consumers' read contract, never the full sample or table.**
 Since 2026-07-25 (ADR 0019) the branch writes `row_doc` chunks only for the
-first `MAX_ROW_DOC_ROWS` (1024) fingerprint-ordered rows — exactly the
-all-or-nothing prefix `B1RagEngine._vectors_from_store` reads — and
+first `--rag_row_docs_limit` (default `MAX_ROW_DOC_ROWS`, 1024)
+fingerprint-ordered rows — exactly the all-or-nothing prefix
+`B1RagEngine._vectors_from_store` reads — and
 `free_text_col` chunks deduped to distinct (column, value) pairs (the
 2026-07-25 06:18 E2E embedded 33,610 chunks, ~90 % unreadable-by-design or
 duplicates, for 1,506 s / 60.8 % of wall clock). The input is the
@@ -45,9 +46,10 @@ table. Deliberate, for four reasons:
      `rag_chunks` and worker memory. After the 2026-07-10 exemplar-leak
      postmortem, the exposure is kept bounded to the sampled subset.
 
-The in-worker retrieval index narrows further still — B.1's setup embeds
-at most `_MAX_EMBED_ROWS` (1024) of the sample (see
-`sdfb_core.engines.b1_rag.engine`).
+The in-worker retrieval index is the same prefix — B.1's setup embeds (or
+reads back) at most `rag_row_docs_limit` rows of the sample (see
+`sdfb_core.engines.b1_rag.engine`). A store written with a smaller limit is
+topped up with only the rows it lacks (`run_pipeline.plan_rag_population`).
 
 Design: docs/DESIGN.md §2 Engines
 (ADR 0013, 0019).

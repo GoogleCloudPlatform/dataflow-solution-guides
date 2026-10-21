@@ -2,16 +2,16 @@
 
 **Audience:** the person provisioning target tables (Terraform) and wiring
 synthetic runs. This is the *configuration* companion to
-[ADR 0024](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0024-structured-prompt-constraint-templates.md) (column-level
+[ADR 0024](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0024-structured-prompt-constraint-templates.md) (column-level
 prompt constraints); design rationale and evidence live in
-[the wave-2 design doc](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/designs/2026-08-10-prompt-constraints.md). Everything
+[the wave-2 design doc](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/designs/2026-08-10-prompt-constraints.md). Everything
 below is copy-paste-ready and matches the parsers in
 `packages/sdfb-core/src/sdfb_core/contracts/`.
 
 > **Relationships are NOT here.** PK, FK and identity live in
 > [`config/relationships/`](../config/relationships/README.md) — versioned
 > YAML the repo owns, read at launch, changed without touching BigQuery
-> ([ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0032-relationships-as-config.md)). Table descriptions are
+> ([ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0032-relationships-as-config.md)). Table descriptions are
 > never parsed for relational structure. This guide owns the OTHER surface:
 > per-column generation steering, which stays next to the column it steers.
 
@@ -27,7 +27,7 @@ expose** its `table_constraints` block at all
 So BigQuery cannot hold the relationships the generator must honor.
 
 The answer used to be a JSON contract embedded in the table description.
-[ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0032-relationships-as-config.md) moved it out: relationships
+[ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0032-relationships-as-config.md) moved it out: relationships
 are **repo config** now (`config/relationships/*.yaml`), because they
 describe a MODEL spanning many tables, and scattering that across N table
 descriptions made every change a `bq update` / `terraform apply` against
@@ -122,7 +122,7 @@ Two hard rules, both loud by design:
 ## 3. Relationships — one file, not N descriptions
 
 PK / identity / FK are declared in `config/relationships/<model>.yaml` and
-nowhere else ([ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0032-relationships-as-config.md); full schema
+nowhere else ([ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0032-relationships-as-config.md); full schema
 and rules in [`config/relationships/README.md`](../config/relationships/README.md)):
 
 ```yaml
@@ -149,7 +149,7 @@ uv run --no-sync python3 scripts/relationships/card.py --table b_table
 ```
 
 Every child row then takes a WHOLE parent key tuple
-([ADR 0031](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0031-joint-fk-key-draws.md)), so orphans are impossible by
+([ADR 0031](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0031-joint-fk-key-draws.md)), so orphans are impossible by
 construction and the `fk.orphan` BLOCKER rule measures it per run.
 
 ## 4. Column-level constraint — every settable field
@@ -189,17 +189,19 @@ LLM pool. Launcher-visible in the `generation_plan` milestone's
   never source copies, per the privacy note such clauses carry.
 - **Anything else** → the LLM pool ladder, as before.
 
-**PK columns** (declared in the table contract): preflight P4 refuses a
-launch whose PK generator cannot cover `num_rows` unique values — give
-PK columns a samplable `pattern`. Declared FKs require
-`--fk_parent_landing` at launch (P6; `skip` is the loud opt-out).
+**PK columns** (declared under `pk:` in `config/relationships/`, §3):
+preflight P4 refuses a launch whose PK generator cannot cover `num_rows`
+unique values — give PK columns a samplable `pattern`. Enforced FK edges
+need no launch flag: parents are read from the `--landing_table` dataset
+(`--fk_parent_landing` is an expert override for parents landed
+elsewhere), and `--generate_fk_relationships=false` is the loud opt-out.
 
 Debugging the result: run with `--prompt_debug=redacted` and grep Dataflow
 worker logs for `freetext_pool_prompt` — you see exactly the instruction +
 rendered clause the model received, seeds elided (design doc §3c).
 
 **Dataset-wide visual snapshot**: the
-[`/visual_fk_pk_ddl_contract_guide`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/.github/prompts/visual_fk_pk_ddl_contract_guide.prompt.md)
+[`/visual_fk_pk_ddl_contract_guide`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/.github/prompts/visual_fk_pk_ddl_contract_guide.prompt.md)
 Copilot prompt scans every table description in a landing dataset,
 resolves the full FK/PK model with the repo's own parsers, and writes a
 timestamped `runs/ddl_contract_guides/<stamp>/{real,oss}/`
