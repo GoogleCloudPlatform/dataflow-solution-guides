@@ -1,0 +1,1752 @@
+{
+  "entries": [
+    {
+      "insertId": "lnch00001",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "2026-09-13 13:12:03,001 [INFO] sdfb.milestone - SDFB_MILESTONE name=build_info commit=0a1b2c3 component=launcher"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000001Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000001Z"
+    },
+    {
+      "insertId": "lnch00002",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "2026-09-13 13:12:03,090 [INFO] sdfb.milestone - SDFB_MILESTONE name=relationships_loaded files=1 models=thelook_ecommerce sha=5e1f0c2a9b3d tables=4 uri=gs://demo-bucket/synthetic/relationships/"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000002Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000002Z"
+    },
+    {
+      "insertId": "lnch00003",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "2026-09-13 13:12:03,101 [INFO] sdfb.milestone - SDFB_MILESTONE name=launch_scenario generate_fk_relationships=True order=users,orders,order_items scenario=relational_closure tables=3"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000003Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000003Z"
+    },
+    {
+      "insertId": "lnch00004",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "2026-09-13 13:12:03,114 [INFO] sdfb.milestone - SDFB_MILESTONE name=launch_config scenario=relational_closure"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000004Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000004Z"
+    },
+    {
+      "insertId": "lnch00005",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "{"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000005Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000005Z"
+    },
+    {
+      "insertId": "lnch00006",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"autoscaling\": \"fixed\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000006Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000006Z"
+    },
+    {
+      "insertId": "lnch00007",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"batch_size\": 16,"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000007Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000007Z"
+    },
+    {
+      "insertId": "lnch00008",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"build_pool_layer\": \"true\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000008Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000008Z"
+    },
+    {
+      "insertId": "lnch00009",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"build_rag_layer\": \"true\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000009Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000009Z"
+    },
+    {
+      "insertId": "lnch00010",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"client_type\": \"vllm\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000010Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000010Z"
+    },
+    {
+      "insertId": "lnch00011",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"create_if_not_exists\": \"false\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000011Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000011Z"
+    },
+    {
+      "insertId": "lnch00012",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"ddl_uri\": \"\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000012Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000012Z"
+    },
+    {
+      "insertId": "lnch00013",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"dlq_table\": \"demo-project.synthetic_data_quality.dead_letter\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000013Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000013Z"
+    },
+    {
+      "insertId": "lnch00014",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"driven_uniqueness_mode\": \"exact\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000014Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000014Z"
+    },
+    {
+      "insertId": "lnch00015",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"embedder_uri\": \"gs://demo-bucket/synthetic/models/embedders/bge-small-en-v1.5/v1/\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000015Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000015Z"
+    },
+    {
+      "insertId": "lnch00016",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"engine\": \"b1_rag\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000016Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000016Z"
+    },
+    {
+      "insertId": "lnch00017",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"env\": \"dev\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000017Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000017Z"
+    },
+    {
+      "insertId": "lnch00018",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"fk_candidate_cap\": 64,"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000018Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000018Z"
+    },
+    {
+      "insertId": "lnch00019",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"fk_fanout_stats_table\": \"\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000019Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000019Z"
+    },
+    {
+      "insertId": "lnch00020",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"fk_parent_landing\": \"\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000020Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000020Z"
+    },
+    {
+      "insertId": "lnch00021",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"freetext_expansion\": \"identifiers\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000021Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000021Z"
+    },
+    {
+      "insertId": "lnch00022",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"freetext_pools_table\": \"demo-project.synthetic_data_quality.freetext_pools\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000022Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000022Z"
+    },
+    {
+      "insertId": "lnch00023",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"generate_fk_relationships\": \"true\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000023Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000023Z"
+    },
+    {
+      "insertId": "lnch00024",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"identity_cols\": \"\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000024Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000024Z"
+    },
+    {
+      "insertId": "lnch00025",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"initial_workers\": \"1\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000025Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000025Z"
+    },
+    {
+      "insertId": "lnch00026",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"landing_table\": \"demo-project.thelook_synthetic.order_items\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000026Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000026Z"
+    },
+    {
+      "insertId": "lnch00027",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"model_uri\": \"gs://demo-bucket/synthetic/models/qwen/qwen2.5-3b-instruct/v1/\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000027Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000027Z"
+    },
+    {
+      "insertId": "lnch00028",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"multi_table_mode\": \"single_job\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000028Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000028Z"
+    },
+    {
+      "insertId": "lnch00029",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"num_rows\": 5000,"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000029Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000029Z"
+    },
+    {
+      "insertId": "lnch00030",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"pk_cols\": \"\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000030Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000030Z"
+    },
+    {
+      "insertId": "lnch00031",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"pool_pattern_guidance\": \"true\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000031Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000031Z"
+    },
+    {
+      "insertId": "lnch00032",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"pool_seed_strategy\": \"kcenter\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000032Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000032Z"
+    },
+    {
+      "insertId": "lnch00033",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"prompt_constraints\": \"true\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000033Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000033Z"
+    },
+    {
+      "insertId": "lnch00034",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"prompt_debug\": \"off\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000034Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000034Z"
+    },
+    {
+      "insertId": "lnch00035",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"rag_chunks_table\": \"demo-project.synthetic_data_quality.rag_chunks\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000035Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000035Z"
+    },
+    {
+      "insertId": "lnch00036",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"reference_rows_limit\": 10000,"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000036Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000036Z"
+    },
+    {
+      "insertId": "lnch00037",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"reference_table\": \"\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000037Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000037Z"
+    },
+    {
+      "insertId": "lnch00038",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"relationships_uri\": \"gs://demo-bucket/synthetic/relationships/\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000038Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000038Z"
+    },
+    {
+      "insertId": "lnch00039",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"resolved\": {"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000039Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000039Z"
+    },
+    {
+      "insertId": "lnch00040",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    \"fk_parent_landing_derived\": ["
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000040Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000040Z"
+    },
+    {
+      "insertId": "lnch00041",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "      \"(none)\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000041Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000041Z"
+    },
+    {
+      "insertId": "lnch00042",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "      \"demo-project.thelook_synthetic\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000042Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000042Z"
+    },
+    {
+      "insertId": "lnch00043",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "      \"demo-project.thelook_synthetic\""
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000043Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000043Z"
+    },
+    {
+      "insertId": "lnch00044",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    ],"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000044Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000044Z"
+    },
+    {
+      "insertId": "lnch00045",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    \"generate_fk_relationships\": true,"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000045Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000045Z"
+    },
+    {
+      "insertId": "lnch00046",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    \"multi_table_mode\": \"single_job\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000046Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000046Z"
+    },
+    {
+      "insertId": "lnch00047",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    \"run_ids\": ["
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000047Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000047Z"
+    },
+    {
+      "insertId": "lnch00048",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "      \"thelook-0913-a1b2c3-00-users\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000048Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000048Z"
+    },
+    {
+      "insertId": "lnch00049",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "      \"thelook-0913-a1b2c3-01-orders\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000049Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000049Z"
+    },
+    {
+      "insertId": "lnch00050",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "      \"thelook-0913-a1b2c3-02-order_items\""
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000050Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000050Z"
+    },
+    {
+      "insertId": "lnch00051",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    ],"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000051Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000051Z"
+    },
+    {
+      "insertId": "lnch00052",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    \"scenario\": \"relational_closure\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000052Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000052Z"
+    },
+    {
+      "insertId": "lnch00053",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    \"tables_in_order\": ["
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000053Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000053Z"
+    },
+    {
+      "insertId": "lnch00054",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "      \"demo-project.thelook_synthetic.users\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000054Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000054Z"
+    },
+    {
+      "insertId": "lnch00055",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "      \"demo-project.thelook_synthetic.orders\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000055Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000055Z"
+    },
+    {
+      "insertId": "lnch00056",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "      \"demo-project.thelook_synthetic.order_items\""
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000056Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000056Z"
+    },
+    {
+      "insertId": "lnch00057",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    ],"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000057Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000057Z"
+    },
+    {
+      "insertId": "lnch00058",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    \"warnings\": ["
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000058Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000058Z"
+    },
+    {
+      "insertId": "lnch00059",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "      \"the relational model expanded this launch to ['demo-project.thelook_synthetic.users', 'demo-project.thelook_synthetic.orders'] (declared in config/relationships; parents generate first)\""
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000059Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000059Z"
+    },
+    {
+      "insertId": "lnch00060",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    ]"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000060Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000060Z"
+    },
+    {
+      "insertId": "lnch00061",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  },"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000061Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000061Z"
+    },
+    {
+      "insertId": "lnch00062",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"run_id\": \"thelook-0913-a1b2c3\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000062Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000062Z"
+    },
+    {
+      "insertId": "lnch00063",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"seed\": \"\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000063Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000063Z"
+    },
+    {
+      "insertId": "lnch00064",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"similarity\": 0.5,"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000064Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000064Z"
+    },
+    {
+      "insertId": "lnch00065",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"source_stats\": \"exact\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000065Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000065Z"
+    },
+    {
+      "insertId": "lnch00066",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"source_stats_json\": \"\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000066Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000066Z"
+    },
+    {
+      "insertId": "lnch00067",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"source_stats_table\": \"\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000067Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000067Z"
+    },
+    {
+      "insertId": "lnch00068",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"thresholds_uri\": \"config/thresholds.yml\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000068Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000068Z"
+    },
+    {
+      "insertId": "lnch00069",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"uniqueness_mode\": \"exact\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000069Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000069Z"
+    },
+    {
+      "insertId": "lnch00070",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"validation_runs_table\": \"demo-project.synthetic_data_quality.validation_runs\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000070Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000070Z"
+    },
+    {
+      "insertId": "lnch00071",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"vllm_dtype\": \"float16\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000071Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000071Z"
+    },
+    {
+      "insertId": "lnch00072",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"vllm_max_model_len\": \"\","
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000072Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000072Z"
+    },
+    {
+      "insertId": "lnch00073",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  \"write_disposition\": \"append\""
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000073Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000073Z"
+    },
+    {
+      "insertId": "lnch00074",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "}"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000074Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000074Z"
+    },
+    {
+      "insertId": "lnch00075",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "2026-09-13 13:12:03,120 [INFO] sdfb.milestone - SDFB_MILESTONE name=fk_generation_mode mode=relational table=demo-project.thelook_synthetic.order_items"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000075Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:12:03.000075Z"
+    },
+    {
+      "insertId": "lnch00076",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "2026-09-13 13:12:41,500 [WARNING] sdfb.milestone - SDFB_MILESTONE name=model_adjustment_model model=thelook_ecommerce source=gs://demo-bucket/synthetic/relationships/thelook.yaml tables=orders uri=gs://demo-bucket/staging/model_adjustments/sdfb-thelook-0913-a1b2c3.thelook_ecommerce.yaml"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000076Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "WARNING",
+      "timestamp": "2026-09-13T13:12:03.000076Z"
+    },
+    {
+      "insertId": "lnch00077",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "# effective model: orders pk removed (measured 0.4% repeats)"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000077Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "WARNING",
+      "timestamp": "2026-09-13T13:12:03.000077Z"
+    },
+    {
+      "insertId": "lnch00078",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "model: thelook_ecommerce"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000078Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "WARNING",
+      "timestamp": "2026-09-13T13:12:03.000078Z"
+    },
+    {
+      "insertId": "lnch00079",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "tables:"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000079Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "WARNING",
+      "timestamp": "2026-09-13T13:12:03.000079Z"
+    },
+    {
+      "insertId": "lnch00080",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "  users:"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000080Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "WARNING",
+      "timestamp": "2026-09-13T13:12:03.000080Z"
+    },
+    {
+      "insertId": "lnch00081",
+      "jsonPayload": {
+        "line": "exec.go:66",
+        "message": "    pk: [id]"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Flauncher",
+      "receiveTimestamp": "2026-09-13T13:12:05.000081Z",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": ""
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "WARNING",
+      "timestamp": "2026-09-13T13:12:03.000081Z"
+    },
+    {
+      "insertId": "wrkr00082",
+      "jsonPayload": {
+        "logger": "sdfb.milestone",
+        "message": "SDFB_MILESTONE name=relational_single_job rows_detail=users:5000,orders:18250,order_items:44710 tables=3",
+        "thread": "worker-thread-7"
+      },
+      "labels": {
+        "compute.googleapis.com/resource_type": "instance",
+        "dataflow.googleapis.com/job_id": "2026-09-13_06_10_16-9000000000000000017"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Fworker",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": "Generate-users"
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "timestamp": "2026-09-13T13:20:11.500000Z"
+    },
+    {
+      "insertId": "wrkr00083",
+      "labels": {
+        "compute.googleapis.com/resource_type": "instance",
+        "dataflow.googleapis.com/job_id": "2026-09-13_06_10_16-9000000000000000017"
+      },
+      "logName": "projects/demo-project/logs/dataflow.googleapis.com%2Fworker",
+      "resource": {
+        "labels": {
+          "job_id": "2026-09-13_06_10_16-9000000000000000017",
+          "job_name": "sdfb-thelook-0913-a1b2c3",
+          "project_id": "demo-project",
+          "region": "europe-west1",
+          "step_id": "Generate-users"
+        },
+        "type": "dataflow_step"
+      },
+      "severity": "INFO",
+      "textPayload": "SDFB_MILESTONE name=fanout_bound cells=5000 driving_cols=user_id exact_cells=True table=demo-project.thelook_synthetic.orders",
+      "timestamp": "2026-09-13T13:20:12.250000Z"
+    }
+  ],
+  "job_id": "2026-09-13_06_10_16-9000000000000000017"
+}

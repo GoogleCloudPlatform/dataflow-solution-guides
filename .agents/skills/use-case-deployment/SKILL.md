@@ -27,7 +27,7 @@ This skill provides step-by-step execution workflows for deploying, running, ver
 | **IoT Analytics** | `terraform/iot_analytics` | `pipelines/iot_analytics` | `./scripts/02_submit_job.sh` | `python scripts/publish_on_pubsub.py` | BigQuery `iot.maintenance_analytics` & Pub/Sub `maintenance-alerts` |
 | **Log Replication** | `terraform/log_replication_splunk` | `pipelines/log_replication_splunk` | `./scripts/01_launch_ps_to_splunk.sh` | Pub/Sub logging topic | Splunk HTTP Event Collector (HEC) |
 | **Gaming Analytics** | `terraform/gaming_analytics` | `pipelines/gaming_analytics_java` | `./scripts/03_launch_pipeline.sh` | `./scripts/04_publish_events.sh` | Pub/Sub `gaming-recommendations` & BigQuery `gaming_analytics.player_recommendations` |
-| **Synthetic Data Generation** | `terraform/synthetic-llm-dataflow-bigquery` | `pipelines/synthetic-llm-dataflow-bigquery` | `./scripts/04_run_dataflow.sh` | BigQuery `synthetic_source` snapshots of `thelook_ecommerce` | `./scripts/05_verify_run.sh RUN_ID` (BigQuery `synthetic_data`, `synthetic_data_quality.validation_runs`) |
+| **Synthetic Data Generation** | `terraform/synthetic-llm-dataflow-bigquery` | `pipelines/synthetic-llm-dataflow-bigquery` | `./scripts/04_run_dataflow.sh` | BigQuery `synthetic_source` snapshots of `thelook_ecommerce` | `./scripts/05_verify_run.sh RUN_ID` (BigQuery `synthetic_data`, `synthetic_data_quality.validation_runs`); `./scripts/06_run_evaluation.sh RUN_ID` (`synthetic_data_quality.evaluation_*`) |
 
 ---
 
@@ -242,6 +242,7 @@ source scripts/00_set_variables.sh
 
 # 3. Verify Generated Tables & Quality Verdicts
 ./scripts/05_verify_run.sh <RUN_ID>
+./scripts/06_run_evaluation.sh <RUN_ID>
 ```
 
 ---

@@ -240,7 +240,7 @@ stopping the launch, via a candidate/pool-level join on the columns the
 two parents share — that would let both non-driving edges draw jointly
 from the intersection instead of one silently overwriting the other.
 Not implemented; recorded as future work in
-[ADR 0037](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0037-multi-parent-children.md) Consequences.
+[ADR 0037](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0037-multi-parent-children.md) Consequences.
 
 #### `--fk_candidate_cap` (default 64)
 
@@ -270,7 +270,7 @@ drawing independently from their measured weights. Raising the cap only
 buys back the capping/wrapping the cap itself caused: a shared value the
 parent simply has too few distinct candidates for is capped or wrapped
 the same way at any cap. See the figure in
-[ADR 0037](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0037-multi-parent-children.md) (D4).
+[ADR 0037](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0037-multi-parent-children.md) (D4).
 
 #### When the parent has no candidate for a key (ruling B)
 

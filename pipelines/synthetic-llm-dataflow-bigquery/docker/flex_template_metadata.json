@@ -1,6 +1,6 @@
 {
   "name": "synthetic-dataflow-bigquery",
-  "description": "Generate fictitious-but-realistic synthetic rows for a BigQuery table via Apache Beam + L4 GPU + Gemma 4. See docs/DEPLOYMENT_PREREQUISITES.md.",
+  "description": "One template for two jobs on one image, selected by the parameter sdfb_job. generation (the default): generate fictitious-but-realistic synthetic rows for a BigQuery table via Apache Beam + L4 GPU + Gemma 4. evaluation: score the landed tables of a generation run against their source in a separate CPU job and write the evaluation_* tables. Every parameter is optional in this template, because a launch for one job cannot be made to supply the other's; what a job requires is refused by its own argument parser in the launcher, before any worker starts. Parameters whose help text starts with 'Evaluation only' are read by the evaluation job alone. See docs/DEPLOYMENT_PREREQUISITES.md.",
   "parameters": [
     {
       "name": "ddl_uri",
@@ -14,7 +14,8 @@
     {
       "name": "reference_table",
       "label": "Reference table FQN",
-      "helpText": "Source BigQuery table for live SELECT reference rows. project.dataset.table.",
+      "helpText": "Source BigQuery table for live SELECT reference rows. project.dataset.table. Required for generation.",
+      "isOptional": true,
       "regexes": [
         "^[a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
       ]
@@ -22,16 +23,23 @@
     {
       "name": "reference_rows_limit",
       "label": "Reference rows LIMIT",
-      "helpText": "Cap on rows pulled by SELECT ... LIMIT N. Default 10000.",
+      "helpText": "Generation: cap on rows pulled by SELECT ... LIMIT N. Default 10000; a positive integer. Evaluation: the generation's reference sample size (a positive integer; empty means not given). It sizes the reference panel behind the privacy metrics, which an evaluation named by seed_table, tables or relationships_uri cannot read from the launch's records: without it those metrics are not evaluated.",
+      "isOptional": true
+    },
+    {
+      "name": "rag_row_docs_limit",
+      "label": "RAG row documents",
+      "helpText": "B.1 RAG: how many reference rows (the first N of the fingerprint-ordered sample) are embedded as row documents for the in-worker exemplar index and the rag_chunks row_doc prefix. Default 1024; a positive integer, clamped to reference_rows_limit's sample. A rag_chunks store written with a smaller value is topped up with the missing rows.",
       "isOptional": true,
       "regexes": [
-        "^[0-9]+$"
+        "^([1-9][0-9]*)?$"
       ]
     },
     {
       "name": "landing_table",
       "label": "Landing table FQN",
-      "helpText": "Destination BigQuery table for valid synthetic rows. project.dataset.table.",
+      "helpText": "Destination BigQuery table for valid synthetic rows. project.dataset.table. Required for generation.",
+      "isOptional": true,
       "regexes": [
         "^[a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
       ]
@@ -39,7 +47,8 @@
     {
       "name": "dlq_table",
       "label": "DLQ table FQN",
-      "helpText": "Destination BigQuery table for dead-lettered rows. project.dataset.table.",
+      "helpText": "Destination BigQuery table for dead-lettered rows. project.dataset.table. Required for generation.",
+      "isOptional": true,
       "regexes": [
         "^[a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$"
       ]
@@ -47,7 +56,8 @@
     {
       "name": "num_rows",
       "label": "Number of synthetic rows to generate",
-      "helpText": "Positive integer.",
+      "helpText": "Positive integer. Required for generation.",
+      "isOptional": true,
       "regexes": [
         "^[1-9][0-9]*$"
       ]
@@ -91,10 +101,8 @@
     {
       "name": "run_id",
       "label": "Run ID",
-      "helpText": "Unique identifier propagated to validation_runs and reference_digest provenance.",
-      "regexes": [
-        "^[a-zA-Z0-9_-]+$"
-      ]
+      "helpText": "Generation: unique identifier of the launch, propagated to validation_runs and reference_digest provenance. Required for generation. Evaluation: a target, the generation launch's base run id (looked up in the validation_runs of output_dataset); name exactly one of generation_job_id, run_id, tables, seed_table, or give relationships_uri alone.",
+      "isOptional": true
     },
     {
       "name": "identity_cols",
@@ -117,7 +125,8 @@
     {
       "name": "engine",
       "label": "Generation engine",
-      "helpText": "b1_rag (RAG over reference rows) or b2_library (CTGAN/SDV-family wrapper).",
+      "helpText": "b1_rag (RAG over reference rows) or b2_library (CTGAN/SDV-family wrapper). Generation defaults to b1_rag when it is omitted.",
+      "isOptional": true,
       "regexes": [
         "^(b1_rag|b2_library)$"
       ]
@@ -125,7 +134,8 @@
     {
       "name": "model_uri",
       "label": "Model URI",
-      "helpText": "gs://<bucket>/synthetic/models/<family>/<model>/<version>/.",
+      "helpText": "gs://<bucket>/synthetic/models/<family>/<model>/<version>/. Required for generation.",
+      "isOptional": true,
       "regexes": [
         "^gs://[^/]+/.+/$"
       ]
@@ -160,11 +170,8 @@
     {
       "name": "validation_runs_table",
       "label": "validation_runs table FQN",
-      "helpText": "Destination BigQuery table for the run-level summary row. project.dataset.table. Optional; empty skips the write.",
-      "isOptional": true,
-      "regexes": [
-        "^([a-z0-9_-]+\\.[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+)?$"
-      ]
+      "helpText": "Generation: destination BigQuery table for the run-level summary row. project.dataset.table. Optional; empty skips the write. Evaluation: the generator's validation-runs table (project.dataset.table; empty means not given). With generation_job_id next to seed_table, this launch's rows of it, found by landing table and the job's window, give the digest that verifies the reference sample, so the metrics that compare with it are evaluated; without it, or when the job's window cannot be read, those metrics are not evaluated and the row says why.",
+      "isOptional": true
     },
     {
       "name": "env",
@@ -178,7 +185,7 @@
     {
       "name": "thresholds_uri",
       "label": "Thresholds file URI",
-      "helpText": "gs:// or local path to thresholds.yml selecting the pass/fail gates for the run's env tier. Default: config/thresholds.yml.",
+      "helpText": "Generation: gs:// or local path to thresholds.yml selecting the pass/fail gates for the run's env tier. Default: config/thresholds.yml. Evaluation: a DIFFERENT file in a different format, YAML (gs://) of warn/fail thresholds per metric id that override the evaluator's catalogue for the run (thresholds: {metric id: {warn: W, fail: F}}). Never pass one job's file to the other.",
       "isOptional": true
     },
     {
@@ -370,7 +377,7 @@
     {
       "name": "relationships_uri",
       "label": "Relationship models URI",
-      "helpText": "Where the relational models live (ADR 0032): a folder or a single YAML file, local or gs://. Default: the config/relationships folder packaged in the image. Point it at gs://... to change PK/FK/identity without rebuilding \u2014 this is the ONLY source of relational truth; table descriptions are never read for it.",
+      "helpText": "Generation: where the relational models live (ADR 0032): a folder or a single YAML file, local or gs://. Default: the config/relationships folder packaged in the image. Point it at gs://... to change PK/FK/identity without rebuilding \u2014 this is the ONLY source of relational truth; table descriptions are never read for it. Evaluation: the relationship model file or directory. Given alone (with landing_dataset and reference_dataset) it names the tables: every enabled table of the model, parents first. With seed_table it names the model the seed's component is read from; a URI that holds no model file evaluates the seed alone, with a warning. By generation_job_id it is read only when the generation launch's own records name none, and the default folder is in this same image.",
       "isOptional": true
     },
     {
@@ -380,6 +387,227 @@
       "isOptional": true,
       "regexes": [
         "^(single_job|sequential_jobs)$"
+      ]
+    },
+    {
+      "name": "sdfb_job",
+      "label": "Job kind",
+      "helpText": "Which job this launch runs on the one image: generation (the default when empty or omitted) writes synthetic rows on GPU workers; evaluation scores a landed generation run against its source in a CPU job. Read and removed by the image's entry (docker/flex_entry.py); every other parameter reaches the selected job's own argument parser unchanged.",
+      "isOptional": true,
+      "regexes": [
+        "^(generation|evaluation)?$"
+      ]
+    },
+    {
+      "name": "disk_size_gb",
+      "label": "Worker disk size (GB)",
+      "helpText": "Beam's own --disk_size_gb, handed to Beam unchanged by either job: the workers' boot disk. Generation: leave it out; the launcher pins 200, because this image is multi-GB and Dataflow's 25 GB default overflows while a worker unpacks it. Evaluation: the evaluator pins nothing, so a launch on this image passes 200 (the Composer DAGs do). Never pass it empty; Beam refuses an empty number.",
+      "isOptional": true,
+      "regexes": [
+        "^[1-9][0-9]*$"
+      ]
+    },
+    {
+      "name": "allow_contaminated",
+      "label": "Evaluation: Allow contaminated scope",
+      "helpText": "Evaluation only. Evaluate a scope another writer touched; it stays marked `contaminated`. Empty or false: refuse it.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^((?i:true|false|1|0|yes|no|on|off))?$"
+      ]
+    },
+    {
+      "name": "detection_sample_rows",
+      "label": "Evaluation: Detection sample rows",
+      "helpText": "Evaluation only. Rows per side in the detection (C2ST) sample. Empty: 50000.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^[0-9]*$"
+      ]
+    },
+    {
+      "name": "fail_on",
+      "label": "Evaluation: Fail-on status",
+      "helpText": "Evaluation only. Exit 1 when a metric is at this status or worse: none, warn or fail. Empty: none. No effect on a template launch: the template entry never applies it (it submits the job and returns). Read the statuses from the registry instead.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^(none|warn|fail)?$"
+      ]
+    },
+    {
+      "name": "generation_job_id",
+      "label": "Evaluation: Generation job id",
+      "helpText": "Evaluation only. Target: the generation job's Dataflow id. Needs region. Name exactly one of generation_job_id, run_id, tables, seed_table, or give relationships_uri alone; the one exception is a seed_table, which generation_job_id may accompany: it is then the identity of the launch the seed names, and only the Dataflow job is read (for its window; never its log or BigQuery job labels; with validation_runs_table given and the window known, this launch's rows of that table are read as well, to verify the reference sample), a job that cannot be read costing the window and a warning. It is not called job_id because the template launcher does not pass a parameter of that name to the pipeline.",
+      "paramType": "TEXT",
+      "isOptional": true
+    },
+    {
+      "name": "label_key_uri",
+      "label": "Evaluation: Label key URI",
+      "helpText": "Evaluation only. The operator's label key: a Secret Manager version (projects/P/secrets/S/versions/V) or a gs:// object. Empty: the key is ephemeral.",
+      "paramType": "TEXT",
+      "isOptional": true
+    },
+    {
+      "name": "landing_dataset",
+      "label": "Evaluation: Landing dataset",
+      "helpText": "Evaluation only. With tables, seed_table, or relationships_uri alone: the dataset (or project.dataset) the tables landed in.",
+      "paramType": "TEXT",
+      "isOptional": true
+    },
+    {
+      "name": "max_bytes_billed",
+      "label": "Evaluation: Max bytes billed",
+      "helpText": "Evaluation only. BigQuery bytes the evaluation may process. Empty: 1099511627776 (1 TiB).",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^[0-9]*$"
+      ]
+    },
+    {
+      "name": "max_shuffle_gb",
+      "label": "Evaluation: Max shuffle GB",
+      "helpText": "Evaluation only. Shuffle the value census may use before it is value-sampled. Empty: 500.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^([0-9]+(\\.[0-9]+)?)?$"
+      ]
+    },
+    {
+      "name": "mode",
+      "label": "Evaluation: Mode",
+      "helpText": "Evaluation only. exact: read every row; sampled: a salted sample above sample_rows. Empty: exact on Dataflow.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^(exact|sampled)?$"
+      ]
+    },
+    {
+      "name": "output_dataset",
+      "label": "Evaluation: Output dataset",
+      "helpText": "Evaluation only. The dataset of the four evaluation tables. Empty: synthetic_data_quality.",
+      "paramType": "TEXT",
+      "isOptional": true
+    },
+    {
+      "name": "output_local",
+      "label": "Evaluation: Local output directory",
+      "helpText": "Evaluation only. Only with the bq_client or local_json sinks, which need a local runner; no effect with the bq sink on Dataflow.",
+      "paramType": "TEXT",
+      "isOptional": true
+    },
+    {
+      "name": "pair_max_columns",
+      "label": "Evaluation: Pair max columns",
+      "helpText": "Evaluation only. Columns whose pairs are compared, per table. Empty: 20.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^[0-9]*$"
+      ]
+    },
+    {
+      "name": "privacy_sample_rows",
+      "label": "Evaluation: Privacy sample rows",
+      "helpText": "Evaluation only. Rows of the nearest-neighbour privacy sample. Empty: 50000.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^[0-9]*$"
+      ]
+    },
+    {
+      "name": "reference_dataset",
+      "label": "Evaluation: Reference dataset",
+      "helpText": "Evaluation only. With tables, seed_table, or relationships_uri alone: the dataset (or project.dataset) of their sources, same table names.",
+      "paramType": "TEXT",
+      "isOptional": true
+    },
+    {
+      "name": "row_flags_source_keys",
+      "label": "Evaluation: Row flags source keys",
+      "helpText": "Evaluation only. Row flags carry the matched source key as a keyed hash only. Empty: hashed.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^(hashed)?$"
+      ]
+    },
+    {
+      "name": "row_flags_top_k",
+      "label": "Evaluation: Row flags top-k",
+      "helpText": "Evaluation only. Row flags kept per check and table. Empty: 100.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^[0-9]*$"
+      ]
+    },
+    {
+      "name": "sample_rows",
+      "label": "Evaluation: Sample rows",
+      "helpText": "Evaluation only. Sampled mode: rows read per side of a table larger than this. Empty: 200000.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^[0-9]*$"
+      ]
+    },
+    {
+      "name": "scope",
+      "label": "Evaluation: Scope",
+      "helpText": "Evaluation only. How the job's landing rows are isolated. Empty: auto.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^(auto|table|as_of|appends|as_of_diff|manual)?$"
+      ]
+    },
+    {
+      "name": "sink",
+      "label": "Evaluation: Sink",
+      "helpText": "Evaluation only. bq: the pipeline loads BigQuery (the template default on Dataflow). bq_client and local_json write local files and need a local runner. Empty: bq.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^(bq|bq_client|local_json)?$"
+      ]
+    },
+    {
+      "name": "seed_table",
+      "label": "Evaluation: Seed table",
+      "helpText": "Evaluation only. Target: the table a launch targeted; evaluates what that launch generated: its enabled component in the relationship model (relationships_uri), or the table alone when no model names it or none is given. Needs landing_dataset and reference_dataset. Name exactly one of generation_job_id, run_id, tables, seed_table, or give relationships_uri alone; generation_job_id may accompany a seed_table (it then says which generation job the row belongs to, and the row takes the job's start and end from the Dataflow API).",
+      "paramType": "TEXT",
+      "isOptional": true
+    },
+    {
+      "name": "tables",
+      "label": "Evaluation: Tables",
+      "helpText": "Evaluation only. Target: landing table names, comma-separated, parents first. Needs landing_dataset and reference_dataset. Name exactly one of generation_job_id, run_id, tables, seed_table, or give relationships_uri alone.",
+      "paramType": "TEXT",
+      "isOptional": true
+    },
+    {
+      "name": "temp_dataset",
+      "label": "Evaluation: Temp dataset",
+      "helpText": "Evaluation only. Where the expiring scope, pin and sample tables go. Empty: output_dataset.",
+      "paramType": "TEXT",
+      "isOptional": true
+    },
+    {
+      "name": "trigger",
+      "label": "Evaluation: Trigger",
+      "helpText": "Evaluation only. What started the evaluation, recorded in the registry. Empty: cli.",
+      "paramType": "TEXT",
+      "isOptional": true,
+      "regexes": [
+        "^(cli|composer|chained|agent)?$"
       ]
     }
   ]

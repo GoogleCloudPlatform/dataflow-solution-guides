@@ -234,3 +234,31 @@ def test_schema_file_matches_stats_rows_columns():
   stats = profile_source_table(_table_schema(), _rows())
   row = stats_rows("p.d.t", "d", "r", stats)[0]
   assert set(row) == schema_cols
+
+
+# 32 amounts whose mean is 469.4065625 exactly: a tie at the sixth decimal,
+# which the last bit of the sum settles.
+_TIE_AMOUNTS = [
+    2.77, 29.26, 33.36, 37.16, 40.1, 82.72, 123.03, 134.0, 154.56, 176.12,
+    275.2, 299.85, 334.33, 349.09, 416.07, 497.57, 510.94, 567.24, 583.78,
+    589.16, 618.99, 639.45, 649.38, 746.07, 774.84, 796.19, 851.38, 854.06,
+    912.05, 945.74, 997.41, 999.14
+]
+
+
+def test_mean_is_the_value_python_3_11_wrote():
+  """CPython 3.12 made the builtin `sum()` of floats compensated, which
+    moved the written mean of this column from 469.406562 to 469.406563.
+    The mean is summed left to right: what 3.11 wrote is what is written."""
+  schema = TableSchema.model_validate({
+      "table_info": {
+          "table_id": "demo_project.demo_dataset.t"
+      },
+      "schema": [{
+          "name": "AMOUNT",
+          "type": "FLOAT64",
+          "mode": "NULLABLE"
+      }],
+  })
+  stats = profile_source_table(schema, [{"AMOUNT": v} for v in _TIE_AMOUNTS])
+  assert stats["AMOUNT"]["mean"] == 469.406562

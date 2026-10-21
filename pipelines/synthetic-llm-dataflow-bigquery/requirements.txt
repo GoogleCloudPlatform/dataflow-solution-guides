@@ -1,6 +1,7 @@
-# Generated from uv.lock (Python 3.14 / Apache Beam 2.76.0)
+# Generated from uv.lock at https://github.com/albertols/synthetic-llm-dataflow-bigquery/tree/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48
 -e ./packages/sdfb-beam
 -e ./packages/sdfb-core
+aiofiles==25.1.0
 aiohappyeyeballs==2.7.1
 aiohttp==3.14.4
 aiosignal==1.4.0

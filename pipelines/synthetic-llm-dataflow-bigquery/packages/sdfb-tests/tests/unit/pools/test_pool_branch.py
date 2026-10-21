@@ -145,13 +145,32 @@ def test_branch_ignores_an_attached_store_so_it_cannot_short_circuit_itself():
   assert all("stale" not in v for r in rows for v in r["values"])
 
 
-def test_dag_gains_the_branch_and_gate_only_when_a_store_is_passed():
+def test_dag_gains_the_branch_and_gate_only_when_a_store_is_passed(monkeypatch):
   """None store => DAG unchanged, exactly like rag_chunks (WS5 §2). A
     store => the branch appears AND Generate's input is gated on its output
     (AwaitFreeTextPools) — the R1/R3 cold runs proved that an ungated
     Generate rebuilds every pool concurrently with the branch. The branch
     writes the store itself, so no WriteFreeTextPools sink exists anymore."""
   from sdfb_beam.pipeline import PipelineConfig, build_pipeline
+  from sdfb_beam.pools import store as pool_store_mod
+
+  # TestPipeline() RUNS the DAG at context exit, so Generate's setup()
+  # sees `freetext_pools_table` (set below) and worker-side-attaches a REAL
+  # `BigQueryFreeTextPoolStore` (generate.py `_setup_inner`); its lazy
+  # `bigquery.Client()` then goes through ADC / GCE-metadata discovery and
+  # can block for minutes on a sandboxed network. This DAG-shape test never
+  # needs a fetch, so the store is faked.
+  class _NoNetworkStore:
+
+    def __init__(self, table_fqn, **_kwargs):
+      self.table_fqn = table_fqn
+
+    def fetch(self, reference_digest, model_uri):
+      del reference_digest, model_uri
+      return []
+
+  monkeypatch.setattr(pool_store_mod, "BigQueryFreeTextPoolStore",
+                      _NoNetworkStore)
 
   def _labels(freetext_pools_store):
     cfg = PipelineConfig(

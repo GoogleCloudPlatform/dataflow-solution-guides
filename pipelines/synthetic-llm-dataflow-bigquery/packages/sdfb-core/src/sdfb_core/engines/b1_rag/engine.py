@@ -124,7 +124,6 @@ from sdfb_core.observability import (
 from sdfb_core.rag.chunking import (
     CHUNK_KIND_FREE_TEXT_COL,
     CHUNK_KIND_ROW_DOC,
-    MAX_ROW_DOC_ROWS,
     compute_row_digest,
 )
 from sdfb_core.rag.embedding import BgeEmbedder, Embedder, HashingEmbedder
@@ -213,17 +212,6 @@ _NUMERIC_MULTI_KNOT_MIN = 2
 # a sample frequency of 2 does not imply source frequency >= 10 (the
 # 2026-08-21 cycle measured that gap as COL_009's 0.25-vs-0.14 residual).
 _NUMERIC_KANON_MIN_COUNT = 10
-# Setup embeds at most this many reference rows. The index those vectors
-# feed serves ONLY centroid top-k exemplar retrieval in M1 (generation
-# samples marginals — no per-batch retrieval), so embedding the full 10k
-# reference sample bought nothing but wall-clock: the 2026-07-16 corp run
-# spent 26-92 min PER Dataflow bundle attempt in `embedder.embed`. The
-# reference SELECT is fingerprint-ordered (deterministic spread), so a
-# prefix is a representative sample. Aliases the population write contract
-# (chunking.MAX_ROW_DOC_ROWS) — the persisted row_doc chunk set and this
-# read prefix must stay the same set of rows.
-_MAX_EMBED_ROWS = MAX_ROW_DOC_ROWS
-
 # Process-level pool cache (2026-07-24 16:35 E2E): a strict failure in ONE
 # column's ladder crashes DoFn.setup() and Dataflow retries the bundle with
 # a FRESH engine in the SAME worker process — without this cache the retry
@@ -350,17 +338,23 @@ class B1RagEngine(GenerationEngine):
     if self._injected_embedder is not None:
       self._embedder = self._injected_embedder
     elif ctx.embedder_uri:
-      # "auto" = the worker's GPU when present — the bulk 1024-row
+      # "auto" = the worker's GPU when present — the bulk row-doc
       # embed runs before vLLM ignition and demotes right after
       # (ADR 0019), so the two never contend for VRAM.
       self._embedder = BgeEmbedder(ctx.embedder_uri, device="auto")
     else:
       self._embedder = HashingEmbedder(dim=384)
     if ctx.reference_rows:
-      # Prefix of the (fingerprint-ordered) reference sample — the
-      # exemplar ids returned by `_retrieve_exemplars` index into this
-      # same prefix, so `ctx.reference_rows[i]` stays valid.
-      embed_rows = ctx.reference_rows[:_MAX_EMBED_ROWS]
+      # Prefix of the (fingerprint-ordered) reference sample, at most
+      # `ctx.rag_row_docs_limit` rows (`--rag_row_docs_limit`, default
+      # chunking.MAX_ROW_DOC_ROWS = 1024). The index serves ONLY
+      # centroid top-k exemplar retrieval (generation samples marginals),
+      # so embedding the whole 10k sample bought nothing but wall-clock:
+      # the 2026-07-16 corp run spent 26-92 min PER bundle attempt in
+      # `embedder.embed`. The population branch writes the same prefix
+      # from the same value, and the exemplar ids `_retrieve_exemplars`
+      # returns index into it, so `ctx.reference_rows[i]` stays valid.
+      embed_rows = ctx.reference_rows[:ctx.rag_row_docs_limit]
       reused = self._vectors_from_store(ctx, embed_rows)
       if reused is not None:
         self._ref_vectors = reused
@@ -662,6 +656,12 @@ class B1RagEngine(GenerationEngine):
         PINNED (embedder_id, embedder_version) space with the embedder's
         exact dim — a partial read would silently mix vector spaces, which
         is worse than re-embedding (WS2 §4b; 2026-07-07 design §4).
+
+        Rows are matched by `row_digest`, so a store written with a LARGER
+        `rag_row_docs_limit` serves a smaller prefix exactly; one written
+        with a smaller limit misses rows and returns None (re-embed, as on
+        a cold digest). With `--build_rag_layer` the launcher tops such a
+        store up (`plan_rag_population`), so the next launch reads it.
         """
     # GenerationContext types the store as `object` to keep base.py free
     # of rag imports; the DoFn only ever injects a ChunkStore.
@@ -1509,7 +1509,7 @@ class B1RagEngine(GenerationEngine):
       values: list[str] = []
       # raw values, not str(v): "5" must not dedup against int 5.
       seen: set[object] = set()
-      for row in ctx.reference_rows[:_MAX_EMBED_ROWS]:
+      for row in ctx.reference_rows[:ctx.rag_row_docs_limit]:
         v = row.get(prof.name)
         if v not in (None, "") and v not in seen:
           seen.add(v)
@@ -1611,7 +1611,7 @@ class B1RagEngine(GenerationEngine):
         """
     if self._index is None or not self._ref_vectors or self._embedder is None:
       return list(ctx.reference_rows[:k])
-    # Exemplar ids index into the same _MAX_EMBED_ROWS prefix the
+    # Exemplar ids index into the same rag_row_docs_limit prefix the
     # vectors were built from, so ctx.reference_rows[i] stays valid.
     return retrieve_centroid_top_k(self._index, self._ref_vectors,
                                    ctx.reference_rows, k)
