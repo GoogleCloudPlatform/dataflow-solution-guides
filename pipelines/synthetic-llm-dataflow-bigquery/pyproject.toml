@@ -35,18 +35,15 @@ Repository = "https://github.com/albertols/synthetic-llm-dataflow-bigquery"
 
 [tool.uv]
 package = false
-
-# apache-beam 2.76.0 → envoy-data-plane >=1.0.3 → betterproto==2.0.0b6, a
-# PRE-RELEASE. uv's default strategy (if-necessary-or-explicit) only accepts
-# pre-releases pinned explicitly in first-party requirements or constraints —
-# a transitive pin does not qualify and resolution fails with "no version of
-# betterproto==2.0.0b6". Surfacing the pin here is the canonical uv pattern
-# for transitive pre-release deps. Drop when beam's envoy-data-plane chain
-# moves to a stable betterproto.
-constraint-dependencies = ["betterproto==2.0.0b6"]
+# pyarrow comes in with Apache Beam, which accepts every release from 14.0.1.
+# Its first release with Python 3.14 wheels is 22.0.0. Without this floor a
+# machine that resolves again (through a private mirror, say) can settle on an
+# older pyarrow and then has to compile it. The locked version is unchanged.
+constraint-dependencies = ["pyarrow>=22"]
 
 [tool.uv.workspace]
 members = ["packages/sdfb-core", "packages/sdfb-beam", "packages/sdfb-tests"]
+exclude = ["packages/sdfb-evaluation"]   # standalone project, own lock (ADR 0041)
 
 [tool.uv.sources]
 sdfb-core = { workspace = true }
@@ -86,7 +83,7 @@ select = ["E", "F", "B", "UP", "N", "RUF", "SIM", "PL"]
 # PLC0415: deferred (function-level) imports are an architectural pattern here —
 # sdfb-core stays import-light and engines/handlers defer heavy/optional deps
 # (faiss, sdgx, torch, vllm, mlx) so the package imports without them.
-ignore = ["E501", "PLR0913", "PLR0917", "PLC0415"]
+ignore = ["E501", "PLR0913", "PLC0415"]
 
 [tool.ruff.lint.per-file-ignores]
 # PLR2004: magic-number checks are noise in tests.
@@ -98,7 +95,7 @@ ignore = ["E501", "PLR0913", "PLR0917", "PLC0415"]
 based_on_style = "yapf"
 
 [tool.yapfignore]
-ignore_patterns = [".venv/**", "packages/sdfb-tests/fixtures/**"]
+ignore_patterns = [".venv/**", "packages/sdfb-tests/fixtures/**", "packages/*/.venv/**"]
 
 [tool.mypy]
 python_version = "3.14"

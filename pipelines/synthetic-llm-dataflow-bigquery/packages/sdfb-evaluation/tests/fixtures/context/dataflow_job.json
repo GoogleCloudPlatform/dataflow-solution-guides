@@ -1,0 +1,164 @@
+{
+  "createTime": "2026-09-13T13:10:16.512345Z",
+  "currentState": "JOB_STATE_DONE",
+  "currentStateTime": "2026-09-13T14:02:41.118204Z",
+  "environment": {
+    "sdkPipelineOptions": {
+      "display_data": [
+        {
+          "key": "landing_table",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": "demo-project.thelook_synthetic.order_items"
+        },
+        {
+          "key": "run_id",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": "thelook-0913-a1b2c3"
+        },
+        {
+          "key": "engine",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": "b1_rag"
+        },
+        {
+          "key": "model_uri",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": "gs://demo-bucket/synthetic/models/qwen/qwen2.5-3b-instruct/v1/"
+        },
+        {
+          "key": "embedder_uri",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": ""
+        },
+        {
+          "key": "seed",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": "7"
+        },
+        {
+          "key": "pool_seed_strategy",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": "kcenter"
+        },
+        {
+          "key": "write_disposition",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": "append"
+        },
+        {
+          "key": "validation_runs_table",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": "demo-project.synthetic_data_quality.validation_runs"
+        },
+        {
+          "key": "dlq_table",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": "demo-project.synthetic_data_quality.dead_letter"
+        },
+        {
+          "key": "relationships_uri",
+          "namespace": "sdfb.launcher",
+          "type": "STRING",
+          "value": "gs://demo-bucket/synthetic/relationships/"
+        },
+        {
+          "key": "service_account_email",
+          "namespace": "google.cloud",
+          "type": "STRING",
+          "value": "sdfb-runner@example.com"
+        },
+        {
+          "key": "subnetwork",
+          "namespace": "google.cloud",
+          "type": "STRING",
+          "value": "regions/europe-west1/subnetworks/demo-subnet"
+        }
+      ]
+    },
+    "workerPools": [
+      {
+        "machineType": "g2-standard-8",
+        "numWorkers": 1
+      }
+    ]
+  },
+  "id": "2026-09-13_06_10_16-9000000000000000017",
+  "labels": {
+    "goog-dataflow-provided-template-type": "flex",
+    "sdfb_run": "thelook-0913"
+  },
+  "location": "europe-west1",
+  "name": "sdfb-thelook-0913-a1b2c3",
+  "pipelineDescription": {
+    "displayData": [
+      {
+        "key": "engine",
+        "namespace": "sdfb.launcher",
+        "strValue": "b2_library"
+      },
+      {
+        "int64Value": "5000",
+        "key": "num_rows",
+        "namespace": "sdfb.launcher"
+      },
+      {
+        "floatValue": 0.5,
+        "key": "similarity",
+        "namespace": "sdfb.launcher"
+      },
+      {
+        "int64Value": "10000",
+        "key": "reference_rows_limit",
+        "namespace": "sdfb.launcher"
+      },
+      {
+        "key": "uniqueness_mode",
+        "namespace": "sdfb.launcher",
+        "strValue": "exact"
+      },
+      {
+        "key": "freetext_expansion",
+        "namespace": "sdfb.launcher",
+        "strValue": "identifiers"
+      },
+      {
+        "key": "source_stats",
+        "namespace": "sdfb.launcher",
+        "strValue": "sample"
+      },
+      {
+        "key": "env",
+        "namespace": "sdfb.launcher",
+        "strValue": "dev"
+      },
+      {
+        "key": "client_type",
+        "namespace": "sdfb.launcher",
+        "strValue": "vllm"
+      },
+      {
+        "key": "vllm_dtype",
+        "namespace": "sdfb.launcher",
+        "strValue": "float16"
+      },
+      {
+        "boolValue": true,
+        "key": "generate_fk_relationships",
+        "namespace": "sdfb.launcher"
+      }
+    ]
+  },
+  "projectId": "demo-project",
+  "startTime": "2026-09-13T13:10:16.512345Z",
+  "type": "JOB_TYPE_BATCH"
+}

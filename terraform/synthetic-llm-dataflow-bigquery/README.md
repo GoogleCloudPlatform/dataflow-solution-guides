@@ -113,6 +113,28 @@ without a Terraform change.
 | `synthetic_rag` | `freetext_pools` | — | LLM-built value pools for free-text columns, reused across runs |
 | `synthetic_rag` | `source_table_stats` | — | Per-column statistics of each source table |
 
+### Evaluation tables
+
+`scripts/06_run_evaluation.sh` launches the evaluator, which scores a
+finished run against its sources and writes to `synthetic_data_quality`.
+Terraform creates its four tables from the schema files the evaluator
+ships,
+[`packages/sdfb-evaluation/src/sdfb_evaluation/schemas/<table>.schema.json`](../../pipelines/synthetic-llm-dataflow-bigquery/packages/sdfb-evaluation/src/sdfb_evaluation/schemas/),
+partitioned and clustered as `sdfb-eval schemas` creates them, and its two
+views from `views.sql` in the same directory:
+
+| Table or view | Partitioned on | Clustered by | Holds |
+| :-- | :-- | :-- | :-- |
+| `evaluation_data_history` | `recorded_at`, by day | `relationship_model`, `engine`, `evaluation_id` | One row when an evaluation starts and one when it ends: status, scores, metric counts, the generation job it scored |
+| `evaluation_metrics` | `evaluated_at`, by month | `table_name`, `metric_id`, `evaluation_id` | One row per metric, column, pair, table or foreign-key edge, with its baseline and noise floor |
+| `evaluation_profiles` | `evaluated_at`, by month | `table_name`, `profile_kind`, `evaluation_id` | Histograms, quantiles, top values and the other profiles of both sides |
+| `evaluation_row_flags` | `evaluated_at`, by month; partitions expire after 180 days | `table_name`, `check`, `evaluation_id` | The top synthetic rows per privacy check (exact or near copy, nearest record, detectable), with the matched source key as a keyed hash |
+| `evaluation_latest` (view) | — | — | The last row of each evaluation |
+| `evaluation_latest_per_job` (view) | — | — | The latest finished evaluation of each generation job |
+
+The [evaluator's README](../../pipelines/synthetic-llm-dataflow-bigquery/packages/sdfb-evaluation/README.md)
+describes the metrics and how to read them.
+
 ## Configuration the job reads
 
 The image packages the pipeline's `config/` directory; the launch parameters
@@ -125,6 +147,7 @@ select from it.
 | [`config/models.yml`](../../pipelines/synthetic-llm-dataflow-bigquery/config/models.yml) | Nobody at runtime: a registry | GCS layout, Hugging Face repository, license and GPU memory of each model. Terraform's `model` variable picks the matching `gcs_uri` as `model_uri`. |
 | [`docker/flex_template_metadata.json`](../../pipelines/synthetic-llm-dataflow-bigquery/docker/flex_template_metadata.json) | `03_build_flex_template.sh` | The Flex Template parameter contract. |
 | [`config/bq_schema/`](../../pipelines/synthetic-llm-dataflow-bigquery/config/bq_schema/) | Terraform | The pipeline tables above. |
+| [`packages/sdfb-evaluation/src/sdfb_evaluation/schemas/`](../../pipelines/synthetic-llm-dataflow-bigquery/packages/sdfb-evaluation/src/sdfb_evaluation/schemas/) | Terraform, and the evaluator | The evaluation tables and views above. |
 
 ## Open-weight models: Hugging Face to Cloud Storage
 
@@ -187,7 +210,7 @@ flowchart LR
 
 | `gpu` | GPU | Machine family (default) | `worker_accelerator` | Models | `vllm_dtype` |
 | :-- | :-- | :-- | :-- | :-- | :-- |
-| `l4` (default) | NVIDIA L4, compute capability 8.9, 24 GB | G2 only (`g2-standard-8`) | `type:nvidia-l4;count:1;install-nvidia-driver:latest` | `gemma4-e4b-it`, `qwen3-4b` | `auto`: serves the bf16 checkpoint as is |
+| `l4` (default) | NVIDIA L4, compute capability 8.9, 24 GB | G2 only (`g2-standard-8`) | `type:nvidia-l4;count:1;install-nvidia-driver` | `gemma4-e4b-it`, `qwen3-4b` | `auto`: serves the bf16 checkpoint as is |
 | `t4` | NVIDIA T4, compute capability 7.5, 16 GB | N1 only (`n1-standard-8`) | `type:nvidia-tesla-t4;count:1;install-nvidia-driver:5xx` | `qwen3-4b` only | `float16`, required |
 
 Why the dtype depends on the GPU:
@@ -216,11 +239,12 @@ The T4 driver pin `:5xx` follows Dataflow's guidance for vLLM. Check that
 | :-- | :-: | :-- |
 | Project services | — | Artifact Registry, BigQuery (+ Storage API), Cloud Build, Compute, Dataflow, IAM, Logging, Monitoring, Storage. Never disabled on destroy. |
 | Docker registry | `synthetic-llm-containers` | Artifact Registry repo for the single launcher + GPU worker image. The build service account can write, the Dataflow service account can read. Keeps the 3 latest versions. |
-| Service account | `synthetic-llm-dataflow-sa` | Flex Template launcher and Dataflow workers: Dataflow worker/developer, BigQuery data editor, job user and read session user, Storage object admin, metrics and log writer. |
+| Service account | `synthetic-llm-dataflow-sa` | Flex Template launcher and Dataflow workers of the generation and the evaluation jobs: Dataflow worker/developer, BigQuery data editor, job user and read session user, Storage object admin, metrics and log writer. See [Evaluation permissions](#evaluation-permissions). |
 | Service account | `synthetic-llm-build-sa` | Cloud Build identity for `01_build_and_push_container.sh` and `02_stage_models.sh`: log writer, Storage object admin, Artifact Registry writer. |
 | BigQuery datasets | `synthetic_source`, `synthetic_data` | Source snapshots and landing tables, see [Tables](#tables-what-comes-from-thelook_ecommerce). |
 | BigQuery datasets | `synthetic_data_quality`, `synthetic_rag` | One per directory in `config/bq_schema/`. |
 | BigQuery tables | 6 pipeline tables | One per schema file, see [Pipeline tables](#pipeline-tables). |
+| BigQuery tables and views | 4 evaluation tables, 2 views | In `synthetic_data_quality`, from the evaluator's schema files, see [Evaluation tables](#evaluation-tables). |
 | BigQuery job | `sdfb-thelook-tables-*` | One script: snapshots, `products` copy and empty landing tables. It runs again only when the script changes; landing tables that exist are kept. |
 | Dataflow job | `sdfb-thelook-tf-*` (opt) | The generation job, only when `launch_job = true`. |
 | Subnet IAM | — | `roles/compute.networkUser` for the Dataflow service account on `subnetwork`, only when it is set (local or Shared VPC). |
@@ -272,6 +296,7 @@ across locations.
      d --> e1[04_run_dataflow.sh<br/>gcloud]
      d --> e2[terraform apply<br/>-var launch_job=true]
      e1 & e2 --> f[05_verify_run.sh RUN_ID]
+     e1 & e2 --> g[06_run_evaluation.sh RUN_ID<br/>same template, CPU]
    ```
 
    * **gcloud:** `./scripts/04_run_dataflow.sh [NUM_ROWS]` prints the `RUN_ID`.
@@ -282,9 +307,31 @@ across locations.
      without `launch_job` once the job is done.
 5. `./scripts/05_verify_run.sh RUN_ID` checks row counts, primary-key
    duplicates, foreign-key orphans and the `validation_runs` verdicts.
+6. `./scripts/06_run_evaluation.sh RUN_ID` scores the run once its job is
+   done: a CPU-only job from the same template (`sdfb_job=evaluation`) that
+   writes the [evaluation tables](#evaluation-tables). It finds the
+   generation job by its name, `sdfb-RUN_ID` (pass the job id as a second
+   argument otherwise). `EVALUATION_MACHINE_TYPE` (default `e2-standard-8`)
+   and `EVALUATION_MAX_WORKERS` (default 2) size its workers; the launcher VM
+   is an `e2-standard-8`.
 
 The account that runs the scripts needs permission to act as both service
 accounts (`roles/iam.serviceAccountUser`) and quota for the chosen GPU in `region`.
+
+### Evaluation permissions
+
+The evaluation runs as `synthetic-llm-dataflow-sa`, like the generation, and
+needs no role of its own. `roles/dataflow.developer` includes every
+permission of `roles/dataflow.viewer`, which the evaluator uses to read the
+generation job's start and end; BigQuery data editor reads the sources and
+the landing tables, writes the evaluation tables and creates table
+snapshots; read session user opens Storage Read API sessions (without it the
+evaluator pages through the rows, more slowly). Not granted:
+`bigquery.tables.deleteSnapshot`, which only `roles/bigquery.dataOwner` and
+above carry and which the evaluator needs to pin each source as of the
+generation job with an expiring snapshot. The evaluation then reads the
+sources as they are, with a warning on its row. Here that is the same data:
+the sources are snapshots Terraform made, which no job writes.
 
 ## Scripts generation
 

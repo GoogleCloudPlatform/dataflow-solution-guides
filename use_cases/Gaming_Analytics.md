@@ -72,7 +72,15 @@ Dataflow is the premier platform for building real-time gaming analytics and in-
 - **Niantic**'s data science teams worked with BigQuery, Bigtable, Dataflow, and Pub/Sub to support the launch of Pokémon GO, scaling to close to a million transactions per second in a matter of minutes.
 - **King / Activision Blizzard** migrated from on-premises systems to Dataflow to ingest data and support its massive data archive.
 
-## How to deploy
+## How to deploy (Agentic or Manual)
+
+### Option 1: Deploy with an AI Coding Harness (Recommended)
+
+Open this repository in your AI coding harness and prompt it to provision the infrastructure, build the Python SDK harness container with the embedded scikit-learn model, seed Bigtable player features, launch the cross-language Java pipeline, and verify live recommendations:
+
+> *"Deploy the Gaming Analytics guide in project `my-gcp-project` and region `us-central1` (check if the project uses a Shared VPC). Provision the Terraform infrastructure, build the Python SDK harness container image, populate the Cloud Bigtable player feature store, launch the Java portable Dataflow pipeline with private IPs, publish synthetic gameplay events, and verify recommendations in Pub/Sub and BigQuery."*
+
+### Option 2: Manual CLI Deployment
 
 Follow the [Terraform module README](../terraform/gaming_analytics/README.md) for the full instructions:
 

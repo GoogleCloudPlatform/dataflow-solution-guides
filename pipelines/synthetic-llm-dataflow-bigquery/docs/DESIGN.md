@@ -45,15 +45,20 @@ flowchart LR
   job. Row synthesis, validation and IO are CPU work; the GPU builds free-text
   value pools and, optionally, embeddings. That is what makes the LLM cost
   independent of the row count (§2).
-- **No managed AI or data-quality service** is in the serving path ([ADR 0001](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0001-no-managed-gcp-services.md)):
+- **No managed AI or data-quality service** is in the serving path ([ADR 0001](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0001-no-managed-gcp-services.md)):
   inference runs inside the pipeline's own `DoFn`s, and validation lands in
   BigQuery tables and GCS artifacts.
 - **Reference rows are a live, bounded `SELECT`** with a deterministic order
-  ([ADR 0005](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0005-live-select-reference-data.md)), so a run is reproducible from its inputs.
-- **One image serves the Flex Template launcher and the workers** ([ADR 0009](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0009-single-flex-template-image.md)). It
-  is built in CI, never on a laptop ([ADR 0008](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0008-ci-driven-builds.md)), and pulled from Artifact
-  Registry ([ADR 0015](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0015-worker-image-via-artifact-registry.md)). Launcher and workers therefore share one Python version,
+  ([ADR 0005](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0005-live-select-reference-data.md)), so a run is reproducible from its inputs.
+- **One image serves the Flex Template launcher and the workers** ([ADR 0009](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0009-single-flex-template-image.md)). It
+  is built in CI, never on a laptop ([ADR 0008](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0008-ci-driven-builds.md)), and pulled from Artifact
+  Registry ([ADR 0015](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0015-worker-image-via-artifact-registry.md)). Launcher and workers therefore share one Python version,
   pinned once in `.python-version`.
+- **One image and one template serve two jobs** ([ADR 0041](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0041-evaluation-standalone-package.md), amendment of 2026-10-06). The
+  template's entry is a dispatcher, `docker/flex_entry.py`: without the parameter `sdfb_job` a launch is a generation launch, as
+  before; `sdfb_job=evaluation` runs the evaluator (§11) when the image was built from a tree that has it.
+  Both jobs run on the image's interpreter and Beam, so the evaluator's own Python and Beam pins are held equal to the
+  generator's and move with them (amendment of 2026-10-13).
 - All sinks use BigQuery `FILE_LOADS`: the job is batch-shaped.
 
 Code: [`sdfb_beam/pipeline.py::build_pipeline`](../packages/sdfb-beam/src/sdfb_beam/pipeline.py).
@@ -62,7 +67,7 @@ Code: [`sdfb_beam/pipeline.py::build_pipeline`](../packages/sdfb-beam/src/sdfb_b
 
 **Claim: the LLM is asked what values a column can take, once, and rows are
 then sampled without it.** Calling a model per row would make cost grow with
-the table; here it grows with the number of free-text columns ([ADR 0013](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0013-distribution-estimator-spine.md)).
+the table; here it grows with the number of free-text columns ([ADR 0013](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0013-distribution-estimator-spine.md)).
 
 ```mermaid
 flowchart TB
@@ -87,18 +92,47 @@ flowchart TB
 ```
 
 - Both engines implement one `GenerationEngine` ABC and reach the model only
-  through the `ModelClient` Protocol ([ADR 0006](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0006-generation-engine-abc.md)), so an engine is testable with
+  through the `ModelClient` Protocol ([ADR 0006](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0006-generation-engine-abc.md)), so an engine is testable with
   no Beam, no GPU and no network. A fake client and an Apple-Silicon client
-  ([ADR 0010](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0010-m4-local-smoke-mlx.md)) satisfy the same Protocol.
+  ([ADR 0010](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0010-m4-local-smoke-mlx.md)) satisfy the same Protocol.
 - **`b1_rag`** retrieves representative exemplars from an exact vector index
   to condition the model. The retrieval layer is this repository's own rather
-  than `apache_beam.ml.rag` ([ADR 0017](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0017-custom-rag-layer-over-beam-ml-rag.md)): it needs deterministic search and a
+  than `apache_beam.ml.rag` ([ADR 0017](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0017-custom-rag-layer-over-beam-ml-rag.md)): it needs deterministic search and a
   persisted chunk text that is byte-identical to what was embedded. The
-  embedding population is scoped to the columns that consume it ([ADR 0019](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0019-rag-population-scoped-to-consumers.md)).
+  embedding population is scoped to the columns that consume it ([ADR 0019](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0019-rag-population-scoped-to-consumers.md)).
+  How many reference rows become row documents is the launch knob
+  `rag_row_docs_limit` (default 1,024, the former constant
+  `MAX_ROW_DOC_ROWS`); the writer and the reader slice the same prefix with
+  it (diagram below).
 - **`b2_library`** wraps an open-source tabular synthesizer fitted once per
   worker; the model only fills free-text columns.
 - Each run logs one `generation_plan` line naming the strategy chosen for every
   column, so the synthesis is auditable from worker logs.
+
+**Row documents: one value, two sides.** The launcher resolves
+`--rag_row_docs_limit` once per table, clamped to the reference sample, and
+both the `rag_chunks` population and the engine's in-worker index use
+`rows[:N]`. The store is keyed by reference digest and embedder, not by N, so
+the launcher checks it by content:
+
+```mermaid
+flowchart LR
+  classDef cpu   fill:#1baf7a,color:#fff,stroke:#127a55
+  classDef data  fill:#6b7280,color:#fff,stroke:#4b5563
+
+  K["⚙️ launcher<br/>N = min(rag_row_docs_limit, n)"]:::cpu
+  ST[("rag_chunks<br/>digest + embedder")]:::data
+  K -->|"no chunk: full<br/>rows[:N] + value chunks"| ST
+  K -->|"rows[:N] all present: skip"| ST
+  K -->|"some missing: topup<br/>only those rows"| ST
+  ST -->|"rows[:N] by row_digest,<br/>all or nothing"| E["⚙️ b1_rag setup<br/>index of N vectors"]:::cpu
+  K -->|"GenerationContext.rag_row_docs_limit"| E
+```
+
+A store written with a larger N serves a smaller one exactly; one written
+with a smaller N is topped up, never mixed with local vectors. The default
+(N = 1,024) reproduces the constant's behaviour. Flag modes and the milestones
+each one logs: [`RUN_PLAYBOOK.md` §6e](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/RUN_PLAYBOOK.md#6e---rag_row_docs_limit-b1-row-documents).
 
 Code: [`sdfb_core/engines/base.py`](../packages/sdfb-core/src/sdfb_core/engines/base.py),
 [`engines/b1_rag/`](../packages/sdfb-core/src/sdfb_core/engines/b1_rag),
@@ -107,7 +141,7 @@ Code: [`sdfb_core/engines/base.py`](../packages/sdfb-core/src/sdfb_core/engines/
 ## 3. Serving: a vLLM server owned by the engine
 
 **Claim: each worker runs one vLLM OpenAI-compatible server, started by the
-first model call and sized to the GPU it finds** ([ADR 0014](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0014-vllm-model-client-owns-server.md), amending [ADR 0011](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0011-adopt-beam-vllm-model-handler.md)).
+first model call and sized to the GPU it finds** ([ADR 0014](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0014-vllm-model-client-owns-server.md), amending [ADR 0011](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0011-adopt-beam-vllm-model-handler.md)).
 
 ```mermaid
 sequenceDiagram
@@ -127,7 +161,7 @@ sequenceDiagram
 ```
 
 - **Weights come from GCS, never a model hub** at run time; the image sets
-  `HF_HUB_OFFLINE=1`. The shortlist of open-weight models is [ADR 0002](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0002-gemma-4-model-shortlist.md); their
+  `HF_HUB_OFFLINE=1`. The shortlist of open-weight models is [ADR 0002](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0002-gemma-4-model-shortlist.md); their
   GCS layout is [`MODEL_LAYOUT.md`](MODEL_LAYOUT.md).
 - **The schema travels in `response_format`** ([vLLM structured
   outputs](https://docs.vllm.ai/en/latest/usage/structured_outputs.html)), on the
@@ -142,7 +176,7 @@ sequenceDiagram
 Beam ships [`VLLMCompletionsModelHandler` and
 `VLLMChatModelHandler`](https://beam.apache.org/releases/pydoc/current/apache_beam.ml.inference.vllm_inference.html).
 They start the same server from the `vllm` package in the worker image; what
-differs is who drives it. [ADR 0011](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0011-adopt-beam-vllm-model-handler.md) chose them; [ADR 0014](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0014-vllm-model-client-owns-server.md) reversed that a day
+differs is who drives it. [ADR 0011](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0011-adopt-beam-vllm-model-handler.md) chose them; [ADR 0014](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0014-vllm-model-client-owns-server.md) reversed that a day
 later, before any code used them, once the engines' call pattern was fixed.
 
 **Claim: Beam's handlers run inference over a `PCollection` of prompts; here
@@ -193,7 +227,7 @@ flowchart LR
   B7 -->|"next run is warm, no call and no server"| B6
 ```
 
-| | Beam `vllm_inference` (2.76.0) | `VLLMModelClient` |
+| | Beam `vllm_inference` (2.74.0) | `VLLMModelClient` |
 | :-- | :-- | :-- |
 | **What flows through the LLM step** | Prompts: inference is a `PTransform` between two `PCollection`s | Nothing. The `PCollection` carries row batches; the model is called from inside `generate_batch()` and returns to the caller |
 | **Who decides the next prompt** | The graph: every prompt exists before inference starts | The engine: each round takes the next sampling level (`temperature`, `top_p`, `top_k`), filters the answer by format and by novelty against the source domain (§5), then decides whether to ask again |
@@ -257,10 +291,10 @@ parent/child ratio, the child's key uniqueness and referential integrity hold
 by construction rather than by rejection.**
 
 One Dataflow job generates a whole connected component of the relationship
-model, parents first, with one vLLM server and table-tagged logs ([ADR 0030](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0030-single-job-relational-generation.md)).
+model, parents first, with one vLLM server and table-tagged logs ([ADR 0030](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0030-single-job-relational-generation.md)).
 Which tables join a launch follows from two inputs, the landing table and one
-flag ([ADR 0029](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0029-fk-model-scenarios-and-history-mappings.md), §8). The structure is declared once in versioned YAML and never
-read from a table description ([ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0032-relationships-as-config.md), which supersedes [ADR 0021](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0021-relational-contract-in-descriptions.md)).
+flag ([ADR 0029](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0029-fk-model-scenarios-and-history-mappings.md), §8). The structure is declared once in versioned YAML and never
+read from a table description ([ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0032-relationships-as-config.md), which supersedes [ADR 0021](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0021-relational-contract-in-descriptions.md)).
 
 ### 4.1 Children from parent keys
 
@@ -271,9 +305,9 @@ children-per-parent histogram, zero bucket included, so it is derived and not
 requested. Right: inside one parent key, drawing the key-completing cells at
 random collides; drawing them without replacement never does.* Formally, a
 primary key that contains a foreign key is unique **within** each parent key,
-so the draw is structured per parent key ([ADR 0036](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0036-parent-driven-fanout-generation.md)). A preflight counts the
+so the draw is structured per parent key ([ADR 0036](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0036-parent-driven-fanout-generation.md)). A preflight counts the
 distinct keys a model can produce against the rows asked for, including the
-members bound by a foreign key ([ADR 0035](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0035-pk-capacity-fk-bound-members.md)). Code:
+members bound by a foreign key ([ADR 0035](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0035-pk-capacity-fk-bound-members.md)). Code:
 [`engines/fanout.py::FanoutPlan`](../packages/sdfb-core/src/sdfb_core/engines/fanout.py).
 
 ### 4.2 Several parents: every edge gets a role
@@ -306,7 +340,7 @@ flowchart TB
 ```
 
 Stars, diamonds, trees, forests, 1:1 chains and a child that reaches both its
-parent and its grandparent all generate from one declared model ([ADR 0037](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0037-multi-parent-children.md)).
+parent and its grandparent all generate from one declared model ([ADR 0037](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0037-multi-parent-children.md)).
 The roles are derived from the declared columns and the model's own graph;
 nothing new is declared. The driving edge is the one marked `drives: true`,
 else the first declared, and the launcher says which. An `external` parent is
@@ -328,7 +362,7 @@ and cap `M`, so the source's tail decides and the cap is a flag. Code:
 enforcing the key at all; drawing whole observed tuples orphans none.* Where a
 child draws from a key pool (an `independent` or `external` edge), it draws
 **joint tuples from observed parent combinations**, weighted by iteratively
-fitted marginals ([ADR 0031](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0031-joint-fk-key-draws.md)). An orphaned child row is a blocker: the run fails.
+fitted marginals ([ADR 0031](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0031-joint-fk-key-draws.md)). An orphaned child row is a blocker: the run fails.
 Code: [`engines/fk_keys.py::FkKeyPool`](../packages/sdfb-core/src/sdfb_core/engines/fk_keys.py),
 [`dofns/fk_integrity.py`](../packages/sdfb-beam/src/sdfb_beam/dofns/fk_integrity.py).
 
@@ -338,9 +372,9 @@ A full-source measurement can show that a declared primary key is not a key of
 the source. The launch then drops it from the **effective** model for that run,
 prints a `MODEL ADJUSTED` banner with the YAML to paste back, and carries on;
 `--on_model_conflict=stop` restores the refusal, and a model that contradicts
-itself always stops ([ADR 0038](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0038-measured-conflicts-adjust-the-model.md)). A launch also states how many rows each table
+itself always stops ([ADR 0038](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0038-measured-conflicts-adjust-the-model.md)). A launch also states how many rows each table
 will receive and where each number came from, before the graph is built
-([ADR 0039](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0039-row-projection-before-the-graph.md), proposed). Code:
+([ADR 0039](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0039-row-projection-before-the-graph.md), proposed). Code:
 [`contracts/model_adjustment.py`](../packages/sdfb-core/src/sdfb_core/contracts/model_adjustment.py),
 [`contracts/row_projection.py`](../packages/sdfb-core/src/sdfb_core/contracts/row_projection.py).
 
@@ -354,23 +388,23 @@ uniformly across its range.**
 *Uniform-in-range sampling flattens a skewed column; sampling through its
 deciles preserves the shape.* Formally this is inverse transform sampling over
 a piecewise-linear CDF built from an 11-point decile vector, part of a
-per-column profile measured once and persisted ([ADR 0022](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0022-stats-driven-generation.md)). Code:
+per-column profile measured once and persisted ([ADR 0022](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0022-stats-driven-generation.md)). Code:
 [`engines/b1_rag/_fidelity.py::ColumnSampler`](../packages/sdfb-core/src/sdfb_core/engines/b1_rag/_fidelity.py),
 [`stats/source_stats.py`](../packages/sdfb-core/src/sdfb_core/stats/source_stats.py).
 
 - **Categoricals** use the empirical frequency table and never invent an unseen
   category; identifiers are shaped deterministically and never reach the model;
   marginal fidelity holds by construction rather than by a post-hoc fix
-  ([ADR 0025](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0025-marginal-fidelity-by-construction.md), refined by [ADR 0026](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0026-measurement-first-mask-integrity.md) and verified in [ADR 0027](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0027-verified-wave4-operational-integrity.md)).
+  ([ADR 0025](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0025-marginal-fidelity-by-construction.md), refined by [ADR 0026](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0026-measurement-first-mask-integrity.md) and verified in [ADR 0027](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0027-verified-wave4-operational-integrity.md)).
 - **Free-text pools** are the only model output. They are built in parallel
-  batches ([ADR 0018](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0018-parallel-batched-freetext-pools.md)), persisted and reused across runs keyed by the reference
-  digest and model ([ADR 0020](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0020-freetext-pools-as-persisted-artifact.md)), and every candidate is rejected against the
+  batches ([ADR 0018](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0018-parallel-batched-freetext-pools.md)), persisted and reused across runs keyed by the reference
+  digest and model ([ADR 0020](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0020-freetext-pools-as-persisted-artifact.md)), and every candidate is rejected against the
   **full** source domain, not only the sample, so a pool cannot memorize
-  ([ADR 0023](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0023-source-domain-pool-rejection.md)). A retry ladder keeps pools honest at scale ([ADR 0033](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0033-pool-ladder-integrity-at-scale.md)).
+  ([ADR 0023](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0023-source-domain-pool-rejection.md)). A retry ladder keeps pools honest at scale ([ADR 0033](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0033-pool-ladder-integrity-at-scale.md)).
 - **Per-column prompt constraints** (clauses, length bands, format masks) ride
-  the DDL contract as structured templates ([ADR 0024](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0024-structured-prompt-constraint-templates.md)). A constraint router
+  the DDL contract as structured templates ([ADR 0024](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0024-structured-prompt-constraint-templates.md)). A constraint router
   decides per column whether a constraint is satisfied by construction or must
-  reach the model ([ADR 0028](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0028-constraint-router-relational-plan.md)). Worked examples:
+  reach the model ([ADR 0028](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0028-constraint-router-relational-plan.md)). Worked examples:
   [`DDL_CONTRACT_GUIDE.md`](DDL_CONTRACT_GUIDE.md).
 
 ## 6. Throughput
@@ -382,7 +416,7 @@ generation and shuffle, not the GPU.**
 
 *Warming the pools removes only the pool branch; CPU generation and the
 uniqueness shuffle dominate both the cold and the warm job.* That measurement
-set the throughput decisions ([ADR 0034](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0034-generation-throughput-single-barrier-shared-engines.md)): exact uniqueness runs **one** full-row
+set the throughput decisions ([ADR 0034](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0034-generation-throughput-single-barrier-shared-engines.md)): exact uniqueness runs **one** full-row
 barrier; a worker process builds one engine per table and every `DoFn`
 instance shares it; and a fleet sized by hand stays that size, because
 autoscaling is pinned off when the launch names its worker count. Multiple SDK
@@ -433,7 +467,7 @@ on any identical real/synthetic row. Code:
 ## 8. Configuration
 
 Relational structure is configuration, in
-[`config/relationships/*.yaml`](../config/relationships/README.md) ([ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0032-relationships-as-config.md)).
+[`config/relationships/*.yaml`](../config/relationships/README.md) ([ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0032-relationships-as-config.md)).
 
 ![What each scenario generates](designs/assets/relationships-scenarios.png)
 
@@ -453,6 +487,7 @@ edge keeps the table and stops drawing keys through that edge.*
 | Model URI, vLLM server flags, licence | [`config/models.yml`](../config/models.yml) | `VLLMModelClient` (§3) |
 | Severity budgets per environment | [`config/thresholds.yml`](../config/thresholds.yml) | thresholds gate (§7) |
 | Column constraints | the table's DDL contract | constraint router (§5) |
+| B.1 row documents, `rag_row_docs_limit` (default 1,024) | launch flag / DAG param | launcher (store check), population branch, `b1_rag` setup (§2) |
 | GPU type, machine family, dtype | the Terraform module's `gpu` variable | launch scripts and the Flex Template job |
 
 ## 9. ADR reference map
@@ -463,46 +498,48 @@ record; the section is where this document summarizes it.
 <!-- adr-map:start -->
 | ADR | Section | Decision record |
 | :-- | :-- | :-- |
-| 0001 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [No managed GCP services in the serving path](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0001-no-managed-gcp-services.md) |
-| 0002 | [§3 Serving](#3-serving-a-vllm-server-owned-by-the-engine) | [Open-weight model shortlist](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0002-gemma-4-model-shortlist.md) |
-| 0003 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Private container registry (withdrawn)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0003-jfrog-image-registry.md) |
-| 0004 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Dataflow region](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0004-europe-west3-region.md) |
-| 0005 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Live SELECT for reference rows](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0005-live-select-reference-data.md) |
-| 0006 | [§2 Engines](#2-engines-and-the-llm-as-a-distribution-estimator) | [`GenerationEngine` ABC and `ModelClient` Protocol](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0006-generation-engine-abc.md) |
-| 0007 | [§9 ADR reference map](#9-adr-reference-map) | [One source of truth across docs and code](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0007-dry-documentation-policy.md) |
-| 0008 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Images are built in CI](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0008-ci-driven-builds.md) |
-| 0009 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [One image for launcher and workers](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0009-single-flex-template-image.md) |
-| 0010 | [§2 Engines](#2-engines-and-the-llm-as-a-distribution-estimator) | [Local smoke test on Apple Silicon](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0010-m4-local-smoke-mlx.md) |
-| 0011 | [§3 Serving](#3-serving-a-vllm-server-owned-by-the-engine) | [Adopt Beam's vLLM handler (amended by 0014)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0011-adopt-beam-vllm-model-handler.md) |
-| 0012 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Image build under network constraints (withdrawn)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0012-enterprise-image-build.md) |
-| 0013 | [§2 Engines](#2-engines-and-the-llm-as-a-distribution-estimator) | [The LLM as a distribution estimator](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0013-distribution-estimator-spine.md) |
-| 0014 | [§3 Serving](#3-serving-a-vllm-server-owned-by-the-engine) | [The model client owns the vLLM server](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0014-vllm-model-client-owns-server.md) |
-| 0015 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Worker image in Artifact Registry](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0015-worker-image-via-artifact-registry.md) |
-| 0016 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Images on Cloud Build](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0016-personal-gcp-cloud-build.md) |
-| 0017 | [§2 Engines](#2-engines-and-the-llm-as-a-distribution-estimator) | [Own retrieval layer instead of `apache_beam.ml.rag`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0017-custom-rag-layer-over-beam-ml-rag.md) |
-| 0018 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Batched, parallel free-text pool builds](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0018-parallel-batched-freetext-pools.md) |
-| 0019 | [§2 Engines](#2-engines-and-the-llm-as-a-distribution-estimator) | [Embedding population scoped to its consumers](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0019-rag-population-scoped-to-consumers.md) |
-| 0020 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Free-text pools as a persisted artifact](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0020-freetext-pools-as-persisted-artifact.md) |
-| 0021 | [§4 Relational generation](#4-relational-generation) | [Relational contract in column descriptions (superseded by 0032)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0021-relational-contract-in-descriptions.md) |
-| 0022 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Source table statistics as a generation input](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0022-stats-driven-generation.md) |
-| 0023 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Pools reject against the full source domain](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0023-source-domain-pool-rejection.md) |
-| 0024 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Structured prompt-constraint templates](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0024-structured-prompt-constraint-templates.md) |
-| 0025 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Marginal fidelity by construction](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0025-marginal-fidelity-by-construction.md) |
-| 0026 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Measurement first, then mask integrity](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0026-measurement-first-mask-integrity.md) |
-| 0027 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Verification cycle and operational integrity](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0027-verified-wave4-operational-integrity.md) |
-| 0028 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Constraint router and relational plan](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0028-constraint-router-relational-plan.md) |
-| 0029 | [§4 Relational generation](#4-relational-generation) | [Launch scenarios for a relationship model](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0029-fk-model-scenarios-and-history-mappings.md) |
-| 0030 | [§4 Relational generation](#4-relational-generation) | [Single-job relational generation](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0030-single-job-relational-generation.md) |
-| 0031 | [§4 Relational generation](#4-relational-generation) | [Joint foreign-key draws](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0031-joint-fk-key-draws.md) |
-| 0032 | [§8 Configuration](#8-configuration) | [Relationships are configuration](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0032-relationships-as-config.md) |
-| 0033 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Pool-ladder integrity at scale](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0033-pool-ladder-integrity-at-scale.md) |
-| 0034 | [§6 Throughput](#6-throughput) | [One barrier, shared engines](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0034-generation-throughput-single-barrier-shared-engines.md) |
-| 0035 | [§4 Relational generation](#4-relational-generation) | [Key capacity counts foreign-key-bound members](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0035-pk-capacity-fk-bound-members.md) |
-| 0036 | [§4 Relational generation](#4-relational-generation) | [Parent-driven fan-out generation](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0036-parent-driven-fanout-generation.md) |
-| 0037 | [§4 Relational generation](#4-relational-generation) | [Multi-parent children](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0037-multi-parent-children.md) |
-| 0038 | [§4 Relational generation](#4-relational-generation) | [Measured conflicts adjust the model](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0038-measured-conflicts-adjust-the-model.md) |
-| 0039 | [§4 Relational generation](#4-relational-generation) | [Row projection before the graph (proposed)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0039-row-projection-before-the-graph.md) |
-| 0040 | [§9 ADR reference map](#9-adr-reference-map) | [Publishing this design to the Dataflow Solution Guides](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0040-dsg-donation-golden-source-sync.md) |
+| 0001 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [No managed GCP services in the serving path](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0001-no-managed-gcp-services.md) |
+| 0002 | [§3 Serving](#3-serving-a-vllm-server-owned-by-the-engine) | [Open-weight model shortlist](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0002-gemma-4-model-shortlist.md) |
+| 0003 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Private container registry (withdrawn)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0003-jfrog-image-registry.md) |
+| 0004 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Dataflow region](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0004-europe-west3-region.md) |
+| 0005 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Live SELECT for reference rows](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0005-live-select-reference-data.md) |
+| 0006 | [§2 Engines](#2-engines-and-the-llm-as-a-distribution-estimator) | [`GenerationEngine` ABC and `ModelClient` Protocol](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0006-generation-engine-abc.md) |
+| 0007 | [§9 ADR reference map](#9-adr-reference-map) | [One source of truth across docs and code](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0007-dry-documentation-policy.md) |
+| 0008 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Images are built in CI](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0008-ci-driven-builds.md) |
+| 0009 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [One image for launcher and workers](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0009-single-flex-template-image.md) |
+| 0010 | [§2 Engines](#2-engines-and-the-llm-as-a-distribution-estimator) | [Local smoke test on Apple Silicon](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0010-m4-local-smoke-mlx.md) |
+| 0011 | [§3 Serving](#3-serving-a-vllm-server-owned-by-the-engine) | [Adopt Beam's vLLM handler (amended by 0014)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0011-adopt-beam-vllm-model-handler.md) |
+| 0012 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Image build under network constraints (withdrawn)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0012-enterprise-image-build.md) |
+| 0013 | [§2 Engines](#2-engines-and-the-llm-as-a-distribution-estimator) | [The LLM as a distribution estimator](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0013-distribution-estimator-spine.md) |
+| 0014 | [§3 Serving](#3-serving-a-vllm-server-owned-by-the-engine) | [The model client owns the vLLM server](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0014-vllm-model-client-owns-server.md) |
+| 0015 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Worker image in Artifact Registry](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0015-worker-image-via-artifact-registry.md) |
+| 0016 | [§1 Architecture](#1-architecture-and-the-cpugpu-split) | [Images on Cloud Build](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0016-personal-gcp-cloud-build.md) |
+| 0017 | [§2 Engines](#2-engines-and-the-llm-as-a-distribution-estimator) | [Own retrieval layer instead of `apache_beam.ml.rag`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0017-custom-rag-layer-over-beam-ml-rag.md) |
+| 0018 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Batched, parallel free-text pool builds](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0018-parallel-batched-freetext-pools.md) |
+| 0019 | [§2 Engines](#2-engines-and-the-llm-as-a-distribution-estimator) | [Embedding population scoped to its consumers](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0019-rag-population-scoped-to-consumers.md) |
+| 0020 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Free-text pools as a persisted artifact](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0020-freetext-pools-as-persisted-artifact.md) |
+| 0021 | [§4 Relational generation](#4-relational-generation) | [Relational contract in column descriptions (superseded by 0032)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0021-relational-contract-in-descriptions.md) |
+| 0022 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Source table statistics as a generation input](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0022-stats-driven-generation.md) |
+| 0023 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Pools reject against the full source domain](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0023-source-domain-pool-rejection.md) |
+| 0024 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Structured prompt-constraint templates](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0024-structured-prompt-constraint-templates.md) |
+| 0025 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Marginal fidelity by construction](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0025-marginal-fidelity-by-construction.md) |
+| 0026 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Measurement first, then mask integrity](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0026-measurement-first-mask-integrity.md) |
+| 0027 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Verification cycle and operational integrity](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0027-verified-wave4-operational-integrity.md) |
+| 0028 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Constraint router and relational plan](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0028-constraint-router-relational-plan.md) |
+| 0029 | [§4 Relational generation](#4-relational-generation) | [Launch scenarios for a relationship model](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0029-fk-model-scenarios-and-history-mappings.md) |
+| 0030 | [§4 Relational generation](#4-relational-generation) | [Single-job relational generation](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0030-single-job-relational-generation.md) |
+| 0031 | [§4 Relational generation](#4-relational-generation) | [Joint foreign-key draws](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0031-joint-fk-key-draws.md) |
+| 0032 | [§8 Configuration](#8-configuration) | [Relationships are configuration](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0032-relationships-as-config.md) |
+| 0033 | [§5 Fidelity](#5-fidelity-value-pools-and-constraints) | [Pool-ladder integrity at scale](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0033-pool-ladder-integrity-at-scale.md) |
+| 0034 | [§6 Throughput](#6-throughput) | [One barrier, shared engines](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0034-generation-throughput-single-barrier-shared-engines.md) |
+| 0035 | [§4 Relational generation](#4-relational-generation) | [Key capacity counts foreign-key-bound members](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0035-pk-capacity-fk-bound-members.md) |
+| 0036 | [§4 Relational generation](#4-relational-generation) | [Parent-driven fan-out generation](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0036-parent-driven-fanout-generation.md) |
+| 0037 | [§4 Relational generation](#4-relational-generation) | [Multi-parent children](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0037-multi-parent-children.md) |
+| 0038 | [§4 Relational generation](#4-relational-generation) | [Measured conflicts adjust the model](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0038-measured-conflicts-adjust-the-model.md) |
+| 0039 | [§4 Relational generation](#4-relational-generation) | [Row projection before the graph (proposed)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0039-row-projection-before-the-graph.md) |
+| 0040 | [§9 ADR reference map](#9-adr-reference-map) | [Publishing this design to the Dataflow Solution Guides](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0040-dsg-donation-golden-source-sync.md) |
+| 0041 | [§11 Evaluation (sdfb-evaluation)](#11-evaluation-sdfb-evaluation) | [Evaluation is a standalone package and a separate job](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0041-evaluation-standalone-package.md) |
+| 0042 | [§12 Platform GUI](#12-platform-gui) | [A self-hosted GUI; managed dashboards stay out](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0042-self-hosted-platform-gui.md) |
 <!-- adr-map:end -->
 
 ## 10. Figure provenance
@@ -523,3 +560,176 @@ measured number of its own. Regenerate with
 | `designs/assets/throughput-where-time-went.png` | `scripts/doc/make_throughput_figures.py` | evidence (`MEASURED` block) |
 | `designs/assets/relationships-scenarios.png` | `scripts/doc/make_relationships_figures.py` | concept |
 | `designs/assets/relationships-flags.png` | `scripts/doc/make_relationships_figures.py` | concept, one panel per mode |
+| `designs/assets/eval-levels.png`, `designs/assets/eval-noise-floor.png` | `scripts/doc/make_eval_figures.py` | concept |
+
+## 11. Evaluation (sdfb-evaluation)
+
+**Claim: evaluation is a separate CPU job, after generation, that scores each
+unit of the synthetic data against the full source and says whether the
+distance is more than sampling noise; it never gates or fails the generation
+run.** *Status: built and reviewed on a laptop with invented data; launched on
+a deployment from both Composer DAGs, and no launch has completed an
+evaluation yet ([ADR 0041](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0041-evaluation-standalone-package.md), notes
+of 2026-10-09 to 2026-10-11).*
+
+```mermaid
+flowchart LR
+  classDef beam  fill:#eb6834,color:#fff,stroke:#b44f26
+  classDef cpu   fill:#1baf7a,color:#fff,stroke:#127a55
+  classDef store fill:#2a78d6,color:#fff,stroke:#1d5599
+  classDef data  fill:#6b7280,color:#fff,stroke:#4b5563
+
+  GEN["🔀 generation job<br/>unchanged"]:::beam --> LAND[("🗄️ landing tables")]:::store
+  SRC[("🗄️ source tables")]:::store --> EVAL
+  LAND --> EVAL["🔀 evaluation job<br/>CPU only"]:::beam
+  EVAL --> REG[("🗄️ evaluation_data_history<br/>RUNNING, then one final row")]:::store
+  EVAL --> MET[("🗄️ metrics, profiles,<br/>row flags")]:::store
+  REG --> CLI["⚙️ sdfb-eval report<br/>and compare"]:::cpu
+  MET --> CLI
+  MET --> SQL["⚪ plain SQL<br/>and a separate GUI"]:::data
+```
+
+![Seven levels, each a unit of the data](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/designs/assets/eval-levels.png)
+
+*Concept figure, no data.* A metric id is `<level>.<name>`, from a single cell
+up to the whole launch, in one of four families: fidelity, privacy, integrity,
+diversity.
+
+![The same KS value is noise at 1,000 rows and an effect at a million](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/designs/assets/eval-noise-floor.png)
+
+*Concept figure, a seeded simulation, not a measurement of a run.* A metric
+fails only when its value crosses its threshold and exceeds its own noise
+floor; lifts and the holdout share gate on a confidence bound; no p-value is
+reported ([ADR 0041](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0041-evaluation-standalone-package.md) D5).
+
+| Decision | In one line |
+| :-- | :-- |
+| D1 | A standalone nested uv project, excluded from the root workspace |
+| D2 | Parity with the generator by two-sided golden files, never by import |
+| D3 | The reference sets R, E, H and H_E are prefixes of the generator's own row-fingerprint order |
+| D4 | Fidelity against the full source, pinned by time travel; every row stores `baseline_value = metric(R, source)` |
+| D5 | Status by effect size against a noise floor, at matched n |
+| D6 | Literal values only for at most 50 distinct source values seen at least 10 times; otherwise keyed hashes |
+| D7 | The registry is append-only events; the final row is written after the metric loads |
+
+**On Dataflow it has no image or template of its own.** The one image,
+`docker/Dockerfile`, copies the evaluator's source through a build stage that
+tolerates its absence, runs it on the generator's environment (it is not
+installed), and imports its entry modules at build time. The one template's
+entry, `docker/flex_entry.py`, dispatches on the parameter `sdfb_job`, and
+`docker/flex_template_metadata.json` declares both jobs' parameters, every
+one optional. Neither package imports the other; the dispatcher is the only
+file that names both.
+
+```mermaid
+flowchart LR
+  classDef beam  fill:#eb6834,color:#fff,stroke:#b44f26
+  classDef cpu   fill:#1baf7a,color:#fff,stroke:#127a55
+  classDef store fill:#2a78d6,color:#fff,stroke:#1d5599
+  classDef data  fill:#6b7280,color:#fff,stroke:#4b5563
+
+  T[("📄 one template<br/>one image")]:::store --> E{"⚙️ flex_entry.py<br/>reads sdfb_job"}:::cpu
+  E -- "absent" --> G["🔀 generation job<br/>GPU workers"]:::beam
+  E -- "evaluation" --> V["🔀 evaluation job<br/>CPU workers"]:::beam
+  G -. "launched table and job id,<br/>unless run_evaluation is false" .-> V
+```
+
+The Composer DAG of the generator, where a deployment has one, chains the two
+unless its `run_evaluation` parameter is false (true by default): the
+evaluation is given the launched table and the relationship model, and the
+job only as the launch's identity (it reads the Dataflow job for its window,
+one query on the generator's `validation_runs` for the digest that verifies
+the reference sample, and no job log). The standalone DAG evaluates an
+already-landed run on its own by the same seed path. Both launches take a
+launcher machine type, because the launch has 12 minutes in all, the image
+pull included. The DAGs stay in the source repository.
+
+Four tables in `synthetic_data_quality` (`evaluation_data_history`,
+`evaluation_metrics`, `evaluation_profiles`, `evaluation_row_flags`) and two
+views (`evaluation_latest`, `evaluation_latest_per_job`). One file,
+`catalogue/metrics.yaml`, defines every metric; the scorer, the report and the
+design document's tables all read it. The package never imports `sdfb_core`
+or `sdfb_beam`. A local run executes on Beam's in-process runner
+(`--runner DirectRunner`), never on Prism.
+
+Full design, every figure and the primary sources:
+[`designs/2026-07-07-evaluation-framework-design.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/designs/2026-07-07-evaluation-framework-design.md).
+How to run it: [`packages/sdfb-evaluation/README.md`](../packages/sdfb-evaluation/README.md)
+(the command line, Dataflow, Composer and reading results, each in its
+`docs/` page) and [`RUN_PLAYBOOK.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/RUN_PLAYBOOK.md) "Evaluate a run".
+
+Code: [`packages/sdfb-evaluation/src/sdfb_evaluation/`](../packages/sdfb-evaluation/src/sdfb_evaluation/) (`catalogue/`, `context/`, `beam/`, `scoring/`, `cli/`, `schemas/`).
+
+## 12. Platform GUI
+
+**Claim: a self-hosted app reads this project's BigQuery tables through named,
+read-only, bytes-capped queries; it writes nothing, and the pipeline does not
+depend on it.**
+
+```mermaid
+flowchart LR
+  classDef beam  fill:#eb6834,color:#fff,stroke:#b44f26
+  classDef cpu   fill:#1baf7a,color:#fff,stroke:#127a55
+  classDef store fill:#2a78d6,color:#fff,stroke:#1d5599
+
+  JOB["🔀 Dataflow job<br/>generate + validate"]:::beam
+  BQ[("🗄️ project tables<br/>quality, evaluation,<br/>source stats")]:::store
+  WEB["⚙️ browser app<br/>holds no credentials"]:::cpu
+  BFF["⚙️ local BFF<br/>named queries only"]:::cpu
+  CAP["🛡️ dry run<br/>+ bytes cap"]:::cpu
+  MOCK[("📄 seeded mock<br/>fixtures")]:::store
+
+  JOB -->|"FILE_LOADS"| BQ
+  WEB -->|"query name<br/>+ parameters"| BFF
+  BFF -->|"DATA_SOURCE=bigquery"| CAP
+  CAP -->|"read-only SELECT"| BQ
+  BFF -->|"DATA_SOURCE=mock"| MOCK
+```
+
+*Nothing points back from the GUI to the job: the pipeline writes its tables
+as before, and the GUI only reads them.*
+
+- **The browser never sends SQL.** It names a query and passes its
+  parameters. The backend-for-frontend (BFF) holds the SQL, binds the
+  parameters, dry-runs the query and caps the bytes billed (10 GiB by default).
+  The UI shows the estimate. Fetched rows are cached in memory and never
+  written anywhere.
+- **Two data sources, one contract.** `DATA_SOURCE=bigquery` reads the
+  tables. `DATA_SOURCE=mock` serves seeded fixtures that parse against the
+  same types, so the app runs with no GCP access. The types are generated from
+  the Python-side schemas and the metric catalogue, and CI fails when they
+  drift.
+
+```mermaid
+flowchart LR
+  classDef cpu   fill:#1baf7a,color:#fff,stroke:#127a55
+  classDef store fill:#2a78d6,color:#fff,stroke:#1d5599
+
+  subgraph local["💻 default: local"]
+    DEV["⚙️ BFF on<br/>127.0.0.1"]:::cpu
+  end
+  subgraph cloud["☁️ optional: Cloud Run"]
+    IAP["🛡️ IAP<br/>who may open it"]:::cpu
+    SVC["⚙️ same container<br/>read-only account"]:::cpu
+    IAP --> SVC
+  end
+  BQ[("🗄️ project tables")]:::store
+
+  DEV -->|"your ADC<br/>named SELECTs"| BQ
+  SVC -->|"Data Viewer<br/>+ Job User"| BQ
+```
+
+*One panel per deployment mode. Locally, the BFF listens on `127.0.0.1` and
+queries with the Application Default Credentials of whoever runs it; those may
+carry more than read access, so read-only rests on the BFF running named
+`SELECT`s only. On Cloud Run, Identity-Aware Proxy decides who may open the
+app, and the container queries as a service account that holds only BigQuery
+Data Viewer and Job User, so IAM enforces read-only as well.*
+
+The GUI stays in the source repository. The pipeline does not depend on it,
+and it is not part of the Dataflow Solution Guides copy
+([ADR 0040](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0040-dsg-donation-golden-source-sync.md)). Managed dashboard
+services (Looker, Looker Studio, Dataplex) stay out
+([ADR 0001](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0001-no-managed-gcp-services.md)); the rule that allows this
+GUI and keeps them out is [ADR 0042](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0042-self-hosted-platform-gui.md).
+Code: [`gui/apps/web/src/router.tsx`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/gui/apps/web/src/router.tsx).
