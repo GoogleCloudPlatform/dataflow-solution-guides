@@ -8,9 +8,6 @@ data warehouses, transactional databases, messaging queues). Adopting real-time 
 architectures are generally regarded as an essential part of modernizing your data systems, and
 confer a number of competitive advantages to the company adopting them.
 
-For the full version of this solution guide, please refer to:
-* https://solutions.cloud.google.com/app/solutions/dataflow-real-time-etl-integration
-
 ## Documentation
 
 * [One pager: ETL & reverse ETL in real-time with Dataflow (PDF)](./one_pagers/etl_dataflow_onepager.pdf)
