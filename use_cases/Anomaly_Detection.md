@@ -28,6 +28,13 @@ The [one-pager](one_pagers/anomaly_detection_dataflow_onepager.pdf) and
 references. This Markdown walkthrough and the component READMEs describe the
 executable implementation.
 
+## Deploying with an AI Coding Harness vs. Manually
+
+You can run the complete lifecycle below either **conversationally via an AI coding harness** (which reads [`AGENTS.md`](../AGENTS.md) and invokes the [`use-case-deployment`](../.agents/skills/use-case-deployment/SKILL.md) and [`terraform-deploy`](../.agents/skills/terraform-deploy/SKILL.md) skills) or **manually step-by-step** using the numbered sections that follow.
+
+**Example prompt for an AI coding harness:**
+> *"Deploy the Anomaly Detection guide in project `my-gcp-project` and region `us-central1` (discover any Shared VPC subnet and existing staging bucket). Build the Python 3.14 worker, training, and serving containers, run the `workflow` stages (`train`, `validate`, `deploy`, `verify`, `seed`), launch the streaming Dataflow pipeline with private IPs, run the `smoke` test (`--count 20`), and report the verification results. When finished, run the ordered cleanup to cancel Dataflow, undeploy the Vertex AI endpoint, and destroy Terraform."*
+
 ## Prerequisites and identities
 
 Use an existing billing-enabled Google Cloud project, an existing network, and
@@ -195,7 +202,7 @@ are never adopted into the manifest or deleted by workflow cleanup.
 
 ## 4. Seed profiles and launch Dataflow
 
-The solution clearly separates the **client-side testing and demonstration harness** ([`anomaly_detection_pipeline/demo.py`](file:///home/ihr/github/dataflow-solution-guides/pipelines/anomaly_detection/anomaly_detection_pipeline/demo.py), executed via `workflow.py`) from the **remote Dataflow worker pipeline** ([`anomaly_detection_pipeline/pipeline.py`](file:///home/ihr/github/dataflow-solution-guides/pipelines/anomaly_detection/anomaly_detection_pipeline/pipeline.py)).
+The solution clearly separates the **client-side testing and demonstration harness** ([`anomaly_detection_pipeline/demo.py`](../pipelines/anomaly_detection/anomaly_detection_pipeline/demo.py), executed via `workflow.py`) from the **remote Dataflow worker pipeline** ([`anomaly_detection_pipeline/pipeline.py`](../pipelines/anomaly_detection/anomaly_detection_pipeline/pipeline.py)).
 
 Before launching the streaming pipeline or publishing transactions, use the client-side harness to seed Bigtable with customer reference profiles:
 
@@ -206,7 +213,7 @@ bash scripts/02_run_dataflow.sh
 
 ### The role of `demo.py` in end-to-end testing and demonstrations
 
-The client-side harness ([`anomaly_detection_pipeline/demo.py`](file:///home/ihr/github/dataflow-solution-guides/pipelines/anomaly_detection/anomaly_detection_pipeline/demo.py)) provides three core operations exposed via `workflow.py`:
+The client-side harness ([`anomaly_detection_pipeline/demo.py`](../pipelines/anomaly_detection/anomaly_detection_pipeline/demo.py)) provides three core operations exposed via `workflow.py`:
 
 1. **State seeding (`seed`)**:
    Connects directly to Bigtable (instance `anomaly-detection`, table `customer_profiles`, family `profile`, qualifier `average_amount`) and writes 100 deterministic baseline profiles (`customer-0000` through `customer-0099`). This pre-populates the historical spending baseline needed by Dataflow workers to calculate the amount-to-average ratio.

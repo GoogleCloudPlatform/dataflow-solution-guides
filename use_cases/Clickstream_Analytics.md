@@ -5,11 +5,10 @@ and marketing campaigns. Clickstream analytics provides a continuous stream of d
 with digital platforms. But to truly capitalize on this information, businesses need insights in real time,
 not days later.
 
-For the full version of this solution guide, please refer to:
-
 ## Documentation
 
 - [One pager: Clickstream analytics in real-time with Dataflow (PDF)](./one_pagers/clickstream_dataflow_onepager.pdf)
+- [Clickstream Analytics Solution Guide and Architecture (PDF)](./guides/clickstream_analytics_dataflow_guide.pdf)
 
 ## Assets included in this repository
 
@@ -47,3 +46,30 @@ Key capabilities make it the ideal choice for extracting maximum value from user
 - Open-Source Ecosystem: Leverage the power of the Apache Beam ecosystem, including a vast library of I/O
   connectors for various data sources and sinks. Dataflow's compatibility with open-source tools ensures flexibility
   and avoids vendor lock-in.
+
+## How to deploy (Agentic or Manual)
+
+### Option 1: Deploy with an AI Coding Harness (Recommended)
+
+Open this repository in your AI coding harness and prompt it to provision Bigtable, Pub/Sub, and BigQuery, seed reference metadata, launch the Java pipeline, and verify sessionized outputs:
+
+> *"Deploy the Clickstream Analytics guide in project `my-gcp-project` and region `us-central1` (check if the project uses a Shared VPC). Provision the Terraform infrastructure, populate the Cloud Bigtable lookup table, launch the Java Dataflow pipeline with private IPs, generate synthetic clickstream events, and verify that both raw enriched events and session UPSERTs land in BigQuery."*
+
+### Option 2: Manual CLI Deployment
+
+Follow the step-by-step instructions in the [Terraform module README](../terraform/clickstream_analytics/README.md) and [Pipeline README](../pipelines/clickstream_analytics_java/README.md):
+
+```bash
+# 1. Provision Pub/Sub, Cloud Bigtable & BigQuery infrastructure
+cd terraform/clickstream_analytics
+terraform init && terraform apply
+
+# 2. Seed Bigtable, launch the Java pipeline & publish synthetic clickstream events
+cd ../../pipelines/clickstream_analytics_java
+source scripts/00_set_variables.sh
+python3 scripts/populate_bigtable.py
+./scripts/01_launch_pipeline.sh
+python3 scripts/generate_clickstream_events.py
+```
+
+To tear down the deployment, cancel the active Dataflow job first, then run `terraform destroy` in `terraform/clickstream_analytics`.

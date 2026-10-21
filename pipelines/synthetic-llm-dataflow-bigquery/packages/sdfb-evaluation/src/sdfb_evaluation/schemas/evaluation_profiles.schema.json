@@ -1,0 +1,13 @@
+[
+  {"name": "evaluation_id", "type": "STRING", "mode": "REQUIRED", "description": "Evaluation run id this profile belongs to; joins to evaluation_data_history.evaluation_id."},
+  {"name": "evaluated_at", "type": "TIMESTAMP", "mode": "REQUIRED", "description": "Evaluation start time; partition key."},
+  {"name": "table_name", "type": "STRING", "mode": "REQUIRED", "description": "Table this profile was computed for."},
+  {"name": "column_name", "type": "STRING", "mode": "NULLABLE", "description": "Column this profile is scoped to, if column-level."},
+  {"name": "edge", "type": "STRING", "mode": "NULLABLE", "description": "FK edge this profile is scoped to, if relationship-level."},
+  {"name": "profile_kind", "type": "STRING", "mode": "REQUIRED", "description": "histogram | quantiles | topk | length_hist | shape_mix | char_classes | temporal_mix | null_patterns | corr_matrix | contingency | dcr_hist | nndr_hist | roc_curve | moments"},
+  {"name": "side", "type": "STRING", "mode": "REQUIRED", "description": "source | synthetic | reference | holdout | both"},
+  {"name": "n", "type": "INT64", "mode": "NULLABLE", "description": "Number of rows/values the profile was computed over."},
+  {"name": "truncated", "type": "BOOL", "mode": "NULLABLE", "description": "True if the profile payload was truncated (e.g. a top-k cutoff)."},
+  {"name": "edges_digest", "type": "STRING", "mode": "NULLABLE", "description": "Digest of the bin edges used, so payloads sharing it are directly comparable."},
+  {"name": "payload", "type": "JSON", "mode": "REQUIRED", "description": "literal policy D6 applied"}
+]

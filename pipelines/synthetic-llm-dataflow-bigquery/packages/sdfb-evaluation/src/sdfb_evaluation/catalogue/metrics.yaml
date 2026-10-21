@@ -1,0 +1,2219 @@
+#  Copyright 2026 Google LLC
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+# Metric catalogue v1 — the evaluation contract (E0).
+#
+# The single source of truth for every metric sdfb-evaluation computes. The
+# scoring code, the design doc's catalogue table and the GUI's info popovers
+# all read this file; `sdfb_evaluation.catalogue` parses it strictly.
+#
+# Every entry carries every key below (a missing or unknown key fails the
+# load). Notation in formulas: src = the FULL source table (D4), syn = the
+# synthetic (landing) table, p = source distribution, q = synthetic
+# distribution, R = the reference sample the generator read, H = an equally
+# sized holdout of source rows it never saw, E = the 1,024 prompt-exposed
+# reference rows and H_E its holdout twin (D3).
+#
+#   id            <level>.<name>, unique.
+#   version       per-metric version; bump it when the metric's value for the
+#                 same inputs would change.
+#   kinds         column kinds the metric applies to (field, column and pair
+#                 levels); [] above the column level.
+#   value_kind    distance | share | ratio | bits | correlation_delta | auc |
+#                 score | count.
+#   estimator     exact | binned | sketch | sample | value_sampled. "a/b" when
+#                 the column kind or the census budget picks one; the metric
+#                 row's `method` column records which one ran.
+#   direction     lower_better | higher_better | target.
+#   target        the value a perfect generator scores. On a `target` metric
+#                 status and score read d = |value - target|. On lower/higher
+#                 metrics it is informational (the R1 lifts 1.0, the holdout
+#                 share 0.5, detection AUC 0.5, adherence shares 1.0) and is
+#                 the D5 noise reference. null on a `target` metric (only
+#                 column.novelty_mass) = data-dependent: the row's
+#                 source_value is the target, and t = 0 is fine (d = value).
+#                 null elsewhere = the D5 noise reference is 0 for
+#                 lower_better and the top of the range (1) for
+#                 higher_better.
+#   range         [lo, hi] of the value; null = unbounded.
+#   thresholds    warn / fail effect sizes (never p-values, D5). Crossing is
+#                 inclusive (Ruling R9):
+#                 lower_better: WARN at value >= warn, FAIL at value >= fail;
+#                 higher_better: WARN at value <= warn, FAIL at value <= fail;
+#                 target: the same as lower_better, on d = |value - target|;
+#                 warn 0 / fail 0: integrity by construction, FAIL iff
+#                 value > 0 (PASS at exactly 0);
+#                 null / null: INFO only.
+#                 A WARN or FAIL also needs the value to clear sampling
+#                 noise relative to the noise reference (see target and
+#                 noise_floor, D5); otherwise it is PASS.
+#                 source: literature | repo-continuity | heuristic, or none
+#                 when there are no thresholds.
+#   score         maps the value to [0, 1], higher = better (Ruling R10):
+#                 complement   = clip(1 - |v| / range_hi, 0, 1);
+#                 linear       = lower_better: 1 at or under warn, 0 at or
+#                                over fail, linear between; mirrored for
+#                                higher_better (1 at or over warn, 0 at or
+#                                under fail);
+#                 ratio_to_one = with d = |v - target|: 1 at or under warn,
+#                                0 at or over fail, linear between;
+#                 auc          = 1 - 2 max(0, v - 0.5);
+#                 none         = v when 0 <= v <= 1, else null (a roll-up
+#                                score is its own score).
+#                 A row whose WARN or FAIL D5 attributes to sampling noise
+#                 is scored at its noise reference, score_value(metric,
+#                 reference) (Ruling R40): status and score stay coupled, so
+#                 an effect within sampling resolution is no effect for
+#                 either; every other row keeps the function's score.
+#   noise_floor   the method sizing sampling noise: ks_two_sample | wilson |
+#                 newcombe | tvd_null | jsd_null | fisher_z | mi_bias |
+#                 rate_ratio | delong | none (D5, Ruling R41). The scalar
+#                 methods (ks_two_sample, tvd_null, jsd_null, fisher_z,
+#                 mi_bias) call a difference noise when |value - reference|
+#                 <= the row's noise_floor; the interval methods (wilson,
+#                 newcombe, delong) when [ci_low, ci_high] covers the
+#                 reference; rate_ratio metrics gate on their CI bound
+#                 with no further check.
+#   n_dependent   the raw value moves with sample size, so it is computed at
+#                 matched n (D5).
+#   baseline      the row also stores baseline_value = metric(R, source): the
+#                 floor a perfect copier of the reference sample scores (D4).
+#   uses_ci_bound status AND score read the CI bound instead of the value:
+#                 ci_low for a lower-is-better metric, ci_high for a
+#                 higher-is-better one (Rulings R1, R12).
+#   formula       KaTeX, standard macros only.
+#   purpose / interpretation / pitfalls / references
+#                 popover text for a data engineer; references are https links
+#                 to the primary source (retrieved 2026-09-27).
+#
+# Family `overall` is the roll-up family: only the *.overall_score entries
+# carry it; every measured metric belongs to one of the other four.
+#
+# Roll-ups (Ruling R11). A table's family score is the mean over UNITS
+# with at least one metric in that family: each column (mean of its field
+# and column metrics), the pair group (mean of its pair metrics), each
+# row-level metric, each non-aggregate table-level metric, and each
+# foreign-key edge where the table is the child (mean of the edge's
+# metrics). Aggregate ids (table.*_score, table.column_shape_score,
+# table.pair_trend_score, model.*) never feed themselves. A model family
+# score is the mean of the table family scores; an overall score is the
+# mean of the available family scores.
+
+catalogue_version: "1.0.0"
+levels: [field, column, pair, row, table, relationship, model]
+families: [fidelity, privacy, integrity, diversity, overall]
+metrics:
+
+  # ---------------------------------------------------------------- field --
+
+  - id: field.category_adherence
+    version: "1"
+    title: "Category adherence"
+    level: field
+    family: fidelity
+    kinds: [categorical, boolean]
+    value_kind: share
+    estimator: exact/value_sampled
+    direction: higher_better
+    target: 1.0
+    range: [0, 1]
+    thresholds: {warn: 0.99, fail: 0.95, source: heuristic}
+    score: linear
+    noise_floor: wilson
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{CA} = \frac{1}{\lvert Y \rvert} \sum_{y \in Y} \mathbf{1}\left[ y \in \mathcal{D}_{src} \right]'
+    purpose: "Share of non-null synthetic values that also occur in the source column. A categorical generator should only emit categories the source has."
+    interpretation:
+      good: "Above 0.99 the generator stays inside the source vocabulary."
+      bad: "At or below 0.95, 1 value in 20 or more is an invented category (a typo, a hallucinated label, a format drift); the value census lists the top offenders."
+    pitfalls: "A column that emits only the most common category still scores 1.0: adherence says nothing about proportions (read column.tvd for that). On a value-sampled column the interval treats values, not rows, as the sampled units (the same stratified interval as field.substantive_copy_rate)."
+    references:
+      - {label: "SDMetrics — CategoryAdherence", url: "https://docs.sdv.dev/sdmetrics/data-metrics/diagnostic/categoryadherence"}
+      - {label: "Horvitz & Thompson 1952 — sampling without replacement from a finite universe", url: "https://doi.org/10.1080/01621459.1952.10483446"}
+      - {label: "Woodruff 1971 — approximating the variance of a complicated estimate", url: "https://doi.org/10.1080/01621459.1971.10482279"}
+      - {label: "Korn & Graubard 1998 — intervals for proportions with small expected counts from survey data (Survey Methodology 24(2))", url: "https://www150.statcan.gc.ca/n1/pub/12-001-x/1998002/article/4356-eng.pdf"}
+
+  - id: field.range_adherence
+    version: "1"
+    title: "Range adherence"
+    level: field
+    family: fidelity
+    kinds: [numeric, temporal]
+    value_kind: share
+    estimator: binned
+    direction: higher_better
+    target: 1.0
+    range: [0, 1]
+    thresholds: {warn: 0.99, fail: 0.95, source: heuristic}
+    score: linear
+    noise_floor: wilson
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{RA} = \frac{1}{\lvert Y \rvert} \sum_{y \in Y} \mathbf{1}\left[ \min_{src} \le y \le \max_{src} \right]'
+    purpose: "Share of non-null synthetic values inside the source column's observed [min, max]. Values outside are extrapolations the source never showed."
+    interpretation:
+      good: "Above 0.99 the generator respects the source's bounds."
+      bad: "At or below 0.95, 5 % or more of values fall outside the source range: negative quantities, future dates, prices far above the source maximum."
+    pitfalls: "A single source outlier widens [min, max] for everyone, so a generator that fills the whole range scores 1.0 even when the shape is wrong; pair it with column.ks."
+    references:
+      - {label: "SDMetrics — BoundaryAdherence", url: "https://docs.sdv.dev/sdmetrics/data-metrics/diagnostic/boundaryadherence"}
+
+  - id: field.shape_adherence
+    version: "1"
+    title: "Shape (mask) adherence"
+    level: field
+    family: fidelity
+    kinds: [text, identifier]
+    value_kind: share
+    estimator: exact
+    direction: higher_better
+    target: 1.0
+    range: [0, 1]
+    thresholds: {warn: 0.95, fail: 0.80, source: heuristic}
+    score: linear
+    noise_floor: wilson
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{SA} = \frac{1}{\lvert Y \rvert} \sum_{y \in Y} \mathbf{1}\left[ \operatorname{mask}(y) \in H_{src} \cup T_{src} \right]'
+    purpose: "Share of synthetic strings whose character mask (AB-1234 has mask AA-9999) is a source head mask, holding at least 2 % of source mass, or one of the source's pooled tail masks."
+    interpretation:
+      good: "Close to 1: synthetic strings follow the same templates as the source (codes, identifiers, phone formats)."
+      bad: "Low values mean new formats: a wrong length, letters where the source has digits, missing separators."
+    pitfalls: "On near-unique masks (free prose, UUID-like keys) almost every mask sits in the tail, so the score is weak evidence there; read column.shape_head_tv next to it."
+    references:
+      - {label: "ADR 0026 — measurement first, then mask integrity", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0026-measurement-first-mask-integrity.md"}
+
+  - id: field.substantive_copy_rate
+    version: "1"
+    title: "Substantive copy rate"
+    level: field
+    family: privacy
+    kinds: [categorical, text, identifier, numeric, temporal]
+    value_kind: share
+    estimator: exact/value_sampled
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 1.0e-4, fail: 1.0e-3, source: repo-continuity}
+    score: linear
+    noise_floor: wilson
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{SCR} = \frac{1}{\lvert Y_{sub} \rvert} \sum_{y \in Y_{sub}} \mathbf{1}\left[ 1 \le c_{src}(y) < 10 \right]'
+    purpose: "Share of substantive synthetic values (non-null, non-empty, not a 0001-/9999- date sentinel) that equal a RARE source value, one held by fewer than 10 source rows. Frequent values are k-anonymous category mass; rare ones copied verbatim look like memorization."
+    interpretation:
+      good: "Below 1e-4 (100 per million) copies are within coincidental-collision noise."
+      bad: "At or above 1e-3 on a free-text column, rare source strings are being reproduced; check field.value_memorization_lift to see whether they come from the rows the generator read."
+    pitfalls: "Gated only on free text (kind text), where the rule comes from. Every other kind reports INFO only: numeric and temporal values collide with a dense source by domain size, and reusing a rare real category or identifier is not evidence of memorization; field.value_memorization_lift (reference vs holdout) is the gated test there. On a value-sampled column the most frequent values are counted exactly and only the hash-sampled rest is uncertain: the interval is a Clopper-Pearson interval for the sampled rest's rate on its effective number of sampled values (Korn & Graubard), with the exact part added back as a known constant, so values, not rows, are the sampled units and a sample without a copy still bounds the rate."
+    references:
+      - {label: "Sweeney 2002 — k-anonymity", url: "https://doi.org/10.1142/S0218488502001648"}
+      - {label: "Carlini et al. 2021 — extracting training data from LLMs", url: "https://arxiv.org/abs/2012.07805"}
+      - {label: "config/thresholds.yml — freetext.copy_fraction", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/config/thresholds.yml"}
+      - {label: "Horvitz & Thompson 1952 — sampling without replacement from a finite universe", url: "https://doi.org/10.1080/01621459.1952.10483446"}
+      - {label: "Woodruff 1971 — approximating the variance of a complicated estimate", url: "https://doi.org/10.1080/01621459.1971.10482279"}
+      - {label: "Korn & Graubard 1998 — intervals for proportions with small expected counts from survey data (Survey Methodology 24(2))", url: "https://www150.statcan.gc.ca/n1/pub/12-001-x/1998002/article/4356-eng.pdf"}
+
+  - id: field.value_memorization_lift
+    version: "1"
+    title: "Value memorization lift (reference vs holdout)"
+    level: field
+    family: privacy
+    kinds: [categorical, text, identifier, numeric, temporal]
+    value_kind: ratio
+    estimator: exact/value_sampled
+    direction: lower_better
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 2, fail: 5, source: heuristic}
+    score: linear
+    noise_floor: rate_ratio
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: true
+    formula: '\operatorname{lift} = \frac{m_R / \lvert V_R \rvert}{m_H / \lvert V_H \rvert}, \quad \text{CI at } \alpha / m'
+    purpose: "How often synthetic values hit rare values found only in the reference sample R the generator read, relative to rare values found only in an equal-size holdout H it never saw. Chance hits both alike, so only copying lifts it above 1."
+    interpretation:
+      good: "CI lower bound below 2: no evidence of a 2× or larger lift. Smaller copying is not ruled out, and few hits give a wide interval."
+      bad: "CI lower bound at 5 or more: reference-only rare values reappear at five times the holdout rate or more; the generator is copying what it read."
+    pitfalls: "With few rare exclusive values the interval is wide and the point estimate swings, so status reads the CI lower bound (Bonferroni-corrected over the m columns tested); no hits on either side gives no ratio. A generator that draws empirical categoricals from R reproduces rare R-only values, so it FAILs by construction unless its source k-anonymity scrub (ADR 0027) removed the rare values first: a FAIL means rare sample values leaked, which is what the metric exists to show."
+    references:
+      - {label: "Przyborowski & Wilenski 1940 — comparing two Poisson counts", url: "https://doi.org/10.1093/biomet/31.3-4.313"}
+      - {label: "Clopper & Pearson 1934 — exact binomial interval", url: "https://doi.org/10.1093/biomet/26.4.404"}
+
+  - id: field.pool_memorization_lift
+    version: "1"
+    title: "Pool memorization lift (LLM free-text pools)"
+    level: field
+    family: privacy
+    kinds: [text]
+    value_kind: ratio
+    estimator: exact/value_sampled
+    direction: lower_better
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 2, fail: 5, source: heuristic}
+    score: linear
+    noise_floor: rate_ratio
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: true
+    formula: '\operatorname{lift}_{pool} = \frac{m_R / \lvert V_R \rvert}{m_H / \lvert V_H \rvert}, \quad m_S = \lvert P \cap V_S \rvert'
+    purpose: "The same reference-vs-holdout lift, measured on the persisted LLM free-text pool P of this run's (reference_digest, model_uri). It shows whether the copying happens inside the LLM stage itself."
+    interpretation:
+      good: "CI lower bound below 2: no evidence that the pool favours rare values the LLM was shown by 2× or more. Smaller copying is not ruled out, and few hits give a wide interval."
+      bad: "CI lower bound at 5 or more: the LLM writes rare reference values into the pool; every row drawn from it inherits the copy."
+    pitfalls: "Only evaluated when a pool for exactly this reference digest and model is found; a pool holds at most 512 values, so the interval is wide. Each pooled column is its own test at an uncorrected alpha of 0.05 (the pool lifts are a separate family from the value lift, which carries the Bonferroni correction across columns)."
+    references:
+      - {label: "ADR 0020 — free-text pools as a persisted artifact", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0020-freetext-pools-as-persisted-artifact.md"}
+      - {label: "Przyborowski & Wilenski 1940 — comparing two Poisson counts", url: "https://doi.org/10.1093/biomet/31.3-4.313"}
+
+  - id: field.type_validity
+    version: "1"
+    title: "Type validity"
+    level: field
+    family: integrity
+    kinds: [numeric, temporal, categorical, boolean, text, identifier, nested]
+    value_kind: share
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.9999, fail: 0.999, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{TV} = \frac{1}{\lvert Y \rvert} \sum_{y \in Y} \mathbf{1}\left[ y \text{ parses as the declared type} \right]'
+    purpose: "Share of non-null synthetic cells that are valid values of the column's declared BigQuery type. A broken cast or a truncated JSON cell lowers it."
+    interpretation:
+      good: "1.0 to four decimals: every cell is a well-formed value of its type."
+      bad: "At or below 0.999, at least 1 cell in 1,000 is malformed; downstream casts and JSON parsing will fail on real queries."
+    pitfalls: "It says nothing about plausibility: 1900-01-01 is a valid DATE. Read range_adherence and ks for that."
+    references:
+      - {label: "BigQuery — data types", url: "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/data-types"}
+
+  # --------------------------------------------------------------- column --
+
+  - id: column.null_rate_delta
+    version: "1"
+    title: "Null-rate difference"
+    level: column
+    family: fidelity
+    kinds: [numeric, temporal, categorical, boolean, text, identifier, nested]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.02, fail: 0.05, source: heuristic}
+    score: linear
+    noise_floor: newcombe
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\Delta_{null} = \lvert p^{syn}_{null} - p^{src}_{null} \rvert'
+    purpose: "Absolute difference between the synthetic and source shares of NULL in this column."
+    interpretation:
+      good: "Under 0.02 (2 percentage points): missingness matches the source."
+      bad: "At or above 0.05 the synthetic column is noticeably more (or less) complete than the source; COUNT and AVG results drift."
+    pitfalls: "It compares marginal rates only; which columns are null together is row.null_pattern_tvd."
+    references:
+      - {label: "Newcombe 1998 — interval for a difference of proportions", url: "https://doi.org/10.1002/(SICI)1097-0258(19980430)17:8%3C873::AID-SIM779%3E3.0.CO;2-I"}
+
+  - id: column.empty_rate_delta
+    version: "1"
+    title: "Empty-string-rate difference"
+    level: column
+    family: fidelity
+    kinds: [categorical, text, identifier]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.02, fail: 0.05, source: heuristic}
+    score: linear
+    noise_floor: newcombe
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\Delta_{empty} = \lvert p^{syn}_{empty} - p^{src}_{empty} \rvert'
+    purpose: "Absolute difference between the synthetic and source shares of empty (or whitespace-only) strings. Empty and NULL are different facts in BigQuery, so they are scored apart."
+    interpretation:
+      good: "Under 0.02: blanks appear as often as in the source."
+      bad: "At or above 0.05 the generator over- or under-emits blanks; an LLM that never leaves a field blank is the common cause."
+    pitfalls: "Legacy loads that wrote empty strings instead of NULL make the source rate itself an artifact; compare with null_rate_delta before blaming the generator."
+    references:
+      - {label: "Newcombe 1998 — interval for a difference of proportions", url: "https://doi.org/10.1002/(SICI)1097-0258(19980430)17:8%3C873::AID-SIM779%3E3.0.CO;2-I"}
+
+  - id: column.ks
+    version: "1"
+    title: "Kolmogorov–Smirnov distance (exact at bin edges)"
+    level: column
+    family: fidelity
+    kinds: [numeric, temporal]
+    value_kind: distance
+    estimator: binned
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: complement
+    noise_floor: ks_two_sample
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: 'D_{lo} = \max_i \lvert F_{src}(e_i) - F_{syn}(e_i) \rvert'
+    purpose: "Largest vertical gap between the source and synthetic CDFs, measured exactly at the bin edges (the union of both sides' 1,001-quantile grids). D_lo is a lower bound; the row's detail carries the matching upper bound D_hi."
+    interpretation:
+      good: "Below the noise floor (and near the baseline) the synthetic column is as close as sampling allows."
+      bad: "A large D says some quantile moved; open the ECDF overlay to see where."
+    pitfalls: "Blind to how FAR the tail moved (see pit_w1 and wasserstein); never read a p-value at n = 10^7, where every difference is significant."
+    references:
+      - {label: "Smirnov 1948 — two-sample KS", url: "https://doi.org/10.1214/aoms/1177730256"}
+      - {label: "Massart 1990 — tight DKW constant", url: "https://doi.org/10.1214/aop/1176990746"}
+
+  - id: column.pit_w1
+    version: "1"
+    title: "PIT Wasserstein-1 (scale-free)"
+    level: column
+    family: fidelity
+    kinds: [numeric, temporal]
+    value_kind: distance
+    estimator: binned
+    direction: lower_better
+    target: null
+    range: [0, 0.5]
+    thresholds: {warn: 0.05, fail: 0.10, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: 'W_1^{PIT} = \int \lvert F_{syn}(x) - F_{src}(x) \rvert \, dF_{src}(x) \in \left[ 0, \frac{1}{2} \right]'
+    purpose: "Average CDF gap weighted by where the source has mass: the Wasserstein-1 distance after mapping both columns through the source CDF (probability integral transform). Unit-free, so one threshold fits prices, ages and timestamps."
+    interpretation:
+      good: "Under 0.05: on average a synthetic value sits within roughly 5 source percentiles of where it should."
+      bad: "At or above 0.10, synthetic values sit on average more than a source decile from where they should (a shifted or collapsed column); 0.5 means the two columns do not overlap at all."
+    pitfalls: "The transform squeezes the source's sparse tails, so a far-out synthetic tail counts little here; column.wasserstein keeps the column's units for that."
+    references:
+      - {label: "Gneiting et al. 2007 — probability integral transform", url: "https://doi.org/10.1111/j.1467-9868.2007.00587.x"}
+      - {label: "Ramdas et al. 2017 — Wasserstein two-sample testing", url: "https://doi.org/10.3390/e19020047"}
+
+  - id: column.wasserstein
+    version: "1"
+    title: "Wasserstein-1 distance (column units)"
+    level: column
+    family: fidelity
+    kinds: [numeric, temporal]
+    value_kind: distance
+    estimator: binned
+    direction: lower_better
+    target: null
+    range: [0, null]
+    thresholds: {warn: null, fail: null, source: none}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: 'W_1 = \int_{-\infty}^{\infty} \lvert F_{syn}(x) - F_{src}(x) \rvert \, dx'
+    purpose: "How far, in the column's own units, the synthetic mass must move to match the source (the earth mover's distance). Informational: its scale is the column's, so it has no threshold."
+    interpretation:
+      good: "Small next to the column's interquartile range: values moved by a fraction of a typical difference."
+      bad: "Comparable to the interquartile range or larger: the bulk of the distribution has shifted by a typical spread."
+    pitfalls: "Computed from bin counts between the outermost edges; mass beyond them is reported as tail masses in detail, not in the value. Compare runs of the same column only."
+    references:
+      - {label: "Ramdas et al. 2017 — Wasserstein two-sample testing", url: "https://doi.org/10.3390/e19020047"}
+
+  - id: column.decile_ks_legacy
+    version: "1"
+    title: "Decile KS (legacy, for continuity)"
+    level: column
+    family: fidelity
+    kinds: [numeric]
+    value_kind: distance
+    estimator: binned
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.20, fail: 0.40, source: repo-continuity}
+    score: complement
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: 'D_{dec} = \max_{x \in G} \lvert \tilde{F}_{src}(x) - \tilde{F}_{syn}(x) \rvert, \quad G = Q^{src}_{0..10} \cup Q^{syn}_{0..10}'
+    purpose: "The verbatim decile_ks of source_synthetic_stats_diff.py: KS between piecewise-linear CDFs drawn through each side's 11 deciles. Kept so new runs stay comparable with the numeric.decile_ks rule's history."
+    interpretation:
+      good: "Under 0.20, the script's historical pass band."
+      bad: "At or above 0.40, the rule's MAJOR band: the deciles disagree grossly."
+    pitfalls: "Eleven points cannot resolve anything between deciles (worst-case error 0.2), so it is continuity only; column.ks is the exact measure."
+    references:
+      - {label: "scripts/e2e/source_synthetic_stats_diff.py — decile_ks", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/scripts/e2e/source_synthetic_stats_diff.py"}
+      - {label: "config/thresholds.yml — numeric.decile_ks", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/config/thresholds.yml"}
+
+  - id: column.jsd
+    version: "1"
+    title: "Jensen–Shannon divergence (bits)"
+    level: column
+    family: fidelity
+    kinds: [numeric, temporal, categorical, boolean]
+    value_kind: bits
+    estimator: exact/binned/value_sampled
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.05, fail: 0.10, source: heuristic}
+    score: linear
+    noise_floor: jsd_null
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{JSD}(p, q) = \frac{1}{2} \sum_k p_k \log_2 \frac{p_k}{m_k} + \frac{1}{2} \sum_k q_k \log_2 \frac{q_k}{m_k}, \quad m = \frac{p + q}{2}'
+    purpose: "Symmetric information distance between the source and synthetic distributions, in bits: over values for categorical columns, over the source-decile bins with open tails for numeric ones. No smoothing, so mass on one side only counts in full."
+    interpretation:
+      good: "Under 0.05 bits: the two distributions are nearly indistinguishable at this resolution."
+      bad: "At or above 0.10 bits a visible share of mass sits in the wrong categories or bins; 1 bit means disjoint supports."
+    pitfalls: "On numeric columns it sees only the decile bins, so shape changes inside a decile are invisible; column.ks and column.pit_w1 resolve those."
+    references:
+      - {label: "Lin 1991 — divergence measures based on Shannon entropy", url: "https://doi.org/10.1109/18.61115"}
+
+  - id: column.tvd
+    version: "1"
+    title: "Total variation distance (categories)"
+    level: column
+    family: fidelity
+    kinds: [categorical, boolean]
+    value_kind: distance
+    estimator: exact/value_sampled
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: complement
+    noise_floor: tvd_null
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{TVD}(p, q) = 1 - \sum_k \min(p_k, q_k) = \frac{1}{2} \sum_k \lvert p_k - q_k \rvert'
+    purpose: "The share of probability mass that sits in the wrong category: how much of the synthetic column would have to be relabelled to match the source."
+    interpretation:
+      good: "Under 0.10: fewer than 1 row in 10 would need a different category."
+      bad: "At or above 0.20: one row in five or more is in the wrong category mix; often the head category is over-produced."
+    pitfalls: "Long-tail columns with thousands of rare values carry a sampling floor even for a perfect generator; compare with the noise floor and the baseline before reading the value."
+    references:
+      - {label: "SDMetrics — TVComplement", url: "https://docs.sdv.dev/sdmetrics/data-metrics/quality/tvcomplement"}
+
+  - id: column.psi
+    version: "1"
+    title: "Population stability index (deciles)"
+    level: column
+    family: fidelity
+    kinds: [numeric, temporal]
+    value_kind: distance
+    estimator: binned
+    direction: lower_better
+    target: null
+    range: [0, null]
+    thresholds: {warn: 0.10, fail: 0.25, source: literature}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{PSI} = \sum_{b=1}^{B} (q_b - p_b) \ln \frac{q_b}{p_b}, \quad p_b = \frac{c^{src}_b + 0.5}{n_{src} + 0.5 B}'
+    purpose: "The credit-risk drift index over the 10 source-decile bins, the outer two open-ended so values beyond the source's range still count, with +0.5-count smoothing so an empty bin cannot divide by zero."
+    interpretation:
+      good: "Under 0.10: no meaningful shift (the conventional stable band)."
+      bad: "From 0.10 up to 0.25 is a moderate shift; 0.25 or more is a major one, by the conventional bands."
+    pitfalls: "The +0.5 pseudo-count keeps empty-bin terms finite, so with an empty or near-empty bin the value hinges on that pseudo-count and on n; a large PSI from mass beyond the source's range is a real signal, not an artifact."
+    references:
+      - {label: "Yurdakul & Naranjo 2020 — statistical properties of the PSI", url: "https://doi.org/10.21314/JRMV.2020.227"}
+
+  - id: column.smd
+    version: "1"
+    title: "Standardized mean difference"
+    level: column
+    family: fidelity
+    kinds: [numeric, temporal]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, null]
+    thresholds: {warn: 0.10, fail: 0.20, source: literature}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{SMD} = \frac{\lvert \mu_{syn} - \mu_{src} \rvert}{\sigma_{src}}'
+    purpose: "How far the synthetic mean sits from the source mean, in source standard deviations."
+    interpretation:
+      good: "Under 0.10: a negligible shift (the usual balance threshold)."
+      bad: "At or above 0.20, Cohen's 'small' effect or more: averages computed on the synthetic table are visibly biased."
+    pitfalls: "The mean hides shape: a bimodal source matched by a unimodal synthetic column can score 0. Undefined when the source is constant."
+    references:
+      - {label: "Cohen 1988 — statistical power analysis, 2nd ed. (effect sizes)", url: "https://doi.org/10.4324/9780203771587"}
+      - {label: "Austin 2009 — balance diagnostics (SMD < 0.1)", url: "https://doi.org/10.1002/sim.3697"}
+
+  - id: column.std_ratio
+    version: "1"
+    title: "Standard-deviation ratio"
+    level: column
+    family: fidelity
+    kinds: [numeric, temporal]
+    value_kind: ratio
+    estimator: exact
+    direction: target
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 0.10, fail: 0.25, source: heuristic}
+    score: ratio_to_one
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{SR} = \frac{\sigma_{syn}}{\sigma_{src}}'
+    purpose: "Synthetic spread relative to source spread; 1 means the same dispersion."
+    interpretation:
+      good: "Less than 0.10 from 1: the spread matches."
+      bad: "0.25 or more away from 1. Below 1 the generator is too timid (values cluster at the centre, a mode-collapse sign); above 1 it scatters too widely."
+    pitfalls: "One extreme synthetic outlier can inflate the standard deviation on its own; read it with pit_w1 and range_adherence."
+    references:
+      - {label: "Austin 2009 — balance diagnostics (variance ratio)", url: "https://doi.org/10.1002/sim.3697"}
+
+  - id: column.zero_rate_delta
+    version: "1"
+    title: "Zero-rate difference"
+    level: column
+    family: fidelity
+    kinds: [numeric]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.02, fail: 0.05, source: heuristic}
+    score: linear
+    noise_floor: newcombe
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\Delta_{0} = \lvert p^{syn}_{0} - p^{src}_{0} \rvert'
+    purpose: "Absolute difference between the synthetic and source shares of exact zeros. Zero is often a special value (no discount, no balance) that a smooth sampler under-produces."
+    interpretation:
+      good: "Under 0.02: zeros appear as often as in the source."
+      bad: "At or above 0.05 the zero spike is lost (or invented); sums and 'share of customers with none' drift."
+    pitfalls: "Only an exact 0 counts; 0.001 from a continuous sampler is not a zero, which is exactly the failure this catches."
+    references:
+      - {label: "Newcombe 1998 — interval for a difference of proportions", url: "https://doi.org/10.1002/(SICI)1097-0258(19980430)17:8%3C873::AID-SIM779%3E3.0.CO;2-I"}
+
+  - id: column.range_coverage
+    version: "1"
+    title: "Range coverage"
+    level: column
+    family: diversity
+    kinds: [numeric, temporal]
+    value_kind: share
+    estimator: binned
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.90, fail: 0.75, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{RC} = \frac{\max\left(0, \min(M_{syn}, M_{src}) - \max(m_{syn}, m_{src})\right)}{M_{src} - m_{src}}'
+    purpose: "Share of the source's [min, max] range (m, M) that the synthetic values also span. A generator that never reaches the source's extremes scores below 1."
+    interpretation:
+      good: "Above 0.90: the synthetic column explores nearly the full source range."
+      bad: "At or below 0.75 a quarter or more of the range is never generated; typically the high tail (large orders, old dates) is missing."
+    pitfalls: "Min and max are single points: one synthetic value at each extreme gives 1.0 even if the tails between are empty. Read ks for mass."
+    references:
+      - {label: "SDMetrics — RangeCoverage", url: "https://docs.sdv.dev/sdmetrics/data-metrics/quality/rangecoverage"}
+
+  - id: column.dow_tvd
+    version: "1"
+    title: "Day-of-week mix (TVD)"
+    level: column
+    family: fidelity
+    kinds: [temporal]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: complement
+    noise_floor: tvd_null
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{TVD}_{dow} = \frac{1}{2} \sum_{d=1}^{7} \lvert p_d - q_d \rvert'
+    purpose: "Total variation between the source and synthetic day-of-week mixes. It catches calendars that ignore weekly cycles, such as orders spread evenly over weekends."
+    interpretation:
+      good: "Under 0.10: the weekly rhythm matches."
+      bad: "At or above 0.20: one row in five or more falls on the wrong weekday mix; business-day patterns are lost."
+    pitfalls: "A weak check on its own: uniform sampling over a long date range already gets a near-flat weekday mix right, so read month_tvd and the date histogram for seasonality."
+    references:
+      - {label: "ADR 0022 — stats-driven generation (temporal mixes)", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0022-stats-driven-generation.md"}
+
+  - id: column.month_tvd
+    version: "1"
+    title: "Month-of-year mix (TVD)"
+    level: column
+    family: fidelity
+    kinds: [temporal]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: complement
+    noise_floor: tvd_null
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{TVD}_{month} = \frac{1}{2} \sum_{k=1}^{12} \lvert p_k - q_k \rvert'
+    purpose: "Total variation between the source and synthetic month-of-year mixes. It catches lost seasonality, such as a December peak flattened across the year."
+    interpretation:
+      good: "Under 0.10: the yearly rhythm matches."
+      bad: "At or above 0.20: seasonal peaks and troughs are misplaced or missing."
+    pitfalls: "A source covering part of a year has a lopsided month mix by coverage, not by season; read it against the baseline."
+    references:
+      - {label: "ADR 0022 — stats-driven generation (temporal mixes)", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0022-stats-driven-generation.md"}
+
+  - id: column.hour_tvd
+    version: "1"
+    title: "Hour-of-day mix (TVD)"
+    level: column
+    family: fidelity
+    kinds: [temporal]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: complement
+    noise_floor: tvd_null
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{TVD}_{hour} = \frac{1}{2} \sum_{h=0}^{23} \lvert p_h - q_h \rvert'
+    purpose: "Total variation between the source and synthetic hour-of-day mixes, computed only for sub-day columns (a real time part). It catches events spread evenly over the night when the source follows business hours."
+    interpretation:
+      good: "Under 0.10: the daily rhythm matches."
+      bad: "At or above 0.20: activity happens at the wrong hours."
+    pitfalls: "Columns stamped at midnight (dates stored as timestamps) are skipped as not sub-day; in a mixed column the midnight spike counts as hour 0."
+    references:
+      - {label: "ADR 0022 — stats-driven generation (temporal mixes)", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0022-stats-driven-generation.md"}
+
+  - id: column.cohens_w
+    version: "1"
+    title: "Cohen's w (category effect size)"
+    level: column
+    family: fidelity
+    kinds: [categorical, boolean]
+    value_kind: distance
+    estimator: exact/value_sampled
+    direction: lower_better
+    target: null
+    range: [0, null]
+    thresholds: {warn: 0.10, fail: 0.30, source: literature}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: 'w = \sqrt{\sum_{k : p_k > 0} \frac{(q_k - p_k)^2}{p_k}}'
+    purpose: "Effect size of the difference between the two category mixes, on the scale Cohen defined for chi-square tests; unlike the test, it does not grow with sample size."
+    interpretation:
+      good: "Under 0.10: below Cohen's 'small' effect."
+      bad: "At or above 0.30: a 'medium' effect or more; the category mix differs enough to change conclusions."
+    pitfalls: "Rare source categories (small p) dominate the sum, and synthetic mass on categories absent from the source is excluded (reported in detail as q_mass_on_p0)."
+    references:
+      - {label: "Cohen 1988 — statistical power analysis, 2nd ed. (effect sizes)", url: "https://doi.org/10.4324/9780203771587"}
+
+  - id: column.top1_share_delta
+    version: "1"
+    title: "Top-value share difference"
+    level: column
+    family: diversity
+    kinds: [categorical, boolean]
+    value_kind: distance
+    estimator: exact/value_sampled
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.05, fail: 0.15, source: heuristic}
+    score: linear
+    noise_floor: newcombe
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\Delta_{top1} = \lvert \max_k q_k - \max_k p_k \rvert'
+    purpose: "Difference between the share of the most frequent synthetic value and that of the most frequent source value. A mode-collapsing generator over-produces its favourite value."
+    interpretation:
+      good: "Under 0.05: the dominant value is as dominant as in the source."
+      bad: "At or above 0.15: the head is inflated (mode collapse) or flattened (too uniform)."
+    pitfalls: "It compares the two shares, not the two values: a different top category with the same share scores 0, and column.tvd catches that."
+    references:
+      - {label: "Newcombe 1998 — interval for a difference of proportions", url: "https://doi.org/10.1002/(SICI)1097-0258(19980430)17:8%3C873::AID-SIM779%3E3.0.CO;2-I"}
+
+  - id: column.coverage_mass
+    version: "1"
+    title: "Coverage mass"
+    level: column
+    family: diversity
+    kinds: [categorical, boolean]
+    value_kind: share
+    estimator: exact/value_sampled
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.95, fail: 0.80, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{Cov} = \sum_{v \in S \cap Y} p_v'
+    purpose: "Share of source rows whose value the synthetic column also produces. Low coverage means whole categories were never generated."
+    interpretation:
+      good: "Above 0.95: nearly all source mass has a synthetic counterpart."
+      bad: "At or below 0.80: a fifth or more of the source rows carry values the generator never emits; rare categories are dropped."
+    pitfalls: "Mass-weighted, so dropping many rare categories barely moves it; column.distinct_ratio shows how many distinct values are missing."
+    references:
+      - {label: "Naeem et al. 2020 — coverage (concept)", url: "https://arxiv.org/abs/2002.09797"}
+
+  - id: column.novelty_mass
+    version: "1"
+    title: "Novelty mass vs the source's unseen mass"
+    level: column
+    family: diversity
+    kinds: [categorical, text, identifier]
+    value_kind: share
+    estimator: exact/value_sampled
+    direction: target
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.25, source: heuristic}
+    score: ratio_to_one
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\nu_{syn} = \sum_{v \notin S} q_v, \quad t = \hat{\nu}_{src} = \frac{f_1}{N}, \quad d = \lvert \nu_{syn} - t \rvert'
+    purpose: "Share of synthetic rows carrying a value the source never had, against the Good–Turing estimate f1/N (source singletons over source rows) of how often a fresh source sample would show one. A faithful generator invents values at about that rate."
+    interpretation:
+      good: "Less than 0.10 from the source's f1/N: new values appear at about the natural rate."
+      bad: "0.25 or more away. Below the target the generator only replays source values (a copying risk on free text); above it, it invents values a closed vocabulary never has."
+    pitfalls: "The target is data-dependent: it is the row's source_value, and t = 0 on a closed vocabulary simply makes d the novelty itself. f1/N is itself noisy on small sources."
+    references:
+      - {label: "Good 1953 — population frequencies of species", url: "https://doi.org/10.1093/biomet/40.3-4.237"}
+
+  - id: column.entropy_ratio
+    version: "1"
+    title: "Entropy ratio at matched n"
+    level: column
+    family: diversity
+    kinds: [categorical, boolean, text, identifier]
+    value_kind: ratio
+    estimator: exact/value_sampled
+    direction: target
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 0.10, fail: 0.25, source: heuristic}
+    score: ratio_to_one
+    noise_floor: none
+    n_dependent: true
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{ER} = \frac{\hat{H}^{(m)}_{syn}}{\hat{H}^{(m)}_{src}}, \quad \hat{H}^{(m)} = -\sum_v \frac{c_v}{m} \log_2 \frac{c_v}{m}'
+    purpose: "Plug-in Shannon entropy of the synthetic column over that of the source, both on matched subsamples of m = min(n_src, n_syn) rows. Below 1 the synthetic values are less diverse; above 1, more uniform than the source."
+    interpretation:
+      good: "Less than 0.10 from 1: the value diversity matches."
+      bad: "At or below 0.75 diversity collapsed (few values repeated, e.g. a small LLM pool); at or above 1.25 the generator spreads mass too evenly."
+    pitfalls: "Plug-in entropy is biased low and the bias depends on n, which is why both sides use the same m; the detail's Miller–Madow and Chao–Shen values give the bias-corrected picture."
+    references:
+      - {label: "Shannon 1948 — a mathematical theory of communication", url: "https://doi.org/10.1002/j.1538-7305.1948.tb01338.x"}
+      - {label: "Paninski 2003 — estimation of entropy and mutual information", url: "https://doi.org/10.1162/089976603321780272"}
+      - {label: "Chao & Shen 2003 — entropy with unseen species", url: "https://doi.org/10.1023/A:1026096204727"}
+
+  - id: column.distinct_ratio
+    version: "1"
+    title: "Distinct-count ratio at matched n"
+    level: column
+    family: diversity
+    kinds: [categorical, text, identifier]
+    value_kind: ratio
+    estimator: exact/value_sampled
+    direction: target
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 0.10, fail: 0.30, source: heuristic}
+    score: ratio_to_one
+    noise_floor: none
+    n_dependent: true
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{DR} = \frac{K^{(m)}_{syn}}{K^{(m)}_{src}}'
+    purpose: "Distinct synthetic values over distinct source values, both counted on matched subsamples of m rows. It catches a generator that recycles a small set of values."
+    interpretation:
+      good: "Less than 0.10 from 1: as many distinct values as a same-size source sample."
+      bad: "At or below 0.70 the generator recycles too few values (the 512-value LLM pool cap is the classic cause); at or above 1.30 it invents too many."
+    pitfalls: "Distinct counts grow with n, so a full-n ratio between a 10k-row source and a 10M-row synthetic table means nothing; only the matched-n value is gated (detail adds the rarefaction estimate)."
+    references:
+      - {label: "Hurlbert 1971 — rarefaction and the nonconcept of diversity", url: "https://doi.org/10.2307/1934145"}
+
+  - id: column.distinct_ceiling_hit
+    version: "1"
+    title: "Distinct-count ceiling hit (pool cap)"
+    level: column
+    family: diversity
+    kinds: [text]
+    value_kind: count
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.5, fail: 1, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{hit} = \mathbf{1}\left[ K_{syn} \in \{ 512, K_{target} \} \right]'
+    purpose: "A 0/1 flag: 1 when the synthetic distinct count lands exactly on the LLM free-text pool cap (512) or on the pool target the generator logged. The column's variety was then set by the pool size, not by the source."
+    interpretation:
+      good: "0: the distinct count is not pinned to a pool size."
+      bad: "1: every synthetic value came from a fixed-size pool; distinct_ratio and entropy_ratio read low for that reason."
+    pitfalls: "A column can land on exactly 512 distinct values by chance; the flag is meaningful on free-text columns routed through the LLM pool."
+    references:
+      - {label: "ADR 0018 — batched, parallel free-text pools", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0018-parallel-batched-freetext-pools.md"}
+      - {label: "ADR 0033 — pool-ladder integrity at scale", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0033-pool-ladder-integrity-at-scale.md"}
+
+  - id: column.length_ks
+    version: "1"
+    title: "String-length KS"
+    level: column
+    family: fidelity
+    kinds: [categorical, text, identifier]
+    value_kind: distance
+    estimator: binned
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: complement
+    noise_floor: ks_two_sample
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: 'D_{len} = \max_{\ell} \lvert F^{len}_{src}(\ell) - F^{len}_{syn}(\ell) \rvert'
+    purpose: "Kolmogorov–Smirnov distance between the source and synthetic distributions of string length (one bin per length from 0 to 255, plus one for 256 and longer)."
+    interpretation:
+      good: "Under 0.10: strings are as long as the source's."
+      bad: "At or above 0.20: the generator writes systematically shorter or longer text (truncated notes, padded codes, LLM verbosity)."
+    pitfalls: "Lengths of 256 characters and more share one bin, so differences among long texts are invisible."
+    references:
+      - {label: "Smirnov 1948 — two-sample KS", url: "https://doi.org/10.1214/aoms/1177730256"}
+
+  - id: column.shape_head_tv
+    version: "1"
+    title: "Shape head total variation"
+    level: column
+    family: fidelity
+    kinds: [text, identifier]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: complement
+    noise_floor: tvd_null
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{TV}_{head} = \frac{1}{2} \left( \sum_{s \in H_{src}} \lvert p_s - q_s \rvert + \lvert p_{tail} - q_{tail} \rvert \right)'
+    purpose: "Total variation over character-mask mixes: each source mask with at least 2 % of mass keeps its own bin, all rarer masks share one tail bin. Inverted format mixes stay visible while near-unique tails compare as one bucket."
+    interpretation:
+      good: "Under 0.10: the synthetic format mix matches the source's."
+      bad: "At or above 0.20: formats are re-weighted, e.g. a 69 %/31 % source split rendered as 8 %/92 %."
+    pitfalls: "Not evaluated for long prose, whose masks are all unique; the raw, un-pooled TV in detail saturates near 1 on such columns even for a perfect generator."
+    references:
+      - {label: "ADR 0026 — measurement first, then mask integrity", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0026-measurement-first-mask-integrity.md"}
+      - {label: "scripts/e2e/freetext_crosscheck.py — _shape_tv", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/scripts/e2e/freetext_crosscheck.py"}
+
+  - id: column.char_class_l1
+    version: "1"
+    title: "Character-class profile distance"
+    level: column
+    family: fidelity
+    kinds: [categorical, text, identifier]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 5]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: 'L_1 = \sum_{k \in K} \lvert f^{syn}_k - f^{src}_k \rvert, \quad K = \{ \text{digit}, \text{upper}, \text{lower}, \text{space}, \text{punct} \}'
+    purpose: "Sum over five character classes of the difference in the share of strings containing at least one character of that class. It catches text that is suddenly all lowercase, digit-free or unpunctuated."
+    interpretation:
+      good: "Under 0.10: the character make-up matches."
+      bad: "At or above 0.20: at least one class is clearly over- or under-used, e.g. identifiers losing their digits or free text losing punctuation."
+    pitfalls: "Presence only: a1 and a111111 both count once for digits, so proportions inside a string are invisible."
+    references:
+      - {label: "scripts/e2e/freetext_crosscheck.py — character classes", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/scripts/e2e/freetext_crosscheck.py"}
+
+  - id: column.source_stats_drift
+    version: "1"
+    title: "Source-stats drift (evaluator vs generator)"
+    level: column
+    family: integrity
+    kinds: [numeric, temporal, categorical, boolean, text, identifier]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.05, fail: 0.15, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\delta = \max\left( \lvert \Delta p_{null} \rvert,\, \max_{i=1}^{9} \operatorname{dist}\left( \frac{i}{10}, \left[ F^{-}_{src}(d_i), F_{src}(d_i) \right] \right),\, \frac{\lvert D_{gen} - D_{src} \rvert}{\max(D_{gen}, D_{src})} \right)'
+    purpose: "Largest difference between the source_table_stats row the generator used and the evaluator's own dense profile of the source (Ruling R62): the null fraction; for a numeric column, how far the evaluator's source CDF puts the generator's nine inner deciles d_i from their ranks i/10; and, on the exact stats tier, the relative distinct-count difference. It checks that the generator was steered by the same source the evaluation compares against."
+    interpretation:
+      good: "Under 0.05: the generator's view of the source matches the source evaluated today."
+      bad: "At or above 0.15: the generator used stale or tier-limited stats, so fidelity gaps on this column may not be the generator's fault."
+    pitfalls: "It audits the generator's input, not its output: a drift here explains fidelity failures rather than being one. On the sample tier the distinct count is not compared (it is bounded by the reference sample), and the deciles carry the sample's own noise (about 0.02 at 1,000 rows); temporal and non-numeric columns compare the null fraction only. With no stats row (tier off, no stats table, no reference digest) it is not evaluated, with the reason."
+    references:
+      - {label: "ADR 0022 — stats-driven generation", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0022-stats-driven-generation.md"}
+
+  # ----------------------------------------------------------------- pair --
+
+  - id: pair.pearson_delta
+    version: "1"
+    title: "Pearson correlation difference"
+    level: pair
+    family: fidelity
+    kinds: [numeric, temporal]
+    value_kind: correlation_delta
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 2]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: linear
+    noise_floor: fisher_z
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\Delta\rho = \lvert \rho_{src} - \rho_{syn} \rvert'
+    purpose: "Difference between the source and synthetic Pearson correlations of a column pair, computed from standardized co-moments so that large values such as epoch timestamps stay numerically stable."
+    interpretation:
+      good: "Under 0.10: the linear relation between the two columns is preserved."
+      bad: "At or above 0.20 the generator broke (or invented) a linear relation, e.g. price and quantity drawn independently."
+    pitfalls: "Pearson sees only linear association and is pulled by outliers; spearman_delta covers monotone relations."
+    references:
+      - {label: "Chan, Golub & LeVeque 1983 — stable variance algorithms", url: "https://doi.org/10.1080/00031305.1983.10483115"}
+      - {label: "Pébay 2008 — one-pass parallel co-moments", url: "https://doi.org/10.2172/1028931"}
+
+  - id: pair.spearman_delta
+    version: "1"
+    title: "Spearman rank-correlation difference"
+    level: pair
+    family: fidelity
+    kinds: [numeric, temporal]
+    value_kind: correlation_delta
+    estimator: binned
+    direction: lower_better
+    target: null
+    range: [0, 2]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: linear
+    noise_floor: fisher_z
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\Delta\rho^S = \lvert \rho^S_{src} - \rho^S_{syn} \rvert, \quad \rho^S = \operatorname{corr}\left( F_X(x), F_Y(y) \right)'
+    purpose: "Difference between the Spearman rank correlations, where each side ranks its values through its OWN CDF (probability integral transform). It captures monotone relations whatever their scale."
+    interpretation:
+      good: "Under 0.10: the monotone relation is preserved."
+      bad: "At or above 0.20: one column no longer rises (or falls) with the other as it does in the source."
+    pitfalls: "Ranks come from binned CDFs, so ties inside a bin blur very fine structure; heavy ties (many equal values) lower both sides' correlation."
+    references:
+      - {label: "Spearman 1904 — measurement of association", url: "https://doi.org/10.2307/1412159"}
+
+  - id: pair.cramers_v_delta
+    version: "1"
+    title: "Cramér's V difference (bias-corrected)"
+    level: pair
+    family: fidelity
+    kinds: [categorical, boolean, numeric, temporal]
+    value_kind: correlation_delta
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\Delta\tilde{V} = \lvert \tilde{V}_{src} - \tilde{V}_{syn} \rvert, \quad \tilde{V} = \sqrt{\frac{\tilde{\varphi}^2}{\min(\tilde{k} - 1, \tilde{r} - 1)}}, \quad \tilde{\varphi}^2 = \max\left(0, \frac{\chi^2}{n} - \frac{(k-1)(r-1)}{n-1}\right), \quad \tilde{k} = k - \frac{(k-1)^2}{n-1}, \quad \tilde{r} = r - \frac{(r-1)^2}{n-1}'
+    purpose: "Difference in association strength between two columns (categorical, or binned when numeric), using Bergsma's bias-corrected Cramér's V so that sparse tables do not fake an association."
+    interpretation:
+      good: "Under 0.10: the dependence between the pair is preserved."
+      bad: "At or above 0.20: the generator treats the pair as nearly independent when the source links them, or links them when the source does not."
+    pitfalls: "V measures strength, not which cells carry it; pair.contingency_tvd shows where the joint table differs."
+    references:
+      - {label: "Bergsma 2013 — bias-corrected Cramér's V", url: "https://doi.org/10.1016/j.jkss.2012.10.002"}
+
+  - id: pair.nmi_delta
+    version: "1"
+    title: "Normalized mutual information difference"
+    level: pair
+    family: fidelity
+    kinds: [categorical, boolean, numeric, temporal]
+    value_kind: correlation_delta
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.05, fail: 0.15, source: heuristic}
+    score: linear
+    noise_floor: mi_bias
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\Delta\operatorname{NMI} = \lvert \operatorname{NMI}_{src} - \operatorname{NMI}_{syn} \rvert, \quad \operatorname{NMI} = \frac{I(X; Y)}{\min(H_X, H_Y)}'
+    purpose: "Difference in normalized mutual information: how much knowing one column tells you about the other, on a 0 to 1 scale."
+    interpretation:
+      good: "Under 0.05: the pair shares as much information as in the source."
+      bad: "At or above 0.15: a dependence such as city determining country is lost or invented."
+    pitfalls: "Plug-in mutual information is biased upward on sparse tables, by about (r-1)(c-1)/(2n) nats; the noise floor is set from that bias."
+    references:
+      - {label: "Treves & Panzeri 1995 — bias of information estimates", url: "https://doi.org/10.1162/neco.1995.7.2.399"}
+
+  - id: pair.contingency_tvd
+    version: "1"
+    title: "Contingency-table total variation"
+    level: pair
+    family: fidelity
+    kinds: [categorical, boolean, numeric, temporal]
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: complement
+    noise_floor: tvd_null
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{TVD}_{2D} = \frac{1}{2} \sum_{a, b} \lvert p_{ab} - q_{ab} \rvert'
+    purpose: "Total variation between the source and synthetic joint tables of a column pair, on the source's value dictionary (deciles for numeric columns) plus a null bin. It shows how much joint mass sits in the wrong cells."
+    interpretation:
+      good: "Under 0.10: the pair's joint distribution matches."
+      bad: "At or above 0.20: combinations are wrong, e.g. valid cities paired with the wrong countries."
+    pitfalls: "Values outside the source dictionary are pooled into one bin, so rare combinations are invisible. Many sparse cells carry a sampling floor even for a perfect generator (the noise floor is the null TVD expectation over the joint cells); read it with the baseline."
+    references:
+      - {label: "SDMetrics — ContingencySimilarity", url: "https://docs.sdv.dev/sdmetrics/data-metrics/quality/contingencysimilarity"}
+
+  # ------------------------------------------------------------------ row --
+
+  - id: row.exact_match_rate
+    version: "1"
+    title: "Exact row match rate"
+    level: row
+    family: privacy
+    kinds: []
+    value_kind: share
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 1.0e-5, fail: 1.0e-4, source: heuristic}
+    score: linear
+    noise_floor: wilson
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{EMR} = \frac{1}{n_{syn}} \sum_{i} \mathbf{1}\left[ h(y_i) \in h(\text{source}) \right]'
+    purpose: "Share of synthetic rows identical to some source row in every column, compared by a canonical row digest."
+    interpretation:
+      good: "Below 1e-5 (10 per million): no meaningful verbatim row copying."
+      bad: "At or above 1e-4: whole source records are reproduced, a direct privacy leak; the row flags list the matching keys."
+    pitfalls: "Keys make most rows unique, so a record copied under a freshly minted ID escapes this metric; row.exact_match_rate_nonkey catches it."
+    references:
+      - {label: "Platzer & Reutterer 2021 — holdout-based fidelity and privacy", url: "https://doi.org/10.3389/fdata.2021.679939"}
+
+  - id: row.exact_match_rate_nonkey
+    version: "1"
+    title: "Exact row match rate (keys excluded)"
+    level: row
+    family: privacy
+    kinds: []
+    value_kind: share
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 1.0e-3, fail: 1.0e-2, source: heuristic}
+    score: linear
+    noise_floor: wilson
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{EMR}_{nk} = \frac{1}{n_{syn}} \sum_{i} \mathbf{1}\left[ h_{nk}(y_i) \in h_{nk}(\text{source}) \right]'
+    purpose: "The same share with primary-key, identity and foreign-key columns left out, so a copied record under a fresh ID still matches."
+    interpretation:
+      good: "Below 1e-3: few rows coincide with a source record once keys are ignored."
+      bad: "At or above 1e-2: 1 row in 100 or more duplicates a source record's content."
+    pitfalls: "Tables with a few low-cardinality columns collide by chance, so even a perfect generator can score high; row.memorization_lift compares against the holdout to separate chance from copying."
+    references:
+      - {label: "Platzer & Reutterer 2021 — holdout-based fidelity and privacy", url: "https://doi.org/10.3389/fdata.2021.679939"}
+
+  - id: row.memorization_lift
+    version: "1"
+    title: "Row memorization lift (reference vs holdout)"
+    level: row
+    family: privacy
+    kinds: []
+    value_kind: ratio
+    estimator: exact
+    direction: lower_better
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 2, fail: 5, source: heuristic}
+    score: linear
+    noise_floor: rate_ratio
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: true
+    formula: '\operatorname{lift} = \frac{m_R / \lvert R \cap \bar{H} \rvert}{m_H / \lvert H \cap \bar{R} \rvert}, \quad m_S = \text{distinct exclusive records of } S \text{ the synthetic side reproduces}'
+    purpose: "The share of the non-key records only the reference sample R holds (the generator read R) that the synthetic side reproduces exactly, over the same share for the records only an equal-size holdout H holds (it never saw H). Chance hits both alike, so only copying lifts it above 1."
+    interpretation:
+      good: "CI lower bound below 2: no evidence of a 2× or larger lift for the rows the generator read. Smaller copying is not ruled out, and few matches give a wide interval."
+      bad: "CI lower bound at 5 or more: reference rows come back at five times the holdout rate or more; the generator memorizes."
+    pitfalls: "With very few matches on either side the ratio is unstable, and undefined when both are 0; status reads the CI lower bound for that reason. A record reproduced many times counts once (its copies are not independent events, and counting rows would make the interval far too narrow on skewed tables); the row counts are in the detail."
+    references:
+      - {label: "Przyborowski & Wilenski 1940 — comparing two Poisson counts", url: "https://doi.org/10.1093/biomet/31.3-4.313"}
+      - {label: "Carlini et al. 2021 — extracting training data from LLMs", url: "https://arxiv.org/abs/2012.07805"}
+
+  - id: row.exposure_lift
+    version: "1"
+    title: "Prompt-exposure lift"
+    level: row
+    family: privacy
+    kinds: []
+    value_kind: ratio
+    estimator: exact
+    direction: lower_better
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 2, fail: 5, source: heuristic}
+    score: linear
+    noise_floor: rate_ratio
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: true
+    formula: '\operatorname{lift}_E = \frac{m_E / \lvert E \cap \bar{H} \rvert}{m_{H_E} / \lvert H_E \cap \bar{R} \rvert}, \quad m_S = \text{distinct exclusive records of } S \text{ reproduced}'
+    purpose: "The same lift restricted to the 1,024 reference rows actually placed in prompts as row documents (E, its records H lacks) against the 1,024 matching holdout rows (H_E, its records R lacks). It isolates copying caused by prompt exposure; the detail's unexposed lift compares the exclusive records outside E and H_E (or says why it cannot, when every exclusive record of a half is exposed)."
+    interpretation:
+      good: "CI lower bound below 2: no evidence that prompt exposure raises copying 2× or more. Smaller effects are not ruled out, and few matches give a wide interval."
+      bad: "CI lower bound at 5 or more: rows shown to the LLM come back verbatim at five times the holdout rate or more."
+    pitfalls: "With 1,024 rows per side matches are rare and the interval is wide, so a PASS here is weak evidence alone; read row.memorization_lift too."
+    references:
+      - {label: "ADR 0019 — RAG population scoped to consumers (row documents)", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0019-rag-population-scoped-to-consumers.md"}
+      - {label: "Przyborowski & Wilenski 1940 — comparing two Poisson counts", url: "https://doi.org/10.1093/biomet/31.3-4.313"}
+
+  - id: row.near_match_rate
+    version: "1"
+    title: "Near-match rate (all but one column)"
+    level: row
+    family: privacy
+    kinds: []
+    value_kind: share
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 1.0e-3, fail: 1.0e-2, source: heuristic}
+    score: linear
+    noise_floor: wilson
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{NMR} = \frac{1}{n_{syn}} \sum_i \mathbf{1}\left[ \exists x \in R, \exists j : h_{-j}(y_i) = h_{-j}(x) \text{ and } h_{nk}(y_i) \notin h_{nk}(R \cup H) \right]'
+    purpose: "Share of synthetic rows equal to a reference row in every non-key column but exactly one (found with leave-one-column-out hashes, checked cell by cell), never counting an exact match of a reference or holdout record. It catches a copied record with a single field perturbed."
+    interpretation:
+      good: "Below 1e-3: near-copies are rare."
+      bad: "At or above 1e-2: 1 row in 100 or more is a reference record with one field changed, a copy exact matching misses."
+    pitfalls: "Narrow tables (few non-key columns) produce near matches by chance; row.near_match_lift compares against the holdout to separate chance from copying."
+    references:
+      - {label: "Stadler et al. 2022 — synthetic data, anonymisation groundhog day", url: "https://arxiv.org/abs/2011.07018"}
+
+  - id: row.near_match_lift
+    version: "1"
+    title: "Near-match lift (reference vs holdout)"
+    level: row
+    family: privacy
+    kinds: []
+    value_kind: ratio
+    estimator: exact
+    direction: lower_better
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 2, fail: 5, source: heuristic}
+    score: linear
+    noise_floor: rate_ratio
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: true
+    formula: '\operatorname{lift}_{near} = \frac{m^{near}_R / \lvert L_R \cap \bar{L}_H \rvert}{m^{near}_H / \lvert L_H \cap \bar{L}_R \rvert}, \quad L_S = \text{leave-one-out keys of } S \text{, per column}'
+    purpose: "The share of the leave-one-column-out keys only the reference sample holds (at the same column) that a verified near match reproduces, over the same share for the holdout's exclusive keys. Near 1 means near-copies occur only at chance level."
+    interpretation:
+      good: "CI lower bound below 2: no evidence of a 2× or larger near-copy lift. Smaller copying is not ruled out, and few near matches give a wide interval."
+      bad: "CI lower bound at 5 or more: rows the generator read come back with one field changed at five times the holdout rate or more."
+    pitfalls: "Few near matches give low power: the interval is wide and can hide real copying, so read row.near_match_rate next to it."
+    references:
+      - {label: "Przyborowski & Wilenski 1940 — comparing two Poisson counts", url: "https://doi.org/10.1093/biomet/31.3-4.313"}
+
+  - id: row.internal_duplicate_excess
+    version: "1"
+    title: "Internal duplicate excess"
+    level: row
+    family: diversity
+    kinds: []
+    value_kind: share
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [-1, 1]
+    thresholds: {warn: 0.01, fail: 0.05, source: heuristic}
+    score: linear
+    noise_floor: newcombe
+    n_dependent: true
+    baseline: true
+    uses_ci_bound: false
+    formula: '\Delta_{dup} = \frac{\operatorname{E}[D_m]_{syn} - \operatorname{E}[D_m]_{src}}{m}, \quad \operatorname{E}[D_m] = \sum_{c} f_c \left( \frac{c\,m}{N} - \Pr(X_c = 1) \right), \quad m = \min(n_{src}, n_{syn})'
+    purpose: "Share of rows whose non-key content appears at least twice, synthetic minus source, both at matched n (m = min(n_src, n_syn) rows with content): the larger side is rarefied exactly from its frequency of frequencies (f_c records held c times among its N rows; X_c, a record's rows in an m-row subsample, is hypergeometric) and the smaller side counts as observed. Positive values mean the generator repeats itself more than the source does."
+    interpretation:
+      good: "Under 0.01: at most 1 % more repetition than in the source."
+      bad: "At 0.05 or above: 5 % or more extra rows are internal duplicates, a sign of a small sampling pool or mode collapse."
+    pitfalls: "Duplicate shares grow with the number of rows compared, which is why both sides are rarefied to the same m; the value still depends on m, so compare runs of similar size. Rows of one duplicate group are not independent draws: the interval is Newcombe's on Korn & Graubard effective counts with ONE effective n for both sides, from the pooled rows' duplicate share at m and the null variance of the duplicate count of an m-row subset of both sides' rows pooled (exact, multivariate hypergeometric), so a faithful generator's difference is read as noise while a 2-3x repeating generator still fails. Rows with no non-key content are left out; a row-sampled side (sampled mode) is not evaluated."
+    references:
+      - {label: "Hurlbert 1971 — rarefaction and the nonconcept of diversity", url: "https://doi.org/10.2307/1934145"}
+      - {label: "Heck, van Belle & Simberloff 1975 — explicit calculation of the rarefaction diversity measurement", url: "https://doi.org/10.2307/1934716"}
+      - {label: "Newcombe 1998 — interval for a difference of proportions", url: "https://doi.org/10.1002/(SICI)1097-0258(19980430)17:8%3C873::AID-SIM779%3E3.0.CO;2-I"}
+      - {label: "Korn & Graubard 1998 — intervals for proportions with small expected counts from survey data (Survey Methodology 24(2))", url: "https://www150.statcan.gc.ca/n1/pub/12-001-x/1998002/article/4356-eng.pdf"}
+
+  - id: row.dcr_train_holdout_share
+    version: "1"
+    title: "Closer-to-reference share (DCR holdout test)"
+    level: row
+    family: privacy
+    kinds: []
+    value_kind: share
+    estimator: sample
+    direction: lower_better
+    target: 0.5
+    range: [0, 1]
+    thresholds: {warn: 0.55, fail: 0.60, source: heuristic}
+    score: linear
+    noise_floor: wilson
+    n_dependent: true
+    baseline: false
+    uses_ci_bound: true
+    formula: '\operatorname{share} = \frac{1}{n} \sum_i \left( \mathbf{1}\left[ d_R(y_i) < d_H(y_i) \right] + \frac{1}{2} \mathbf{1}\left[ d_R(y_i) = d_H(y_i) \right] \right)'
+    purpose: "Share of synthetic rows whose nearest source row (Gower distance) is in the reference sample R rather than the equal-size holdout H, ties counted as half. A generator that does not memorize sits at 0.5."
+    interpretation:
+      good: "CI lower bound below 0.55: no evidence the share sits at 0.55 or above. Mild closeness to the reference sample is not ruled out, and small samples give a wide interval."
+      bad: "CI lower bound at 0.60 or more: synthetic rows lean towards the reference sample, closer to what the generator read than chance allows."
+    pitfalls: "Computed on capped deterministic samples with equal-size R and H; a risk indicator, not a privacy guarantee: rare attributes can leak while the share stays at 0.5."
+    references:
+      - {label: "Platzer & Reutterer 2021 — holdout-based fidelity and privacy", url: "https://doi.org/10.3389/fdata.2021.679939"}
+      - {label: "Stadler et al. 2022 — synthetic data, anonymisation groundhog day", url: "https://arxiv.org/abs/2011.07018"}
+
+  - id: row.dcr_p5_ratio
+    version: "1"
+    title: "Distance to closest record, 5th-percentile ratio"
+    level: row
+    family: privacy
+    kinds: []
+    value_kind: ratio
+    estimator: sample
+    direction: higher_better
+    target: null
+    range: [0, null]
+    thresholds: {warn: 0.80, fail: 0.50, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: true
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{DCR}_{p5} = \frac{Q_{0.05}\left( d(Y \to R) \right)}{Q_{0.05}\left( d(H \to R) \right)}'
+    purpose: "The 5th-percentile Gower distance from synthetic rows to their closest reference row, over the same percentile for holdout rows. Below 1, the closest synthetic rows sit nearer to the reference data than genuine unseen records do."
+    interpretation:
+      good: "Above 0.80: the synthetic rows closest to real ones are about as close as real unseen records are."
+      bad: "At or below 0.50: the nearest 5 % of synthetic rows sit at half the natural distance or less; they are near-copies of reference rows."
+    pitfalls: "Gower distance averages over columns, so a row copied in all but a few columns can still look distant; read row.near_match_rate too."
+    references:
+      - {label: "Gower 1971 — general coefficient of similarity", url: "https://doi.org/10.2307/2528823"}
+      - {label: "Podani 1999 — Gower's coefficient for ordinal characters", url: "https://doi.org/10.2307/1224438"}
+      - {label: "Stadler et al. 2022 — synthetic data, anonymisation groundhog day", url: "https://arxiv.org/abs/2011.07018"}
+
+  - id: row.nndr_p5_ratio
+    version: "1"
+    title: "Nearest-neighbour distance ratio, 5th-percentile ratio"
+    level: row
+    family: privacy
+    kinds: []
+    value_kind: ratio
+    estimator: sample
+    direction: higher_better
+    target: null
+    range: [0, null]
+    thresholds: {warn: 0.80, fail: 0.50, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: true
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{NNDR}_{p5} = \frac{Q_{0.05}\left( d_1 / d_2 \text{ of } Y \right)}{Q_{0.05}\left( d_1 / d_2 \text{ of } H \right)}'
+    purpose: "The 5th percentile of the nearest-to-second-nearest distance ratio d1/d2 (to the reference sample) for synthetic rows, over the same for holdout rows. A small d1/d2 means a row hugs ONE specific record, the signature of a copied outlier."
+    interpretation:
+      good: "Above 0.80: synthetic rows are not singled-out neighbours of specific records."
+      bad: "At or below 0.50: some synthetic rows hug one particular reference record far more tightly than real rows do; outliers are being reproduced."
+    pitfalls: "In dense regions d1/d2 is near 1 for everyone, so it speaks only about rows near sparse, identifiable records."
+    references:
+      - {label: "Giomi et al. 2023 — a unified framework for synthetic-data privacy risk", url: "https://arxiv.org/abs/2211.10459"}
+      - {label: "Stadler et al. 2022 — synthetic data, anonymisation groundhog day", url: "https://arxiv.org/abs/2011.07018"}
+
+  - id: row.density
+    version: "1"
+    title: "Density (k-NN precision)"
+    level: row
+    family: fidelity
+    kinds: []
+    value_kind: ratio
+    estimator: sample
+    direction: target
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 0.20, fail: 0.40, source: heuristic}
+    score: ratio_to_one
+    noise_floor: none
+    n_dependent: true
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{density} = \frac{1}{k M} \sum_{j=1}^{M} \sum_{i=1}^{N} \mathbf{1}\left[ Y_j \in B\left( X_i, \operatorname{NND}_k(X_i) \right) \right]'
+    purpose: "Naeem et al.'s density with k = 5 on equal-size samples: how many source-neighbourhood balls each synthetic row falls into, relative to real rows. 1 means synthetic rows populate the source's support as densely as real rows."
+    interpretation:
+      good: "Less than 0.20 from 1: synthetic rows sit where real rows are, at real-row density."
+      bad: "At or below 0.60 many synthetic rows fall outside the real data's support; at or above 1.40 they crowd into its densest region (mode collapse)."
+    pitfalls: "Density is not bounded by 1 and depends on k, the distance and the sample size; compare runs at the same settings only."
+    references:
+      - {label: "Naeem et al. 2020 — reliable fidelity and diversity metrics", url: "https://arxiv.org/abs/2002.09797"}
+
+  - id: row.coverage
+    version: "1"
+    title: "Coverage (k-NN recall)"
+    level: row
+    family: diversity
+    kinds: []
+    value_kind: share
+    estimator: sample
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: true
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{coverage} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}\left[ \exists j : Y_j \in B\left( X_i, \operatorname{NND}_k(X_i) \right) \right]'
+    purpose: "Naeem et al.'s coverage with k = 5 on equal-size samples: the share of real rows whose neighbourhood contains at least one synthetic row. It measures how much of the source's variety the synthetic table reaches."
+    interpretation:
+      good: "Above 0.85: nearly every region of the source has synthetic neighbours."
+      bad: "At or below 0.70: 30 % or more of source neighbourhoods are empty; whole segments (rare customers, unusual orders) are missing."
+    pitfalls: "Even identical distributions score about 1 - 2^-k (0.97 at k = 5), not 1, and the value depends on sample size, hence equal n."
+    references:
+      - {label: "Naeem et al. 2020 — reliable fidelity and diversity metrics", url: "https://arxiv.org/abs/2002.09797"}
+
+  - id: row.null_pattern_tvd
+    version: "1"
+    title: "Null-pattern total variation"
+    level: row
+    family: fidelity
+    kinds: []
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: complement
+    noise_floor: tvd_null
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{TVD}_{null} = \frac{1}{2} \sum_{b} \lvert p_b - q_b \rvert, \quad b \in \text{top-64 source patterns} \cup \{ \text{tail} \}'
+    purpose: "Total variation between the source and synthetic distributions of per-row null patterns (which columns are NULL together), on the 64 most frequent source patterns plus a pooled tail."
+    interpretation:
+      good: "Under 0.10: columns go missing together as they do in the source."
+      bad: "At or above 0.20: missingness is independent per column in the synthetic data when the source links it (e.g. all address fields null together)."
+    pitfalls: "Tables with more than 64 columns are not evaluated for this metric (status not_evaluated) until a later version, because a pattern is stored as a 64-bit mask."
+    references:
+      - {label: "ADR 0022 — stats-driven generation (null patterns)", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0022-stats-driven-generation.md"}
+
+  # ---------------------------------------------------------------- table --
+
+  - id: table.row_count_ratio
+    version: "1"
+    title: "Row-count ratio"
+    level: table
+    family: integrity
+    kinds: []
+    value_kind: ratio
+    estimator: exact
+    direction: target
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 0.01, fail: 0.05, source: heuristic}
+    score: ratio_to_one
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{RCR} = \frac{n_{syn}}{n_{expected}}'
+    purpose: "Synthetic rows landed over rows expected from the run. It verifies that the evaluation read the whole job's output and that the job wrote what it promised."
+    interpretation:
+      good: "Less than 0.01 from 1: the landed table has the rows the run promised."
+      bad: "0.05 or more off: rows were lost (dead-letter queue, failed shards) or double-written."
+    pitfalls: "For append-mode tables the job's rows are recovered from its time window, so a concurrent writer to the same table inflates the count."
+    references: []
+
+  - id: table.pk_duplicate_rate
+    version: "1"
+    title: "Primary-key duplicate rate"
+    level: table
+    family: integrity
+    kinds: []
+    value_kind: share
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0, fail: 0, source: repo-continuity}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{dup}_{pk} = \frac{1}{n_{syn}} \sum_i \mathbf{1}\left[ c\left( \operatorname{pk}(y_i) \right) \ge 2 \right]'
+    purpose: "Share of synthetic rows whose primary key appears more than once. Keys are unique by construction, so any duplicate is a generator defect."
+    interpretation:
+      good: "0: every primary key is unique."
+      bad: "Any value above 0 fails: joins on this key fan out and downstream counts double."
+    pitfalls: "Only keys declared in the relationship model are checked; a table without a declared key is NOT_EVALUATED, not clean. Keys are compared by a 64-bit hash and the threshold is zero, so one hash collision between two different keys reads as a duplicate and fails. Among n rows that happens with probability about n^2 / 2^65: 0.03 % at 100 million rows, about 0.4 % at 365 million and about 3 % at 1 billion. On a table that large, confirm a rate of a couple of rows with a GROUP BY on the key before calling it a generator defect."
+    references:
+      - {label: "ADR 0036 — parent-driven fan-out generation", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0036-parent-driven-fanout-generation.md"}
+      - {label: "config/thresholds.yml — pk.duplicate", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/config/thresholds.yml"}
+
+  - id: table.identity_duplicate_rate
+    version: "1"
+    title: "Identity-column duplicate rate"
+    level: table
+    family: integrity
+    kinds: []
+    value_kind: share
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0, fail: 0, source: repo-continuity}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{dup}_{id} = \frac{1}{n_{syn}} \sum_i \mathbf{1}\left[ c\left( \operatorname{id}(y_i) \right) \ge 2 \right]'
+    purpose: "Share of synthetic rows whose identity columns (declared unique business identifiers) repeat. They must be unique, like a primary key."
+    interpretation:
+      good: "0: every identity value is unique."
+      bad: "Any value above 0 fails: two synthetic entities share an identifier that must be unique."
+    pitfalls: "Only identity columns declared in the relationship model are checked; undeclared natural keys can still repeat."
+    references:
+      - {label: "ADR 0032 — relationships as config (identity)", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0032-relationships-as-config.md"}
+      - {label: "config/thresholds.yml — identity.unique", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/config/thresholds.yml"}
+
+  - id: table.detection_auc
+    version: "1"
+    title: "Detection AUC (classifier two-sample test)"
+    level: table
+    family: fidelity
+    kinds: []
+    value_kind: auc
+    estimator: sample
+    direction: lower_better
+    target: 0.5
+    range: [0, 1]
+    thresholds: {warn: 0.70, fail: 0.85, source: heuristic}
+    score: auc
+    noise_floor: delong
+    n_dependent: true
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{AUC} = \Pr\left( \hat{s}(y) > \hat{s}(x) \right) + \frac{1}{2} \Pr\left( \hat{s}(y) = \hat{s}(x) \right)'
+    purpose: "Out-of-fold ROC AUC of a gradient-boosted classifier trained to tell synthetic rows from source rows (equal n per class, keys excluded). 0.5 means it cannot tell them apart."
+    interpretation:
+      good: "Under 0.70: synthetic rows are hard to distinguish from real ones."
+      bad: "At or above 0.85: a model separates them easily, so some column or combination gives the synthetic rows away; the detectable-row flags show examples."
+    pitfalls: "An AUC below 0.5 is noise, not 'more real than real'; a flexible classifier also finds harmless artifacts such as rounding."
+    references:
+      - {label: "Lopez-Paz & Oquab 2017 — classifier two-sample tests", url: "https://arxiv.org/abs/1610.06545"}
+      - {label: "DeLong et al. 1988 — comparing ROC areas", url: "https://doi.org/10.2307/2531595"}
+
+  - id: table.pmse_ratio
+    version: "1"
+    title: "Propensity MSE ratio"
+    level: table
+    family: fidelity
+    kinds: []
+    value_kind: ratio
+    estimator: sample
+    direction: lower_better
+    target: null
+    range: [0, null]
+    thresholds: {warn: 3, fail: 10, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: true
+    baseline: true
+    uses_ci_bound: false
+    formula: '\frac{\operatorname{pMSE}}{E_0}, \quad \operatorname{pMSE} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\pi}_i - c)^2, \quad E_0 = \frac{(k-1)\, c\, (1-c)}{N}'
+    purpose: "Propensity mean squared error of a logistic model separating synthetic from source rows, divided by its expected value when the two are independent samples of one distribution. A perfect generator scores about 1."
+    interpretation:
+      good: "Under 3: the logistic model finds little beyond chance."
+      bad: "At or above 10: even a linear model separates the two tables well."
+    pitfalls: "E0 assumes independent source and synthetic samples: Snoke et al.'s (k-1)(1-c)^2 c/N holds only for synthetic rows drawn from the source sample itself and would put a perfect generator at 1/(1-c), about 2 here. The ratio can never exceed N/(k-1), since pMSE is at most c(1-c): with many one-hot features k is large and even a perfectly separable table can read low, so levels with fewer than max(20, N/1000) rows are pooled and the metric is not evaluated when N/(k-1) is below the fail threshold."
+    references:
+      - {label: "Snoke et al. 2018 — general and specific utility measures", url: "https://doi.org/10.1111/rssa.12358"}
+      - {label: "Woo et al. 2009 — global measures of data utility", url: "https://doi.org/10.29012/jpc.v1i1.568"}
+
+  - id: table.corr_rms_delta
+    version: "1"
+    title: "Correlation-matrix RMS difference"
+    level: table
+    family: fidelity
+    kinds: []
+    value_kind: correlation_delta
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 2]
+    thresholds: {warn: 0.05, fail: 0.10, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\operatorname{RMS}_{\Delta\rho} = \sqrt{\frac{2}{d(d-1)} \sum_{a < b} \left( \rho^{src}_{ab} - \rho^{syn}_{ab} \right)^2}'
+    purpose: "Root-mean-square difference between the source and synthetic correlation matrices over all off-diagonal pairs of the evaluated numeric columns. One number for how well the table's linear structure survived."
+    interpretation:
+      good: "Under 0.05: correlations match on average."
+      bad: "At or above 0.10: the correlation structure is broadly off, e.g. columns sampled independently."
+    pitfalls: "An average hides one badly broken pair; read table.corr_max_delta and the pair rows."
+    references:
+      - {label: "SDMetrics — CorrelationSimilarity", url: "https://docs.sdv.dev/sdmetrics/data-metrics/quality/correlationsimilarity"}
+
+  - id: table.corr_max_delta
+    version: "1"
+    title: "Correlation-matrix maximum difference"
+    level: table
+    family: fidelity
+    kinds: []
+    value_kind: correlation_delta
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 2]
+    thresholds: {warn: 0.15, fail: 0.30, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: true
+    uses_ci_bound: false
+    formula: '\max_{a < b} \lvert \rho^{src}_{ab} - \rho^{syn}_{ab} \rvert'
+    purpose: "Largest absolute difference between any source and synthetic pairwise correlation."
+    interpretation:
+      good: "Under 0.15: no pair's correlation is badly off."
+      bad: "At or above 0.30: at least one relation is broken or invented; find it in the pair rows."
+    pitfalls: "With many columns the maximum of many noisy differences grows by chance; compare with the baseline."
+    references:
+      - {label: "SDMetrics — CorrelationSimilarity", url: "https://docs.sdv.dev/sdmetrics/data-metrics/quality/correlationsimilarity"}
+
+  - id: table.column_shape_score
+    version: "1"
+    title: "Column shape score"
+    level: table
+    family: fidelity
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{CSS} = \frac{1}{\lvert C \rvert} \sum_{c \in C} \bar{s}_c'
+    purpose: "Mean score of the column-level fidelity metrics, averaged per column first so that wide tables do not weigh more. The analogue of the SDMetrics Column Shapes score."
+    interpretation:
+      good: "Above 0.85: columns individually look like the source."
+      bad: "At or below 0.70: several columns are clearly off; sort the column heatmap by score."
+    pitfalls: "An average: one broken column in a wide table barely moves it, so the member statuses are the actionable signal."
+    references:
+      - {label: "SDMetrics — Quality Report (Column Shapes)", url: "https://docs.sdv.dev/sdmetrics/data-metrics/quality"}
+
+  - id: table.pair_trend_score
+    version: "1"
+    title: "Column pair trend score"
+    level: table
+    family: fidelity
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{PTS} = \frac{1}{\lvert P \rvert} \sum_{(a, b) \in P} \bar{s}_{ab}'
+    purpose: "Mean score of the pair-level metrics over the evaluated column pairs. The analogue of the SDMetrics Column Pair Trends score."
+    interpretation:
+      good: "Above 0.85: relations between columns look like the source's."
+      bad: "At or below 0.70: several pairs lost their relation; open the pair heatmap."
+    pitfalls: "Only the planned, budget-capped selection of pairs is scored; relations between unselected columns are not in it."
+    references:
+      - {label: "SDMetrics — Quality Report (Column Pair Trends)", url: "https://docs.sdv.dev/sdmetrics/data-metrics/quality"}
+
+  - id: table.fidelity_score
+    version: "1"
+    title: "Table fidelity score"
+    level: table
+    family: fidelity
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'S_{fidelity} = \frac{1}{\lvert U_{f} \rvert} \sum_{u \in U_{f}} \bar{s}_{u}, \quad U_{f} = C \cup \{ P \} \cup M_{row} \cup M_{table} \cup E_{child}'
+    purpose: "The table's fidelity metrics rolled into one score over units: each column once (mean of its field and column scores), the pair group once, each row- and table-level metric once, and each foreign-key edge where the table is the child once. Every column weighs the same and no member metric is dropped."
+    interpretation:
+      good: "Above 0.85: the table resembles the source column by column and pair by pair."
+      bad: "At or below 0.70: fidelity is broadly off; look for the columns with the lowest means."
+    pitfalls: "An average: a single FAIL can hide behind a good score, so read the statuses."
+    references:
+      - {label: "Jordon et al. 2022 — synthetic data: what, why and how", url: "https://arxiv.org/abs/2205.03257"}
+
+  - id: table.privacy_score
+    version: "1"
+    title: "Table privacy score"
+    level: table
+    family: privacy
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'S_{privacy} = \frac{1}{\lvert U_{f} \rvert} \sum_{u \in U_{f}} \bar{s}_{u}, \quad U_{f} = C \cup \{ P \} \cup M_{row} \cup M_{table} \cup E_{child}'
+    purpose: "The table's privacy metrics (copy rates, lifts, distance tests) rolled into one score over units: each column once (mean of its field-level copy metrics) and each row-level metric once."
+    interpretation:
+      good: "Above 0.85: little sign of copying on average; read the member statuses before calling it clean."
+      bad: "At or below 0.70: several copy or proximity signals fire; read the lifts and the row flags."
+    pitfalls: "A privacy score is a risk indicator, never a guarantee such as differential privacy."
+    references:
+      - {label: "Jordon et al. 2022 — synthetic data: what, why and how", url: "https://arxiv.org/abs/2205.03257"}
+      - {label: "Stadler et al. 2022 — synthetic data, anonymisation groundhog day", url: "https://arxiv.org/abs/2011.07018"}
+
+  - id: table.integrity_score
+    version: "1"
+    title: "Table integrity score"
+    level: table
+    family: integrity
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'S_{integrity} = \frac{1}{\lvert U_{f} \rvert} \sum_{u \in U_{f}} \bar{s}_{u}, \quad U_{f} = C \cup \{ P \} \cup M_{row} \cup M_{table} \cup E_{child}'
+    purpose: "The table's integrity metrics rolled into one score over units: each column once (type validity, stats drift), each table-level check once (row count, key duplicates) and each foreign-key edge where the table is the child once (orphans)."
+    interpretation:
+      good: "Above 0.85: the table is structurally sound."
+      bad: "At or below 0.70: types, keys or row counts are broken."
+    pitfalls: "An enforced-key failure (duplicate primary key, orphan) is shown as a FAIL badge whatever this average says."
+    references:
+      - {label: "Jordon et al. 2022 — synthetic data: what, why and how", url: "https://arxiv.org/abs/2205.03257"}
+
+  - id: table.diversity_score
+    version: "1"
+    title: "Table diversity score"
+    level: table
+    family: diversity
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'S_{diversity} = \frac{1}{\lvert U_{f} \rvert} \sum_{u \in U_{f}} \bar{s}_{u}, \quad U_{f} = C \cup \{ P \} \cup M_{row} \cup M_{table} \cup E_{child}'
+    purpose: "The table's diversity metrics rolled into one score over units: each column once (coverage, entropy, distinct counts), each row-level metric once (duplicates, coverage) and each foreign-key edge where the table is the child once (parent coverage)."
+    interpretation:
+      good: "Above 0.85: the synthetic table is as varied as the source."
+      bad: "At or below 0.70: values or rows repeat too much, or whole regions of the source are missing."
+    pitfalls: "Diversity can be high for the wrong reason (invented values); read it with fidelity."
+    references:
+      - {label: "Jordon et al. 2022 — synthetic data: what, why and how", url: "https://arxiv.org/abs/2205.03257"}
+
+  - id: table.overall_score
+    version: "1"
+    title: "Table overall score"
+    level: table
+    family: overall
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'S_{overall} = \frac{1}{\lvert F \rvert} \sum_{f \in F} S_f'
+    purpose: "Mean of the table's available family scores (fidelity, privacy, integrity, diversity). A one-number summary for ranking runs, never a verdict."
+    interpretation:
+      good: "Above 0.85: good on average across the families."
+      bad: "At or below 0.70: at least one family is poor; open the family scores."
+    pitfalls: "Averages hide failures: a table can score 0.9 with a FAIL on its primary key, so always read the statuses."
+    references:
+      - {label: "Jordon et al. 2022 — synthetic data: what, why and how", url: "https://arxiv.org/abs/2205.03257"}
+
+  # --------------------------------------------------------- relationship --
+
+  - id: relationship.orphan_rate
+    version: "1"
+    title: "Orphan rate (foreign key)"
+    level: relationship
+    family: integrity
+    kinds: []
+    value_kind: share
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0, fail: 0, source: repo-continuity}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{orphan} = \frac{\#\{ \text{non-null child key tuples with no parent} \}}{\#\{ \text{non-null child key tuples} \}}'
+    purpose: "Share of non-null foreign-key tuples in the child table with no matching parent (SQL MATCH SIMPLE: tuples with a NULL part are skipped). On an enforced edge children come from landed parent keys, so any orphan is a defect."
+    interpretation:
+      good: "0 on an enforced edge."
+      bad: "Above 0 on an enforced edge: FAIL, joins drop rows. On a documented (non-enforced) edge the value is compared with the source's own orphan rate and reported as INFO."
+    pitfalls: "Under MATCH SIMPLE NULL keys are never orphans, so a generator that nulls every foreign key scores 0; read null_rate_delta on the key columns."
+    references:
+      - {label: "SDMetrics — ReferentialIntegrity", url: "https://docs.sdv.dev/sdmetrics/data-metrics/diagnostic/referentialintegrity"}
+      - {label: "config/thresholds.yml — fk.orphan", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/config/thresholds.yml"}
+
+  - id: relationship.orphan_rate_source
+    version: "1"
+    title: "Orphan rate on the source (baseline)"
+    level: relationship
+    family: integrity
+    kinds: []
+    value_kind: share
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: null, fail: null, source: none}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{orphan}_{src} = \frac{\#\{ \text{non-null source child key tuples with no parent} \}}{\#\{ \text{non-null source child key tuples} \}}'
+    purpose: "The same orphan rate measured on the source tables, as context. Real data often has orphans (deleted parents, late-arriving facts)."
+    interpretation:
+      good: "Context, not a verdict: on a documented edge, a synthetic orphan rate close to this value is faithful."
+      bad: "A high source rate on an enforced edge means the declared model is stricter than the data (a measured conflict of the kind ADR 0038 adjusts at launch)."
+    pitfalls: "Computed on the current source, which may have changed since the generation run read it."
+    references:
+      - {label: "SDMetrics — ReferentialIntegrity", url: "https://docs.sdv.dev/sdmetrics/data-metrics/diagnostic/referentialintegrity"}
+      - {label: "ADR 0038 — measured conflicts adjust the model", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0038-measured-conflicts-adjust-the-model.md"}
+
+  - id: relationship.fanout_tvd
+    version: "1"
+    title: "Fan-out distribution (TVD)"
+    level: relationship
+    family: fidelity
+    kinds: []
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.10, fail: 0.20, source: heuristic}
+    score: complement
+    noise_floor: tvd_null
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{TVD}_{fan} = \frac{1}{2} \sum_{c \in \{0, \dots, 49, \ge 50\}} \lvert p_c - q_c \rvert'
+    purpose: "Total variation between the source and synthetic distributions of children per parent (one bin per count from 0 to 49, one for 50 or more; parents with no children included)."
+    interpretation:
+      good: "Under 0.10: parents have as many children as in the source."
+      bad: "At or above 0.20: the fan-out shape is wrong, e.g. every order has 3 items when the source ranges from 1 to 20."
+    pitfalls: "All fan-outs of 50 or more share one bin, so a heavy tail (a few parents with thousands of children) collapses into one mass; fanout_w1 and fanout_mean_ratio see further."
+    references:
+      - {label: "SDMetrics — CardinalityShapeSimilarity", url: "https://docs.sdv.dev/sdmetrics/data-metrics/quality/cardinalityshapesimilarity"}
+      - {label: "Patki, Wedge & Veeramachaneni 2016 — the Synthetic Data Vault", url: "https://doi.org/10.1109/DSAA.2016.49"}
+
+  - id: relationship.fanout_w1
+    version: "1"
+    title: "Fan-out Wasserstein-1 (children per parent)"
+    level: relationship
+    family: fidelity
+    kinds: []
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, null]
+    thresholds: {warn: null, fail: null, source: none}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'W_1^{fan} = \sum_i (x_{i+1} - x_i) \lvert F^{fan}_{src}(x_i) - F^{fan}_{syn}(x_i) \rvert, \quad \{x_i\} = \{0, \dots, 49\} \cup \{\bar c_{src}, \bar c_{syn}\}'
+    purpose: "Wasserstein-1 distance between the fan-out distributions, in children per parent: roughly how many children each parent is off by on average. Informational."
+    interpretation:
+      good: "Well under 1: per-parent child counts are almost right."
+      bad: "Several children per parent: the generator systematically over- or under-produces children."
+    pitfalls: "Each side's >= 50 bin sits at its own atom c-bar: that side's observed mean fan-out among its overflowing parents when known, else 50. The two sides' overflow atoms can therefore land at different points (one heavy tail understated relative to the other, not just both understated alike), and without an observed mean at all, that side's tail still collapses to the single point 50, understating it the way the whole capped histogram always does."
+    references:
+      - {label: "Ramdas et al. 2017 — Wasserstein two-sample testing", url: "https://doi.org/10.3390/e19020047"}
+
+  - id: relationship.fanout_mean_ratio
+    version: "1"
+    title: "Mean fan-out ratio"
+    level: relationship
+    family: fidelity
+    kinds: []
+    value_kind: ratio
+    estimator: exact
+    direction: target
+    target: 1.0
+    range: [0, null]
+    thresholds: {warn: 0.05, fail: 0.15, source: heuristic}
+    score: ratio_to_one
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{FMR} = \frac{n^{syn}_{child} / n^{syn}_{parent}}{n^{src}_{child} / n^{src}_{parent}}'
+    purpose: "The synthetic child-to-parent row ratio over the source's. Parent-driven generation targets exactly the source ratio."
+    interpretation:
+      good: "Less than 0.05 from 1: the child table has the right size for its parents."
+      bad: "0.15 or more off: the child table is too large or too small for its parents."
+    pitfalls: "A matching mean can hide a wrong shape (every parent with the average count); read fanout_tvd."
+    references:
+      - {label: "ADR 0036 — parent-driven fan-out generation", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0036-parent-driven-fanout-generation.md"}
+
+  - id: relationship.zero_child_share_delta
+    version: "1"
+    title: "Childless-parent share difference"
+    level: relationship
+    family: fidelity
+    kinds: []
+    value_kind: distance
+    estimator: exact
+    direction: lower_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.02, fail: 0.05, source: heuristic}
+    score: linear
+    noise_floor: newcombe
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\Delta_z = \lvert z_{syn} - z_{src} \rvert, \quad z = \frac{\#\{ \text{parents with no child} \}}{n_{parent}}'
+    purpose: "Difference between the synthetic and source shares of parents with no children at all."
+    interpretation:
+      good: "Under 0.02: childless parents are as common as in the source."
+      bad: "At or above 0.05: childless parents are missing (every customer has orders) or over-produced."
+    pitfalls: "Parents outside this run (external, read-only parents) are counted from their table as it is today."
+    references:
+      - {label: "Newcombe 1998 — interval for a difference of proportions", url: "https://doi.org/10.1002/(SICI)1097-0258(19980430)17:8%3C873::AID-SIM779%3E3.0.CO;2-I"}
+
+  - id: relationship.cardinality_adherence
+    version: "1"
+    title: "Cardinality adherence"
+    level: relationship
+    family: fidelity
+    kinds: []
+    value_kind: share
+    estimator: exact
+    direction: higher_better
+    target: 1.0
+    range: [0, 1]
+    thresholds: {warn: 0.99, fail: 0.95, source: heuristic}
+    score: linear
+    noise_floor: wilson
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{CBA} = \frac{1}{n^{syn}_{parent}} \sum_{p} \mathbf{1}\left[ \min_{src} \le c_p \le \max_{src} \right]'
+    purpose: "Share of synthetic parents whose number of children lies within the source's observed [min, max] fan-out."
+    interpretation:
+      good: "Above 0.99: child counts stay within what the source shows."
+      bad: "At or below 0.95: parents with impossible child counts, such as more items than any real order has."
+    pitfalls: "The source's min and max are extremes: one source parent with 10,000 children makes almost any count adhere."
+    references:
+      - {label: "SDMetrics — CardinalityBoundaryAdherence", url: "https://docs.sdv.dev/sdmetrics/data-metrics/diagnostic/cardinalityboundaryadherence"}
+
+  - id: relationship.parent_coverage
+    version: "1"
+    title: "Parent coverage"
+    level: relationship
+    family: diversity
+    kinds: []
+    value_kind: ratio
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, null]
+    thresholds: {warn: 0.95, fail: 0.80, source: heuristic}
+    score: linear
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: '\operatorname{PC} = \frac{\Pr_{syn}\left[ c_p \ge 1 \right]}{\Pr_{src}\left[ c_p \ge 1 \right]}'
+    purpose: "Share of synthetic parents with at least one child, relative to the same share in the source. Below 1, children concentrate on fewer parents than in the source."
+    interpretation:
+      good: "Above 0.95: children spread over as many parents as in the source."
+      bad: "At or below 0.80: a fifth or more fewer parents have children; children pile onto a subset of parents."
+    pitfalls: "Values above 1 (more parents with children than the source) pass here; zero_child_share_delta flags that direction."
+    references:
+      - {label: "ADR 0036 — parent-driven fan-out generation", url: "https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/master/docs/adr/0036-parent-driven-fanout-generation.md"}
+
+  # ---------------------------------------------------------------- model --
+
+  - id: model.overall_score
+    version: "1"
+    title: "Model overall score"
+    level: model
+    family: overall
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'S^{model}_{overall} = \frac{1}{\lvert F \rvert} \sum_{f \in F} S^{model}_{f}'
+    purpose: "Mean of the launch's available model family scores (fidelity, privacy, integrity, diversity). One number to rank whole relational launches, never a verdict."
+    interpretation:
+      good: "Above 0.85: the launch is good on average across tables and edges."
+      bad: "At or below 0.70: at least one table or edge is poor; open the per-table scores."
+    pitfalls: "Averages hide failures: an orphaned edge or a duplicate key can sit under a good overall score."
+    references:
+      - {label: "Jordon et al. 2022 — synthetic data: what, why and how", url: "https://arxiv.org/abs/2205.03257"}
+
+  - id: model.fidelity_score
+    version: "1"
+    title: "Model fidelity score"
+    level: model
+    family: fidelity
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'S^{model}_{fidelity} = \frac{1}{\lvert T \rvert} \sum_{t \in T} S_{t, fidelity}'
+    purpose: "Mean of the tables' fidelity scores across the launch; each table's score already counts the foreign-key edges where it is the child (fan-out shape, cardinality)."
+    interpretation:
+      good: "Above 0.85: on average the tables and their edges resemble the source; a single poor table can still hide under the mean."
+      bad: "At or below 0.70: fidelity is poor somewhere; open the per-table scores."
+    pitfalls: "Each table weighs the same whatever its size, so a small lookup table counts as much as the main fact table."
+    references:
+      - {label: "Jordon et al. 2022 — synthetic data: what, why and how", url: "https://arxiv.org/abs/2205.03257"}
+
+  - id: model.privacy_score
+    version: "1"
+    title: "Model privacy score"
+    level: model
+    family: privacy
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'S^{model}_{privacy} = \frac{1}{\lvert T \rvert} \sum_{t \in T} S_{t, privacy}'
+    purpose: "Mean of the tables' privacy scores across the launch."
+    interpretation:
+      good: "Above 0.85: on average the tables show little sign of copying."
+      bad: "At or below 0.70: copying signals fire somewhere; open the per-table lifts and row flags."
+    pitfalls: "A risk indicator, never a guarantee; one leaking table can hide under the mean of several clean ones."
+    references:
+      - {label: "Jordon et al. 2022 — synthetic data: what, why and how", url: "https://arxiv.org/abs/2205.03257"}
+
+  - id: model.integrity_score
+    version: "1"
+    title: "Model integrity score"
+    level: model
+    family: integrity
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'S^{model}_{integrity} = \frac{1}{\lvert T \rvert} \sum_{t \in T} S_{t, integrity}'
+    purpose: "Mean of the tables' integrity scores across the launch; each table's score already counts the orphan rates of the edges where it is the child."
+    interpretation:
+      good: "Above 0.85: on average keys, types and references hold; FAIL badges still mark any broken key."
+      bad: "At or below 0.70: structural defects somewhere; look for FAIL badges."
+    pitfalls: "Enforced-key failures are FAIL badges whatever this average says."
+    references:
+      - {label: "Jordon et al. 2022 — synthetic data: what, why and how", url: "https://arxiv.org/abs/2205.03257"}
+
+  - id: model.diversity_score
+    version: "1"
+    title: "Model diversity score"
+    level: model
+    family: diversity
+    kinds: []
+    value_kind: score
+    estimator: exact
+    direction: higher_better
+    target: null
+    range: [0, 1]
+    thresholds: {warn: 0.85, fail: 0.70, source: heuristic}
+    score: none
+    noise_floor: none
+    n_dependent: false
+    baseline: false
+    uses_ci_bound: false
+    formula: 'S^{model}_{diversity} = \frac{1}{\lvert T \rvert} \sum_{t \in T} S_{t, diversity}'
+    purpose: "Mean of the tables' diversity scores across the launch; each table's score already counts the parent coverage of the edges where it is the child."
+    interpretation:
+      good: "Above 0.85: on average the launch is as varied as its source."
+      bad: "At or below 0.70: repetition or missing regions somewhere; open the per-table scores."
+    pitfalls: "Diversity can be high for the wrong reason (invented values); read it with fidelity."
+    references:
+      - {label: "Jordon et al. 2022 — synthetic data: what, why and how", url: "https://arxiv.org/abs/2205.03257"}

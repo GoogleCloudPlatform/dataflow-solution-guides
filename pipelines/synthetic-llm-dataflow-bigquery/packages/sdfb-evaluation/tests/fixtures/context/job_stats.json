@@ -1,0 +1,30 @@
+{
+  "beam_bq_job_COPY_sdfbthelook0913a1b2c3_COPY_STEP_202_ab12cd34_0": {
+    "copy": {
+      "copiedLogicalBytes": "912500",
+      "copiedRows": "18250"
+    },
+    "creationTime": "1789307361000"
+  },
+  "beam_bq_job_LOAD_sdfbthelook0913a1b2c3_LOAD_STEP_101_c0ffee01": {
+    "creationTime": "1789306855100",
+    "load": {
+      "inputFiles": "4",
+      "outputRows": "5000"
+    }
+  },
+  "beam_bq_job_LOAD_sdfbthelook0913a1b2c3_LOAD_STEP_303_e5f6a7b8": {
+    "creationTime": "1789307900000",
+    "load": {
+      "inputFiles": "9",
+      "outputRows": "44710"
+    }
+  },
+  "beam_bq_job_LOAD_sdfbthelook0913a1b2c3_LOAD_STEP_900_1a2b3c4d": {
+    "creationTime": "1789307970000",
+    "load": {
+      "inputFiles": "1",
+      "outputRows": "3"
+    }
+  }
+}

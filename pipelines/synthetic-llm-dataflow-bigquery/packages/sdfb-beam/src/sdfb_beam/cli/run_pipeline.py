@@ -13,9 +13,12 @@
 #  limitations under the License.
 """Flex Template entrypoint for the synthesis pipeline.
 
-Set via `FLEX_TEMPLATE_PYTHON_PY_FILE` in `docker/Dockerfile`. The Python
-launcher invokes this with argparse args populated from the Flex Template
-parameters declared in `docker/flex_template_metadata.json`.
+The image's `FLEX_TEMPLATE_PYTHON_PY_FILE` (`docker/Dockerfile`) is the small
+dispatcher `docker/flex_entry.py`: unless a launch selects the image's other
+job (the evaluation of a landed run), it calls `main` here with the launch's
+arguments, populated from the Flex Template parameters declared in
+`docker/flex_template_metadata.json`. Running this file directly does the
+same thing.
 
 Runtime modes:
   - Production (Dataflow + L4 + Gemma 4 via vLLM):
@@ -30,17 +33,17 @@ REFs:
   - docs/DEPLOYMENT_PREREQUISITES.md
   - docs/MODEL_LAYOUT.md
 
-Design: docs/DESIGN.md §4 Relational generation; §5 Fidelity; §6 Throughput;
-§8 Configuration
-(ADR 0022, 0023, 0024, 0027, 0028, 0029, 0030, 0031, 0032, 0034, 0035, 0036,
-0037, 0038, 0039).
+Design: docs/DESIGN.md §2 Engines; §4 Relational generation; §5 Fidelity;
+§6 Throughput; §8 Configuration
+(ADR 0019, 0022, 0023, 0024, 0027, 0028, 0029, 0030, 0031, 0032, 0034, 0035,
+0036, 0037, 0038, 0039).
 """
 
 # Heavy or optional dependencies are imported lazily, where they are used.
 # pylint: disable=import-outside-toplevel
 
-# f-string fields keep single quotes while Python 3.11 is supported;
-# pylint on Python >= 3.12 reads those quotes as inconsistent.
+# f-string fields keep single quotes: yapf 0.43 cannot parse PEP 701
+# quote reuse, and pylint reads those quotes as inconsistent.
 # pylint: disable=inconsistent-quotes
 
 from __future__ import annotations
@@ -99,6 +102,11 @@ from sdfb_core.observability import (
     log_milestone,
     log_milestone_pretty,
     log_milestone_text,
+)
+from sdfb_core.rag.chunking import (
+    MAX_ROW_DOC_ROWS,
+    compute_row_digest,
+    resolve_row_docs_limit,
 )
 from sdfb_core.rag.embedding import embedder_identity
 from sdfb_core.stats import PROFILER_VERSION, profile_source_table, stats_rows
@@ -237,6 +245,24 @@ def validate_candidate_cap(value) -> int:
   return cap
 
 
+def parse_rag_row_docs_limit(value) -> int:
+  """``--rag_row_docs_limit``: an integer >= 1; empty means the default.
+
+    Empty is accepted because the Flex Template and the Composer DAG pass
+    every parameter as a string and an unset one as ""; anything else
+    that is not a positive integer is refused at parse time."""
+  text = str(value).strip()
+  if not text:
+    return MAX_ROW_DOC_ROWS
+  try:
+    return resolve_row_docs_limit(int(text), 0)
+  except ValueError as e:
+    raise argparse.ArgumentTypeError(
+        f"--rag_row_docs_limit must be an integer >= 1, got {value!r}: the "
+        f"number of reference rows B.1 embeds as row documents (default "
+        f"{MAX_ROW_DOC_ROWS}).") from e
+
+
 def candidate_cap_of(args) -> int:
   """``--fk_candidate_cap`` off a launcher namespace, validated.
 
@@ -279,6 +305,17 @@ def parse_args(  # noqa: PLR0915 — one flat list of flags; splitting it hides 
       required=True,
       help="FQN of source table for live SELECT reference rows")
   p.add_argument("--reference_rows_limit", type=int, default=10_000)
+  p.add_argument(
+      "--rag_row_docs_limit",
+      type=parse_rag_row_docs_limit,
+      default=MAX_ROW_DOC_ROWS,
+      help="B.1 RAG: how many reference rows (the first N of the "
+      "fingerprint-ordered sample) are embedded as row documents — "
+      "the in-worker exemplar index, the rag_chunks row_doc prefix "
+      "and the seed-value fallback all use the same N. An integer "
+      ">= 1; a value above the reference sample is clamped to it. "
+      "A store written with a smaller N is topped up with the "
+      "missing rows when --build_rag_layer is on (ADR 0019).")
   p.add_argument(
       "--landing_table",
       required=True,
@@ -768,15 +805,17 @@ def resolve_schemas(
        still raises — the operator's declared fallback is broken.
     2. **Target-only steering metadata.** Structure (columns/types/modes)
        mirrors the SOURCE table, but the description surfaces — the
-       `llm_prompt_constraint` clauses and the `{"sdfb":1,…}` contract —
-       are overlaid from the LANDING (synthetic/target) table, which the
-       synthetic-data team owns and Terraforms. The source (lake) table's
-       descriptions are another team's prose and must NEVER steer
-       generation: with the target unreachable they are STRIPPED, not
-       inherited. The offline pin is the one exception — it is the
-       operator's declared fallback, extracted from the landing table per
-       the propagation runbook, so its descriptions stand when the target
-       is also unreachable.
+       per-column `llm_prompt_constraint` clauses, and the table
+       description as plain prose — are overlaid from the LANDING
+       (synthetic/target) table, which the synthetic-data team owns and
+       Terraforms. PK / FK / identity are NOT among them: they come from
+       `config/relationships/` and no description is parsed for them
+       (ADR 0032). The source (lake) table's descriptions are another
+       team's prose and must NEVER steer generation: with the target
+       unreachable they are STRIPPED, not inherited. The offline pin is
+       the one exception — it is the operator's declared fallback,
+       extracted from the landing table per the propagation runbook, so
+       its descriptions stand when the target is also unreachable.
 
     The landing ``TableSchema`` travels back out because its column
     MODES — not the source's — decide a conditional edge's NULL policy
@@ -2792,6 +2831,60 @@ def fk_edge_metadata(
   } for fk in (relations.fk if relations else ()))
 
 
+@dataclass(frozen=True)
+class RagPopulation:
+  """The launcher's rag_chunks decision for one table.
+
+    ``mode``: "full" (no chunk for this digest + embedder: populate the
+    row-doc prefix and the value chunks), "topup" (the store holds fewer
+    prefix rows than `--rag_row_docs_limit` asks for: populate only the
+    ``missing`` ones) or "skip" (the store covers the prefix)."""
+
+  mode: str
+  present: frozenset[str] | None = None
+  missing: int = 0
+
+
+def plan_rag_population(store, digest: str, prefix_rows: list[dict],
+                        embedder_id: str,
+                        embedder_version: str) -> RagPopulation:
+  """Whether the persisted row_doc set covers this launch's prefix.
+
+    The store is keyed by (reference_digest, embedder id + version), not
+    by the limit, so the limit is checked by content: a store written
+    with a larger `--rag_row_docs_limit` covers a smaller prefix (the
+    engine reads rows by `row_digest`), one written with a smaller limit
+    is topped up rather than silently re-embedded in every worker."""
+  if not store.exists(digest, embedder_id, embedder_version):
+    return RagPopulation("full", missing=len(prefix_rows))
+  present = frozenset(
+      store.row_doc_digests(digest, embedder_id, embedder_version))
+  missing = sum(
+      1 for row in prefix_rows if compute_row_digest(row) not in present)
+  if not missing:
+    return RagPopulation("skip", present)
+  return RagPopulation("topup", present, missing)
+
+
+def resolve_launch_row_docs_limit(args, reference_rows: list[dict]) -> int:
+  """``--rag_row_docs_limit`` for one table, clamped to its sample.
+
+    Logged once per table, and only when a NON-default request is clamped:
+    a default launch on a small table logs what it always did."""
+  requested = parse_rag_row_docs_limit(
+      getattr(args, "rag_row_docs_limit", MAX_ROW_DOC_ROWS))
+  limit = resolve_row_docs_limit(requested, len(reference_rows))
+  if limit < requested and requested != MAX_ROW_DOC_ROWS:
+    log_milestone(
+        "rag_row_docs_clamped",
+        table=args.landing_table,
+        requested=requested,
+        sample_rows=len(reference_rows),
+        rag_row_docs_limit=limit,
+    )
+  return limit
+
+
 def _prepare_table_spec(
     args,
     model_client,
@@ -2878,17 +2971,34 @@ def _prepare_table_spec(
 
   embedder_id, embedder_version = embedder_identity(args.embedder_uri)
 
+  rag_row_docs_limit = resolve_launch_row_docs_limit(args, reference_rows)
   rag_chunks_sink = None
+  rag_present_row_digests = None
   if parse_bool_flag(args.build_rag_layer) and args.rag_chunks_table:
     digest = compute_reference_digest(reference_rows)
-    store = BigQueryChunkStore(args.rag_chunks_table)
-    if store.exists(digest, embedder_id, embedder_version):
+    population = plan_rag_population(
+        BigQueryChunkStore(args.rag_chunks_table),
+        digest,
+        reference_rows[:rag_row_docs_limit],
+        embedder_id,
+        embedder_version,
+    )
+    if population.mode == "skip":
       log_milestone(
           "rag_population_skipped",
           reference_digest=digest[:12],
           embedder_id=embedder_id,
       )
     else:
+      if population.mode == "topup":
+        rag_present_row_digests = population.present
+        log_milestone(
+            "rag_population_topup",
+            reference_digest=digest[:12],
+            embedder_id=embedder_id,
+            rag_row_docs_limit=rag_row_docs_limit,
+            rows_missing=population.missing,
+        )
       rag_chunks_sink = WriteToBigQuery(
           table=args.rag_chunks_table,
           method=WriteToBigQuery.Method.FILE_LOADS,
@@ -2931,6 +3041,8 @@ def _prepare_table_spec(
       rag_chunks_table=args.rag_chunks_table,
       embedder_id=embedder_id,
       embedder_version=embedder_version,
+      rag_row_docs_limit=rag_row_docs_limit,
+      rag_present_row_digests=rag_present_row_digests,
       pool_pattern_guidance=parse_bool_flag(args.pool_pattern_guidance),
       freetext_pools_table=args.freetext_pools_table,
       pool_seed_strategy=validate_seed_strategy(args.pool_seed_strategy),

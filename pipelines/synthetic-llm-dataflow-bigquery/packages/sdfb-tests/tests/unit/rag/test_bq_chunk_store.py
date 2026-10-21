@@ -142,3 +142,20 @@ def test_dofn_attaches_store_from_ctx(monkeypatch):
   assert captured[
       "ctx"].chunk_store == "store-for-proj.synthetic_rag.rag_chunks"
   dofn.teardown()
+
+
+def test_row_doc_digests_reads_the_row_doc_prefix_of_one_vector_space():
+  """`--rag_row_docs_limit` store-reuse check: which prefix rows a store
+    already holds (the launcher tops up the rest)."""
+  client = _FakeBqClient([{"row_digest": "r0"}, {"row_digest": "r1"}])
+  store = BigQueryChunkStore(_TABLE, client=client)
+  assert store.row_doc_digests("dig", "e", "v1") == {"r0", "r1"}
+  assert len(client.queries) == 1
+  sql, params = client.queries[0]
+  assert "SELECT DISTINCT row_digest" in sql and _TABLE in sql
+  assert params == {
+      "reference_digest": "dig",
+      "chunk_kind": "row_doc",
+      "embedder_id": "e",
+      "embedder_version": "v1",
+  }

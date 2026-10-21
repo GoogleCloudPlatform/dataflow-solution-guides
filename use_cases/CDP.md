@@ -63,7 +63,15 @@ flowchart LR
 - **Zero Public IP Security**:
   - Fully compliant with enterprise networking guardrails, enforcing `--no_use_public_ip` and dedicated worker service accounts.
 
-## Quickstart & Verification
+## Quickstart & Verification (Agentic or Manual)
+
+### Option 1: Deploy with an AI Coding Harness (Recommended)
+
+Open this repository in your AI coding harness and prompt it to provision the infrastructure, launch the streaming pipeline, simulate shopping sessions, and verify Customer 360 aggregates in BigQuery:
+
+> *"Deploy the Customer Data Platform (CDP) guide in project `my-gcp-project` and region `us-central1` (auto-discovering any Shared VPC subnet). Build the custom container, launch the streaming Dataflow pipeline with private IPs, run the synthetic transaction and coupon generator, and verify that sessionized records land in `cdp_dataset.unified_customer_data` and `cdp_dataset.customer_sessions` with zero unexpected dead-letter errors."*
+
+### Option 2: Manual CLI Deployment
 
 1. **Provision Infrastructure**:
    ```bash

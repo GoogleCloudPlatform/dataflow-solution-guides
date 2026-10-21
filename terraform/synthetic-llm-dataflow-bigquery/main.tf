@@ -44,15 +44,12 @@ locals {
   # capability 8.0: an L4 (8.9, 24 GB) serves the bf16 checkpoints as they
   # are, while a T4 (7.5, 16 GB) serves Qwen downcast to fp16 and cannot run
   # Gemma, whose fp16 activations overflow (config/models.yml). The T4 driver
-  # pin follows Dataflow's vLLM guidance (docs/RUN_PLAYBOOK.md). The L4 asks
-  # for Dataflow's latest driver: the image's torch wheels bundle the CUDA 13
-  # runtime, which needs driver 580+, while the default driver (535, CUDA
-  # 12.2) leaves torch without a usable GPU.
+  # pin follows Dataflow's vLLM guidance (docs/RUN_PLAYBOOK.md).
   gpu_profiles = {
     l4 = {
       machine_family = "g2"
       machine_type   = "g2-standard-8"
-      accelerator    = "type:nvidia-l4;count:1;install-nvidia-driver:latest"
+      accelerator    = "type:nvidia-l4;count:1;install-nvidia-driver"
       vllm_dtype     = "auto"
       models         = ["gemma4-e4b-it", "qwen3-4b"]
     }
@@ -66,6 +63,26 @@ locals {
   }
   gpu          = local.gpu_profiles[var.gpu]
   machine_type = coalesce(var.machine_type, local.gpu.machine_type)
+
+  # The launcher and the workers of both jobs run as this account. What the
+  # evaluation (scripts/06_run_evaluation.sh) needs is already here:
+  # dataflow.developer holds every permission of dataflow.viewer (reading the
+  # generation job's window), bigquery.dataEditor reads the sources and the
+  # landing tables, writes the evaluation tables and creates snapshots, and
+  # readSessionUser gives the Storage Read API. Not granted:
+  # bigquery.tables.deleteSnapshot (dataOwner and above), which an expiring
+  # source pin needs; the evaluation then reads the sources unpinned, with a
+  # warning, and these sources are snapshots no job writes.
+  dataflow_sa_roles = [
+    "roles/dataflow.worker",
+    "roles/dataflow.developer",
+    "roles/bigquery.dataEditor",
+    "roles/bigquery.jobUser",
+    "roles/bigquery.readSessionUser",
+    "roles/storage.objectAdmin",
+    "roles/monitoring.metricWriter",
+    "roles/logging.logWriter",
+  ]
 }
 
 data "google_project" "project" {
@@ -126,16 +143,7 @@ module "dataflow_sa" {
   project_id = var.project_id
   name       = var.service_account_name
   iam_project_roles = {
-    (var.project_id) = [
-      "roles/dataflow.worker",
-      "roles/dataflow.developer",
-      "roles/bigquery.dataEditor",
-      "roles/bigquery.jobUser",
-      "roles/bigquery.readSessionUser",
-      "roles/storage.objectAdmin",
-      "roles/monitoring.metricWriter",
-      "roles/logging.logWriter",
-    ]
+    (var.project_id) = local.dataflow_sa_roles
   }
 }
 

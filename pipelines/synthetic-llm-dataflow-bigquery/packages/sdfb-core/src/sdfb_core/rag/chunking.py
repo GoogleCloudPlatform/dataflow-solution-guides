@@ -45,10 +45,11 @@ CHUNK_KIND_FREE_TEXT_COL = "free_text_col"
 
 # Population scope (2026-07-25 06:18 E2E postmortem). The only consumer of
 # row_doc vectors is B1RagEngine._vectors_from_store, which reads EXACTLY
-# the first MAX_ROW_DOC_ROWS fingerprint-ordered reference rows
-# (all-or-nothing); embedding more is unreadable by design. The engine's
-# _MAX_EMBED_ROWS aliases this constant — one source of truth for the
-# write/read contract.
+# the first `rag_row_docs_limit` fingerprint-ordered reference rows
+# (all-or-nothing); embedding more is unreadable by design. This is the
+# DEFAULT of that launch knob (`--rag_row_docs_limit`): the population
+# branch writes and the engine reads the same prefix, both sliced by the
+# one value the launcher resolves (`resolve_row_docs_limit`).
 MAX_ROW_DOC_ROWS = 1024
 # free_text_col chunks dedupe to distinct (column, value); a pathological
 # near-unique column stays bounded here (consumers pick top-k=8 exemplars).
@@ -71,6 +72,24 @@ class Chunk:
   source_pk: dict | None = None
   embedding: list[float] | None = None
   metadata: dict = field(default_factory=dict)
+
+
+def resolve_row_docs_limit(requested: int, sample_rows: int) -> int:
+  """The row-document prefix length a launch embeds and reads.
+
+    ``requested`` is `--rag_row_docs_limit`: an integer >= 1, else
+    ValueError. A value above the reference sample is clamped to the
+    sample (``sample_rows``), so the number a run reports is the number
+    it embedded; an empty sample leaves the request as is (nothing is
+    embedded either way)."""
+  if isinstance(requested, bool) or not isinstance(requested, int):
+    raise ValueError(
+        f"rag_row_docs_limit must be an integer >= 1, got {requested!r}")
+  if requested < 1:
+    raise ValueError(f"rag_row_docs_limit must be >= 1, got {requested}")
+  if sample_rows > 0:
+    return min(requested, sample_rows)
+  return requested
 
 
 def compute_row_digest(row: dict) -> str:
@@ -205,4 +224,5 @@ __all__ = [
     "compute_chunk_id",
     "compute_row_digest",
     "distinct_free_text_values",
+    "resolve_row_docs_limit",
 ]

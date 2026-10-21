@@ -38,8 +38,8 @@ Design: docs/DESIGN.md §2 Engines; §4 Relational generation; §5 Fidelity;
 # Heavy or optional dependencies are imported lazily, where they are used.
 # pylint: disable=import-outside-toplevel
 
-# f-string fields keep single quotes while Python 3.11 is supported;
-# pylint on Python >= 3.12 reads those quotes as inconsistent.
+# f-string fields keep single quotes: yapf 0.43 cannot parse PEP 701
+# quote reuse, and pylint reads those quotes as inconsistent.
 # pylint: disable=inconsistent-quotes
 
 from __future__ import annotations
@@ -65,6 +65,7 @@ from sdfb_core.observability import log_milestone
 from sdfb_core.rag.chunking import (
     MAX_ROW_DOC_ROWS,
     chunk_free_text_value,
+    compute_row_digest,
     distinct_free_text_values,
 )
 from sdfb_core.validation import (
@@ -148,6 +149,17 @@ class PipelineConfig:
   rag_chunks_table: str = ""
   embedder_id: str = ""
   embedder_version: str = ""
+  # `--rag_row_docs_limit` as the launcher resolved it (clamped to the
+  # reference sample): the row-doc prefix the population branch writes
+  # and the B.1 engine embeds or reads back — one value for both.
+  rag_row_docs_limit: int = MAX_ROW_DOC_ROWS
+  # Top-up population (`plan_rag_population`): the row_digests the store
+  # already holds for this digest + embedder. None = a cold digest:
+  # populate the whole prefix plus the value chunks. A set = the store
+  # was written with a smaller limit: chunk only the prefix rows it lacks
+  # and no value chunks (those depend on the sample, not the limit, and
+  # are already there).
+  rag_present_row_digests: frozenset[str] | None = None
   # Opt-in decode-time format constraint for identifier-ish free-text
   # pools (2026-07-25 hallucination fix, layer 2). See
   # GenerationContext.pool_pattern_guidance.
@@ -287,6 +299,7 @@ def build_pipeline(
       embedder_id=config.embedder_id,
       embedder_version=config.embedder_version,
       rag_chunks_table=config.rag_chunks_table,
+      rag_row_docs_limit=config.rag_row_docs_limit,
       pool_pattern_guidance=config.pool_pattern_guidance,
       freetext_pools_table=config.freetext_pools_table,
       pool_seed_strategy=config.pool_seed_strategy,
@@ -1174,20 +1187,29 @@ def _population_branch(
     distinct free-text values → chunks → a BOUNDED embed fan-out
     (ADR 0034 D8). Returns the embedded-chunks PCollection; the caller
     writes it and lets the pool trigger wait on it."""
-  free_text_columns = _rag_free_text_columns(config.table_schema,
-                                             reference_rows)
   # Population is scoped to what its consumers can read (ADR 0019):
   # row_doc chunks cover EXACTLY the engine's read prefix
-  # (`_vectors_from_store` is all-or-nothing over rows[:1024]) — the
-  # 2026-07-25 06:18 run embedded all 10k rows and 90 % could never
-  # be read back. free_text_col chunks dedupe to distinct
-  # (column, value), computed driver-side (reference_rows is already
-  # in memory here); Beam still fans the embed itself out below.
-  distinct_values = distinct_free_text_values(reference_rows, free_text_columns)
+  # (`_vectors_from_store` is all-or-nothing over
+  # rows[:rag_row_docs_limit]) — the 2026-07-25 06:18 run embedded all
+  # 10k rows and 90 % could never be read back. free_text_col chunks
+  # dedupe to distinct (column, value), computed driver-side
+  # (reference_rows is already in memory here); Beam still fans the
+  # embed itself out below. A top-up (`rag_present_row_digests` set)
+  # chunks only the prefix rows the store lacks, and no values.
+  present = config.rag_present_row_digests
+  prefix = [
+      row for row in reference_rows[:config.rag_row_docs_limit]
+      if present is None or compute_row_digest(row) not in present
+  ]
+  distinct_values: dict[str, list[str]] = {}
+  if present is None:
+    free_text_columns = _rag_free_text_columns(config.table_schema,
+                                               reference_rows)
+    distinct_values = distinct_free_text_values(reference_rows,
+                                                free_text_columns)
   row_doc_chunks = (
       p
-      | f"{label_prefix}RagReferenceRows" >> beam.Create(
-          reference_rows[:MAX_ROW_DOC_ROWS])
+      | f"{label_prefix}RagReferenceRows" >> beam.Create(prefix)
       | f"{label_prefix}RagChunkRows" >> beam.ParDo(
           ChunkReferenceRowsDoFn(
               source_fqn=config.table_schema.fqn,

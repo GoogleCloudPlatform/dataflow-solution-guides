@@ -1,6 +1,6 @@
 # Terraform Directory — Agent Guidelines
 
-This directory contains Terraform infrastructure definitions for each solution guide, built using **Google Cloud Foundation Fabric** (v56.2.0) modules.
+This directory contains Terraform infrastructure definitions for each solution guide, built using **Google Cloud Foundation Fabric** (v58.0.0) modules.
 
 ---
 
@@ -17,7 +17,7 @@ This directory contains Terraform infrastructure definitions for each solution g
 | `iot_analytics/` | Cloud Bigtable (Instance & Table), BigQuery Dataset & Table, Pub/Sub Topic, Artifact Registry, Service Account | `pipelines/iot_analytics/` |
 | `log_replication_splunk/` | Pub/Sub Topics (`all-logs`, `deadletter-topic`), Cloud Logging Sink, Secret Manager (Splunk HEC token), Service Account, Optional Splunk Demo VM | `pipelines/log_replication_splunk/` |
 | `gaming_analytics/` | Pub/Sub Topics (`gaming-events`, `gaming-recommendations`, `gaming-analytics-errors`), Cloud Bigtable feature store (Instance & Table), BigQuery Dataset & Table, Artifact Registry, Service Account (`gaming-analytics-sa`) | `pipelines/gaming_analytics_java/` |
-| `synthetic-llm-dataflow-bigquery/` | BigQuery datasets (`synthetic_source` snapshots, `synthetic_data` landing tables with the public schemas, `synthetic_data_quality`, `synthetic_rag`), Artifact Registry, Dataflow + Cloud Build Service Accounts, optional Flex Template job | `pipelines/synthetic-llm-dataflow-bigquery/` |
+| `synthetic-llm-dataflow-bigquery/` | BigQuery datasets (`synthetic_source` snapshots, `synthetic_data` landing tables with the public schemas, `synthetic_data_quality` with the evaluator's `evaluation_*` tables and views, `synthetic_rag`), Artifact Registry, Dataflow + Cloud Build Service Accounts, optional Flex Template job | `pipelines/synthetic-llm-dataflow-bigquery/` |
 
 ---
 
@@ -30,9 +30,9 @@ resource "local_file" "variables_script" {
   filename        = "${path.module}/../../pipelines/<use_case>/scripts/01_set_variables.sh"
   file_permission = "0644"
   content         = <<FILE
-export PROJECT=${module.google_cloud_project.project_id}
+export PROJECT=${local.project_id}
 export REGION=${var.region}
-export NETWORK=regions/${var.region}/subnetworks/${var.network_prefix}-subnet
+export SUBNETWORK=${local.subnetwork_path}
 export SERVICE_ACCOUNT=${module.dataflow_sa.email}
 ...
 FILE
@@ -48,13 +48,13 @@ FILE
 
 1. **Cloud Foundation Fabric Modules**:
    Always use standard Fabric module sources:
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v56.2.0`
-   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v56.2.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/gcs?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-firewall?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-cloudnat?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/iam-service-account?ref=v58.0.0`
+   - `github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/bigquery-dataset?ref=v58.0.0`
 
 2. **Network Security**:
    - Every VPC module creates a private subnet with `enable_private_access = true`.
@@ -96,5 +96,5 @@ Anomaly detection implements synthetic data → managed CPU Vertex AI training �
 <!-- dsg-sync:synthetic-llm-dataflow-bigquery:start -->
 ### Synthetic data generation deployment
 
-Batch, not streaming: `terraform apply` in `terraform/synthetic-llm-dataflow-bigquery` (US BigQuery, a region with the chosen GPU: `gpu = "l4"` on G2 with `vllm_dtype=auto`, or `gpu = "t4"` on N1 with `vllm_dtype=float16` and `qwen3-4b` only), then from `pipelines/synthetic-llm-dataflow-bigquery` run `scripts/01_build_and_push_container.sh`, `02_stage_models.sh` (Hugging Face, or `MODEL_SOURCE=modelscope`), `03_build_flex_template.sh`, `04_run_dataflow.sh` (or `terraform apply -var launch_job=true`) and `05_verify_run.sh RUN_ID`. Workers use private IPs and `synthetic-llm-dataflow-sa`; Cloud Build uses `synthetic-llm-build-sa`. The pipeline is developed at https://github.com/albertols/synthetic-llm-dataflow-bigquery, and its README names the release and commit this copy corresponds to. Report live-cloud verification separately from local tests.
+Batch, not streaming: `terraform apply` in `terraform/synthetic-llm-dataflow-bigquery` (US BigQuery, a region with the chosen GPU: `gpu = "l4"` on G2 with `vllm_dtype=auto`, or `gpu = "t4"` on N1 with `vllm_dtype=float16` and `qwen3-4b` only), then from `pipelines/synthetic-llm-dataflow-bigquery` run `scripts/01_build_and_push_container.sh`, `02_stage_models.sh` (Hugging Face, or `MODEL_SOURCE=modelscope`), `03_build_flex_template.sh`, `04_run_dataflow.sh` (or `terraform apply -var launch_job=true`), `05_verify_run.sh RUN_ID` and `06_run_evaluation.sh RUN_ID` (a CPU-only job from the same template that scores the landed tables against their sources into `synthetic_data_quality.evaluation_*`). Workers use private IPs and `synthetic-llm-dataflow-sa`; Cloud Build uses `synthetic-llm-build-sa`. The pipeline is developed at https://github.com/albertols/synthetic-llm-dataflow-bigquery, and its README names the release and commit this copy corresponds to. Report live-cloud verification separately from local tests.
 <!-- dsg-sync:synthetic-llm-dataflow-bigquery:end -->
