@@ -28,3 +28,33 @@ Dataflow is the premier platform for building real-time IoT stream processing an
   - Processed records and inference predictions are streamed into **BigQuery** using the high-performance Storage Write API for fleet analytics and dashboards, while immediate maintenance flags (`needs_maintenance == 1`) are simultaneously routed to a dedicated **Pub/Sub alert topic** for downstream work-order dispatching and telemetry monitors.
 - **Extensible & Portable Architecture**:
   - The pipeline uses standard Apache Beam constructs that run seamlessly on Google Cloud Dataflow or locally with `DirectRunner` for rapid prototyping and unit testing.
+
+## How to deploy (Agentic or Manual)
+
+### Option 1: Deploy with an AI Coding Harness (Recommended)
+
+Open this repository in your AI coding harness and prompt it to provision the infrastructure, seed Bigtable maintenance history, launch the streaming pipeline, and verify predictive maintenance alerts:
+
+> *"Deploy the IoT Analytics guide in project `my-gcp-project` and region `us-central1` (auto-discovering any Shared VPC subnet and existing staging bucket). Build the custom worker container, populate Cloud Bigtable with historical vehicle maintenance records, launch the Dataflow pipeline with private IPs, publish synthetic vehicle sensor telemetry, and verify that predictions and maintenance alerts land in BigQuery and Pub/Sub."*
+
+### Option 2: Manual CLI Deployment
+
+Follow the step-by-step instructions in the [Terraform module README](../terraform/iot_analytics/README.md) and [Pipeline README](../pipelines/iot_analytics/README.md):
+
+```bash
+# 1. Provision Cloud Bigtable, BigQuery, Pub/Sub & Artifact Registry
+cd terraform/iot_analytics
+terraform init && terraform apply
+
+# 2. Build container, seed Bigtable & submit the Dataflow job
+cd ../../pipelines/iot_analytics
+source scripts/00_set_environment.sh
+./scripts/01_cloud_build_and_push.sh
+python3 scripts/create_and_populate_bigtable.py
+./scripts/02_submit_job.sh
+
+# 3. Publish simulated vehicle sensor telemetry
+python3 scripts/publish_on_pubsub.py
+```
+
+To tear down the deployment, cancel the active Dataflow job first, then run `terraform destroy` in `terraform/iot_analytics`.

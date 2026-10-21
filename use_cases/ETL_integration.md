@@ -34,4 +34,35 @@ cases:
   two separate systems for batch & stream processing.
 * **Limitless scalability**: Dataflow offers two service backends for batch and streaming called
   Shuffle
-  and Streaming Engine, respectively. These backends have scaled
+  and Streaming Engine, respectively. These backends have scaled to process petabytes of data and
+  millions of events per second.
+
+## How to deploy (Agentic or Manual)
+
+### Option 1: Deploy with an AI Coding Harness (Recommended)
+
+Open this repository in your AI coding harness and prompt it to discover your project networking (including Shared VPCs), provision Cloud Spanner and BigQuery, launch the CDC pipelines, verify replication, and clean up:
+
+> *"Deploy the ETL & Integration guide in project `my-gcp-project`, region `europe-southwest1`. If this project has no local network and uses a Shared VPC, discover the usable subnet automatically. Provision the Spanner instance, change stream, and BigQuery dataset via Terraform, launch both the publisher pipeline and the Spanner Change Streams to BigQuery job, verify that replicated rows appear in `replica.events_changelog`, and tear down when finished."*
+
+### Option 2: Manual CLI Deployment
+
+Follow the step-by-step instructions in the [Terraform module README](../terraform/etl_integration/README.md) and [Pipeline README](../pipelines/etl_integration_java/README.md):
+
+```bash
+# 1. Provision Cloud Spanner (with Change Stream) & BigQuery infrastructure
+cd terraform/etl_integration
+terraform init && terraform apply
+
+# 2. Launch the Spanner event publisher & Change Stream CDC jobs
+cd ../../pipelines/etl_integration_java
+source scripts/01_set_variables.sh
+./scripts/02_run_publisher_dataflow.sh
+./scripts/03_run_changestream_template.sh
+
+# 3. Verify replicated CDC records in Spanner & BigQuery
+gcloud spanner databases execute-sql taxis_database --instance=test-spanner-instance --project="$PROJECT" --sql='SELECT COUNT(*) FROM events'
+bq query --project_id="$PROJECT" --use_legacy_sql=false 'SELECT COUNT(*) FROM replica.events_changelog'
+```
+
+To tear down the deployment, cancel both active Dataflow jobs first, then run `terraform destroy` in `terraform/etl_integration`.

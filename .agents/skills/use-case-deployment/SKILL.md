@@ -2,14 +2,15 @@
 name: use-case-deployment
 description: >-
   End-to-end orchestration and deployment runner for all solution guides in this repository.
-  Use when deploying, running, ingesting test data into, or validating any of the 8 solution guides:
+  Use when deploying, running, ingesting test data into, or validating any of the 10 solution guides:
   GenAI & ML (Gemma 4 with vLLM on GPU), ETL & Integration (Spanner CDC), Customer Data Platform (CDP),
-  Anomaly Detection, Marketing Intelligence, Clickstream Analytics, IoT Analytics, or Log Replication.
+  Anomaly Detection, Marketing Intelligence, Clickstream Analytics, IoT Analytics, Log Replication,
+  Gaming Analytics, or Synthetic Data Generation.
 ---
 
 # Use Case Deployment Skill
 
-This skill provides step-by-step execution workflows for deploying, running, verifying, and safely tearing down each of the 8 solution guides in this repository.
+This skill provides step-by-step execution workflows for deploying, running, verifying, and safely tearing down each of the 10 solution guides in this repository.
 
 ---
 
@@ -21,10 +22,11 @@ This skill provides step-by-step execution workflows for deploying, running, ver
 | **ETL & Integration** | `terraform/etl_integration` | `pipelines/etl_integration_java` | `./scripts/02_run_publisher_dataflow.sh` & `./scripts/03_run_changestream_template.sh` | Pub/Sub Taxirides feed | Cloud Spanner `events` table & BigQuery `replica.events_changelog` |
 | **Customer Data Platform (CDP)** | `terraform/cdp` | `pipelines/cdp` | `./scripts/02_run_dataflow.sh` | `python cdp_pipeline/generate_transaction_data.py` | BigQuery `cdp_dataset.unified_customer_data` |
 | **Anomaly Detection** | `terraform/anomaly_detection` | `pipelines/anomaly_detection` | `./scripts/02_run_dataflow.sh` | Pub/Sub `anomaly-detection-transactions` topic | Pub/Sub `anomaly-detection-detections`, BigQuery `anomaly_detection.detections`, errors `anomaly-detection-errors` |
-| **Marketing Intelligence** | `terraform/marketing_intelligence` | `pipelines/marketing_intelligence` | `./scripts/02_run_dataflow.sh` | Pub/Sub user activity stream | BigQuery marketing attribution tables |
-| **Clickstream Analytics** | `terraform/clickstream_analytics` | `pipelines/clickstream_analytics_java` | `./scripts/01_launch_pipeline.sh` | Pub/Sub events | Cloud Bigtable & BigQuery analytics table |
+| **Marketing Intelligence** | `terraform/marketing_intelligence` | `pipelines/marketing_intelligence` | `./scripts/02_run_dataflow.sh` | Pub/Sub user activity stream (`scripts/03_publish_events.py`) | BigQuery marketing attribution tables |
+| **Clickstream Analytics** | `terraform/clickstream_analytics` | `pipelines/clickstream_analytics_java` | `./scripts/01_launch_pipeline.sh` | Pub/Sub events (`scripts/generate_clickstream_events.py`) | Cloud Bigtable & BigQuery analytics table |
 | **IoT Analytics** | `terraform/iot_analytics` | `pipelines/iot_analytics` | `./scripts/02_submit_job.sh` | `python scripts/publish_on_pubsub.py` | BigQuery `iot.maintenance_analytics` & Pub/Sub `maintenance-alerts` |
 | **Log Replication** | `terraform/log_replication_splunk` | `pipelines/log_replication_splunk` | `./scripts/01_launch_ps_to_splunk.sh` | Pub/Sub logging topic | Splunk HTTP Event Collector (HEC) |
+| **Gaming Analytics** | `terraform/gaming_analytics` | `pipelines/gaming_analytics_java` | `./scripts/03_launch_pipeline.sh` | `./scripts/04_publish_events.sh` | Pub/Sub `gaming-recommendations` & BigQuery `gaming_analytics.player_recommendations` |
 | **Synthetic Data Generation** | `terraform/synthetic-llm-dataflow-bigquery` | `pipelines/synthetic-llm-dataflow-bigquery` | `./scripts/04_run_dataflow.sh` | BigQuery `synthetic_source` snapshots of `thelook_ecommerce` | `./scripts/05_verify_run.sh RUN_ID` (BigQuery `synthetic_data`, `synthetic_data_quality.validation_runs`) |
 
 ---
@@ -40,15 +42,22 @@ Before deploying infrastructure or submitting Dataflow jobs:
    ```
    If a collision exists, set a custom `service_account_name = "<custom-name>"` in `terraform.tfvars`.
 
-2. **Shared VPC / Subnetwork Verification**:
-   If running workers in a Shared VPC, verify that the full subnetwork URI is configured:
-   `https://www.googleapis.com/compute/v1/projects/HOST_PROJECT/regions/REGION/subnetworks/SUBNET_NAME`
+2. **Shared VPC / Subnetwork Discovery & Past Job Inference**:
+   - Check for local networks first (`gcloud compute networks list --project=$PROJECT`).
+   - If the project uses a **Shared VPC**, discover the host project and usable regional subnets:
+     ```bash
+     gcloud compute shared-vpc get-host-project $PROJECT
+     gcloud compute networks subnets list-usable --project=$HOST_PROJECT --service-project=$PROJECT --filter="region:($REGION)"
+     ```
+   - Configure the full subnetwork URI in `terraform.tfvars`:
+     `https://www.googleapis.com/compute/v1/projects/HOST_PROJECT/regions/REGION/subnetworks/SUBNET_NAME` (or `projects/HOST_PROJECT/regions/REGION/subnetworks/SUBNET_NAME`).
+   - Optionally inspect historical Dataflow jobs in the project (`gcloud dataflow jobs list --project=$PROJECT --region=$REGION --limit=5` and `gcloud dataflow jobs describe <JOB_ID> --project=$PROJECT --region=$REGION --full`) to infer previously validated `subnetwork`, `tempLocation`, and worker parameters.
 
 3. **GCS Staging Bucket**:
    Ensure the staging bucket (`gs://BUCKET_NAME/tmp`) exists in the same region as the Dataflow workers or set `create_bucket = true` in `terraform.tfvars`.
 
 4. **Java Pipeline Toolchains**:
-   For Java pipelines (`etl_integration_java`, `clickstream_analytics_java`), ensure `build.gradle` specifies `JavaLanguageVersion.of(25)`.
+   For Java pipelines (`etl_integration_java`, `clickstream_analytics_java`, `gaming_analytics_java`), ensure `build.gradle` specifies `JavaLanguageVersion.of(25)`.
 
 ---
 
@@ -198,6 +207,41 @@ gcloud compute start-iap-tunnel $SPLUNK_DEMO_INSTANCE 8000 --local-host-port=loc
 
 # 4. Ingest Test Log Event & Verify
 gcloud pubsub topics publish splunk-logs --message='{"message": "Test replication log", "severity": "INFO"}'
+```
+
+### 9. Gaming Analytics (Java + Cross-Language Python RunInference)
+```bash
+# 1. Terraform
+cd terraform/gaming_analytics
+terraform init && terraform apply -auto-approve
+
+# 2. Build Python SDK Harness Container, Seed Bigtable & Launch Pipeline
+cd ../../pipelines/gaming_analytics_java
+source scripts/00_set_environment.sh
+./scripts/01_build_and_push_container.sh
+./scripts/02_populate_bigtable.sh
+./scripts/03_launch_pipeline.sh
+
+# 3. Publish Synthetic Gameplay Events
+./scripts/04_publish_events.sh
+```
+
+### 10. Synthetic Data Generation (Batch vLLM on GPU)
+```bash
+# 1. Terraform
+cd terraform/synthetic-llm-dataflow-bigquery
+terraform init && terraform apply -auto-approve
+
+# 2. Build Container, Stage Models, Build Flex Template & Run Job
+cd ../../pipelines/synthetic-llm-dataflow-bigquery
+source scripts/00_set_variables.sh
+./scripts/01_build_and_push_container.sh
+./scripts/02_stage_models.sh
+./scripts/03_build_flex_template.sh
+./scripts/04_run_dataflow.sh
+
+# 3. Verify Generated Tables & Quality Verdicts
+./scripts/05_verify_run.sh <RUN_ID>
 ```
 
 ---

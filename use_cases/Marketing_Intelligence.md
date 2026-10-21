@@ -29,3 +29,32 @@ Dataflow is the premier platform for building real-time ML & streaming personali
   - Pre-bake dependencies and serialized model artifacts into lightweight CPU container images for instant worker boot times and deterministic autoscaling.
 - **Advanced Stream Processing**:
   - Implemented using the open-source [Apache Beam SDK](https://beam.apache.org/get-started/), providing state & timer APIs, streaming joins, dead-letter routing, and portable execution across runners.
+
+## How to deploy (Agentic or Manual)
+
+### Option 1: Deploy with an AI Coding Harness (Recommended)
+
+Open this repository in your AI coding harness and prompt it to provision the infrastructure, seed Firestore profiles, run the pipeline, and verify predictions in BigQuery:
+
+> *"Deploy the Marketing Intelligence guide in project `my-gcp-project` and region `us-central1` (auto-discovering any Shared VPC subnet and existing staging bucket). Build the custom container, seed the Firestore customer profiles, launch the Dataflow pipeline with private IPs, publish synthetic clickstream events, and verify that enriched conversion propensity scores land in BigQuery with zero dead-letter errors."*
+
+### Option 2: Manual CLI Deployment
+
+Follow the step-by-step instructions in the [Terraform module README](../terraform/marketing_intelligence/README.md) and [Pipeline README](../pipelines/marketing_intelligence/README.md):
+
+```bash
+# 1. Provision Pub/Sub, Firestore, BigQuery & Artifact Registry
+cd terraform/marketing_intelligence
+terraform init && terraform apply
+
+# 2. Build container, seed Firestore & launch the Dataflow pipeline
+cd ../../pipelines/marketing_intelligence
+source scripts/00_set_environment.sh
+./scripts/01_build_and_push_container.sh
+./scripts/02_run_dataflow.sh
+
+# 3. Publish synthetic events & verify BigQuery predictions
+python3 ./scripts/03_publish_events.py
+```
+
+To tear down the deployment, cancel the active Dataflow job first, then run `terraform destroy` in `terraform/marketing_intelligence`.

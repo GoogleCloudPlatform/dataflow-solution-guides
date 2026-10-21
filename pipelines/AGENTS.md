@@ -14,8 +14,9 @@ This directory contains Apache Beam streaming pipeline implementations in **Pyth
 | `anomaly_detection/` | Python | Managed Vertex AI training/prediction, Bigtable enrichment, Pub/Sub and BigQuery | [Anomaly_Detection.md](../use_cases/Anomaly_Detection.md) |
 | `marketing_intelligence/` | Python | Firestore enrichment, Scikit-Learn RunInference, BigQuery, Pub/Sub | [Marketing_Intelligence.md](../use_cases/Marketing_Intelligence.md) |
 | `clickstream_analytics_java/` | Java | Cloud Bigtable enrichment / hydration lookup, BigQueryIO | [Clickstream_Analytics.md](../use_cases/Clickstream_Analytics.md) |
-| `iot_analytics/` | Python | Sensor telemetry aggregation, Bigtable hydration, Vertex AI | [IoT_Analytics.md](../use_cases/IoT_Analytics.md) |
+| `iot_analytics/` | Python | Sensor telemetry aggregation, Bigtable hydration, Scikit-Learn `RunInference` | [IoT_Analytics.md](../use_cases/IoT_Analytics.md) |
 | `log_replication_splunk/` | Flex Template | Pub/Sub to Splunk HTTP Event Collector (HEC) | [Log_replication.md](../use_cases/Log_replication.md) |
+| `gaming_analytics_java/` | Java (Cross-Language Python) | Cloud Bigtable feature store lookup, cross-language `RunInference` (Portable Runner), Pub/Sub & BigQuery | [Gaming_Analytics.md](../use_cases/Gaming_Analytics.md) |
 | `synthetic-llm-dataflow-bigquery/` | Python (Flex Template) | Batch relational synthetic data, vLLM on NVIDIA L4, BigQuery landing + DLQ + validation_runs | [Synthetic_Data_Generation.md](../use_cases/Synthetic_Data_Generation.md) |
 
 ---

@@ -62,3 +62,34 @@ tables are described in the
 - **Portable.** The engines are pure Python behind one interface and the
   pipeline is Apache Beam, so it runs locally with the DirectRunner and a
   fake model client.
+
+## How to deploy (Agentic or Manual)
+
+### Option 1: Deploy with an AI Coding Harness (Recommended)
+
+Open this repository in your AI coding harness and prompt it to inspect your project networking and GPU quotas, stage the open-weight LLM, run the batch Flex Template, and validate the generated relational tables:
+
+> *"Deploy and test the Synthetic Data Generation guide in project `my-gcp-project`, region `europe-southwest1` (or `us-central1`). Check past Dataflow jobs if needed to infer the Shared VPC subnetwork, and check regional `NVIDIA_L4_GPUS` / `NVIDIA_T4_GPUS` quota to select the matching GPU profile. Provision Terraform, build the container, stage the model to GCS, build and run the Dataflow Flex Template, and verify the run with `05_verify_run.sh`."*
+
+### Option 2: Manual CLI Deployment
+
+Follow the step-by-step instructions in the [Terraform module README](../terraform/synthetic-llm-dataflow-bigquery/README.md) and [Pipeline README](../pipelines/synthetic-llm-dataflow-bigquery/README.md):
+
+```bash
+# 1. Provision BigQuery datasets, Artifact Registry & Service Accounts
+cd terraform/synthetic-llm-dataflow-bigquery
+terraform init && terraform apply
+
+# 2. Build container, stage LLM weights, build Flex Template & run batch job
+cd ../../pipelines/synthetic-llm-dataflow-bigquery
+source scripts/00_set_variables.sh
+./scripts/01_build_and_push_container.sh
+./scripts/02_stage_models.sh
+./scripts/03_build_flex_template.sh
+./scripts/04_run_dataflow.sh
+
+# 3. Verify generated tables and quality verdicts
+./scripts/05_verify_run.sh <RUN_ID>
+```
+
+To tear down the deployment after the batch job completes, run `terraform destroy` in `terraform/synthetic-llm-dataflow-bigquery`.
