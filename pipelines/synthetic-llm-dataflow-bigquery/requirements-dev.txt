@@ -14,7 +14,7 @@ astroid==4.3.3
 attrs==26.1.0
 beartype==0.22.9
 cachetools==6.2.6
-certifi==2026.7.22
+certifi==2026.10.19
 cffi==2.1.1 ; platform_python_implementation != 'PyPy'
 charset-normalizer==3.5.2
 cloud-sql-python-connector==1.22.0
