@@ -76,7 +76,7 @@ jaraco-classes==3.4.0
 jaraco-context==6.1.2
 jaraco-functools==4.6.0
 jeepney==0.9.0 ; sys_platform == 'linux'
-jsonpickle==4.1.2
+jsonpickle==4.1.4
 keyring==25.7.0
 keyrings-google-artifactregistry-auth==1.1.2
 kiwisolver==1.5.1
