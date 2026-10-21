@@ -6,7 +6,7 @@ the shared ABC (M1 §6). Library choice: **`sdgx`** (Apache-2.0). See
 (sdgx selected; SDV/GaussianCopula deferred pending BSL-1.1 sign-off) and the
 fit-time / RAM / sample-quality measurement plan.
 
-Design of record: [ADR 0013](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0013-distribution-estimator-spine.md).
+Design of record: [ADR 0013](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/edcfdcd6a621ecf977e9af7b320996f3a9ea7d48/docs/adr/0013-distribution-estimator-spine.md).
 
 ## The spine (fit-once, vectorized-sample, LLM-only-for-free-text)
 

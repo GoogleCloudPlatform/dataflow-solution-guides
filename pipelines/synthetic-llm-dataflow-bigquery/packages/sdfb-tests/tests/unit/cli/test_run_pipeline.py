@@ -505,22 +505,24 @@ def test_parse_args_ddl_uri_optional_defaults_empty():
   assert beam_argv == []
 
 
-def test_resolve_table_schema_prefers_explicit_uri(monkeypatch):
+def test_resolve_table_schema_uses_the_uri_when_live_extraction_fails(
+    monkeypatch):
   from sdfb_beam.cli import run_pipeline as rp
 
   sentinel = object()
   monkeypatch.setattr(rp, "load_ddl", lambda uri: sentinel)
 
-  def fake_extract(fqn: str):
+  def offline_extract(fqn: str):
     live_calls.append(fqn)
+    raise ConnectionError("offline launcher")
 
   live_calls: list[str] = []
-  monkeypatch.setattr(
-      "sdfb_beam.ddl.extract_table_schema",
-      fake_extract,
-  )
+  # Patched where run_pipeline binds it (see the next test): patching
+  # sdfb_beam.ddl left the real extractor to query BigQuery for p.d.t.
+  monkeypatch.setattr(rp, "extract_table_schema", offline_extract)
   assert rp.resolve_table_schema("gs://b/d.json", "p.d.t") is sentinel
-  assert live_calls == []  # precedence: pin wins, live never touched
+  # ADR 0027 D2: live first, the pin only as the offline fallback.
+  assert live_calls == ["p.d.t"]
 
 
 def test_resolve_table_schema_live_extracts_when_uri_empty(monkeypatch):

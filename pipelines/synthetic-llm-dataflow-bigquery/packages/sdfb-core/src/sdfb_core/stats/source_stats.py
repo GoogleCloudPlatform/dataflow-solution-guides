@@ -248,7 +248,13 @@ def _add_numeric(entry: dict, substantive: list[object]) -> None:
   entry["min"] = ordered[0]
   entry["max"] = ordered[-1]
   entry["zero_fraction"] = round(sum(1 for f in ordered if f == 0.0) / count, 6)
-  mean = sum(ordered) / count
+  # A plain left-to-right sum, not the builtin: CPython 3.12 made float
+  # sum() compensated, which moves the mean's last bit and, where the
+  # mean is a tie at the sixth decimal, the value written below.
+  total = 0.0
+  for f in ordered:
+    total += f
+  mean = total / count
   entry["mean"] = round(mean, 6)
   variance = sum((f - mean)**2 for f in ordered) / count
   entry["stddev"] = round(variance**0.5, 6)
