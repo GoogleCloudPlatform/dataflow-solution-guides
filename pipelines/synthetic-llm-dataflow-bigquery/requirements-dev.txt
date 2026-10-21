@@ -11,7 +11,7 @@ anyio==4.15.1
 apache-beam==2.76.0
 asn1crypto==1.5.1
 ast-serialize==0.13.1
-astroid==4.3.3
+astroid==4.3.4
 attrs==26.1.0
 beartype==0.22.9
 cachetools==6.2.6
