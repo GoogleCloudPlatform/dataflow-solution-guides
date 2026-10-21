@@ -1,0 +1,42 @@
+[
+  {
+    "created_at": "2026-09-13T13:58:59.000000Z",
+    "landing_table": "demo-project.thelook_synthetic.order_items",
+    "num_rows_requested": 5000,
+    "reference_digest": "aa54aa45c5f807d1553752b73e851b3692a9c73ba3dc4deae38147a122efd1e8",
+    "reference_table": "bigquery-public-data.thelook_ecommerce.order_items",
+    "run_id": "thelook-0913-a1b2c3-02-order_items",
+    "status": "PASSED",
+    "valid_count": 44710
+  },
+  {
+    "created_at": "2026-09-13T13:41:02.000000Z",
+    "landing_table": "demo-project.thelook_synthetic.users",
+    "num_rows_requested": 5000,
+    "reference_digest": "6113125a2630f8f131674c1ac5f07c8b514d4eadce496e59ea8e208b7735f89e",
+    "reference_table": "bigquery-public-data.thelook_ecommerce.users",
+    "run_id": "thelook-0913-a1b2c3-00-users",
+    "status": "PASSED",
+    "valid_count": 5000
+  },
+  {
+    "created_at": "2026-09-13T13:49:40.000000Z",
+    "landing_table": "demo-project.thelook_synthetic.orders",
+    "num_rows_requested": 5000,
+    "reference_digest": "2c48aa70cc54cc0173b04f480b2af156eb2f676f73f7e83d5d407895e3232bfb",
+    "reference_table": "bigquery-public-data.thelook_ecommerce.orders",
+    "run_id": "thelook-0913-a1b2c3-01-orders",
+    "status": "PASSED",
+    "valid_count": 18250
+  },
+  {
+    "created_at": "2026-09-13T13:55:00.000000Z",
+    "landing_table": "demo-project.thelook_synthetic.orders",
+    "num_rows_requested": 5000,
+    "reference_digest": "4fbaee82d4bdefbcc627656c6bff80b3c2d7169afe404342ed8936d3355fd3ac",
+    "reference_table": "bigquery-public-data.thelook_ecommerce.orders",
+    "run_id": "thelook-0913-ffee00-01-orders",
+    "status": "PASSED",
+    "valid_count": 1200
+  }
+]

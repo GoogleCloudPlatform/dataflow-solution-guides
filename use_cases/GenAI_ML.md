@@ -13,10 +13,6 @@ the proposed architecture effectively reduces prediction times to seconds.
 - [One pager: GenAI & ML inference in real-time with Dataflow (PDF)](./one_pagers/genai_ml_dataflow_onepager.pdf)
 - [Gen AI & ML inference Solution Guide and Architecture (PDF)](./guides/genai_ml_dataflow_guide.pdf)
 
-For the full documentation of this solution guide, please refer to:
-
-- https://solutions.cloud.google.com/app/solutions/data-flow-real-time-ml-and-genai
-
 ## Assets included in this repository
 
 - [Terraform code to deploy infrastructure for GenAI & ML inference](../terraform/ml_ai/)

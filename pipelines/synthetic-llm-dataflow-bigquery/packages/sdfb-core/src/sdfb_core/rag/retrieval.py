@@ -78,7 +78,13 @@ def retrieve_column_exemplars(values: Sequence[str], embedder: Embedder,
 
 
 def _sq_dist(a: Sequence[float], b: Sequence[float]) -> float:
-  return sum((x - y) * (x - y) for x, y in zip(a, b, strict=True))
+  # A plain left-to-right sum, not the builtin: CPython 3.12 made float
+  # sum() compensated, which moves the last bits and, on a near-tie, the
+  # pick. The TS mirror in gui/packages/stats sums this way and must match.
+  total = 0.0
+  for x, y in zip(a, b, strict=True):
+    total += (x - y) * (x - y)
+  return total
 
 
 def retrieve_kcenter_k(
