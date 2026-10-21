@@ -66,7 +66,7 @@ Every Terraform module in `terraform/<use_case>/` contains a `resource "local_fi
 | **Dataflow / Beam** | Stream processing runtime | Apache Beam Python SDK 2.50+, Apache Beam Java SDK 2.50+ |
 | **Python** | Pipeline development | Python 3.13 / 3.14, `yapf`, `pylint`, `pipenv` / `venv` |
 | **Java** | Pipeline development | OpenJDK 25, Gradle Wrapper (`./gradlew`), Spotless |
-| **Terraform** | Infrastructure as Code | Terraform >= 1.5, Google Cloud Foundation Fabric v56.2.0 |
+| **Terraform** | Infrastructure as Code | Terraform >= 1.5, Google Cloud Foundation Fabric v58.0.0 |
 | **Containers & CI** | Worker environment & CI | Docker, Google Cloud Build (`cloudbuild.yaml`), GitHub Actions |
 | **Google Cloud** | Managed platform | Dataflow, Pub/Sub, Cloud Storage, BigQuery, Spanner, Bigtable, Vertex AI |
 
@@ -166,7 +166,7 @@ When assisting a user with deploying a solution guide, follow this structured 7-
 
 1. **Infrastructure Provisioning**:
    - Navigate to `terraform/<use_case>/`.
-   - Ensure `terraform.tfvars` defines `project_id`, `region`, and `billing_account`.
+   - Ensure `terraform.tfvars` defines `project_id`, `region`, and optional `subnetwork` (including Shared VPC subnet paths) or `bucket_name`.
    - Run `terraform init` and `terraform apply`.
 2. **Environment Variable Loading**:
    - Navigate to `pipelines/<use_case>/`.
@@ -201,7 +201,7 @@ The repository includes specialized workspace skills located in `.agents/skills/
 
 - **`dataflow-pipeline-dev`**: Runbooks and procedures for developing, linting, packaging, and locally testing Beam pipelines.
 - **`terraform-deploy`**: Procedures for provisioning, validating, planning, and managing Cloud Foundation Fabric Terraform modules.
-- **`use-case-deployment`**: Matrix and step-by-step guides for end-to-end execution of any of the 8 solution guides.
+- **`use-case-deployment`**: Matrix and step-by-step guides for end-to-end execution of any of the 10 solution guides.
 - **`dataflow-troubleshooting`**: Diagnostic playbooks for resolving common Dataflow worker, IAM, quota, networking, and serialization errors.
 - **`pr-review`**: Procedures for reviewing Pull Requests, monitoring CI builds, verifying security guardrails and code style policies, approving, merging, or providing corrective feedback.
 

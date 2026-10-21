@@ -17,62 +17,73 @@ again.
 
 ## Run in Dataflow and Google Cloud
 
-Before submitting your contribution, make sure that all your code runs correctly 
+Before submitting your contribution, make sure that all your code runs correctly
 in Google Cloud, including any Terraform code and any pipeline you write.
+
+## Developing & Reviewing with AI Coding Agents
+
+This repository includes agent instructions ([`AGENTS.md`](AGENTS.md), [`terraform/AGENTS.md`](terraform/AGENTS.md), [`pipelines/AGENTS.md`](pipelines/AGENTS.md)) and operational skills in [`.agents/skills/`](.agents/skills/) that help automate development, formatting, cloud testing, and Pull Request reviews:
+
+- **Developing & Testing Pipelines ([`dataflow-pipeline-dev`](.agents/skills/dataflow-pipeline-dev/SKILL.md))**: Ask your coding harness to format, lint, package, and run unit tests (`pytest` or `./gradlew test`) and local `DirectRunner` smoke tests before opening a PR.
+- **End-to-End Cloud Verification ([`use-case-deployment`](.agents/skills/use-case-deployment/SKILL.md) & [`terraform-deploy`](.agents/skills/terraform-deploy/SKILL.md))**: Ask your coding harness to provision the Terraform module in a sandbox project, launch the pipeline with private worker IPs, run the synthetic data generator, verify target tables, and tear down all resources afterward.
+- **Automated PR Review & Guardrails ([`pr-review`](.agents/skills/pr-review/SKILL.md))**: Verify that your changes adhere to the repository's mandatory security and engineering guardrails:
+  1. **Private Worker IPs Only**: Always pass `--no_use_public_ip` (Python), `--usePublicIps=false` (Java), or `--disable-public-ips` (Flex Templates / gcloud).
+  2. **Dedicated Least-Privilege Service Accounts**: Never use the default Compute Engine service account.
+  3. **Beam SDK & Container Version Parity**: Keep `apache-beam[gcp]==<version>` in `requirements.txt` strictly matched with the `apache/beam_python3.*_sdk:<version>` tag in `Dockerfile`.
+  4. **Agent Metadata Sync**: When adding a new solution guide or changing scripts/variables, update [`AGENTS.md`](AGENTS.md) and the skill matrices in [`.agents/skills/`](.agents/skills/).
 
 ## Code Quality Checks
 
 ### For Python code
 
-You normally will write Python code in a subdirectory of the `pipelines` folder. 
+You normally will write Python code in a subdirectory of the `pipelines` folder.
 Install `yapf` and run the following command in the top level directory of your
- pipeline, to reformat your code:
+pipeline, to reformat your code:
 
 ```shell
- yapf -i -r --style yapf .
- ```
+yapf -i -r --style yapf .
+```
 
- If you install `pylint`, you can check if your code will pass the build with the 
- following command:
+If you install `pylint`, you can check if your code will pass the build with the
+following command:
 
- ```shell
+```shell
 pylint --rcfile ../pylintrc .
 ```
 
 Please note that the configuration file `../pylintrc` is located in the
- `pipelines` folder.
+`pipelines` folder.
 
- ### For Java code
+### For Java code
 
- Make sure you are using Gradle with the same settings as the existing pipelines 
- (e.g. use `pipelines/etl_integration_java` as an example), and run the following 
- command to make your build passes:
+Make sure you are using Gradle with the same settings as the existing pipelines
+(e.g. use `pipelines/etl_integration_java` as an example), and run the following
+command to make sure your build passes:
 
- ```shell
- ./gradlew build
- ```
+```shell
+./gradlew build
+```
 
- If you find code style issues, run this command to fix them:
+If you find code style issues, run this command to fix them:
 
- ```
- shell
- ./gradlew spotlessApply
- ```
+```shell
+./gradlew spotlessApply
+```
 
- You can use the following files to copy the Gradle settings to your pipeline:
- * `build.gradle`
- * `gradlew` and `gradlew.bat`
- * The directory `gradle` and all its contents.
+You can use the following files to copy the Gradle settings to your pipeline:
+* `build.gradle`
+* `gradlew` and `gradlew.bat`
+* The directory `gradle` and all its contents.
 
- ### For Terraform code
+### For Terraform code
 
- Run the following command in the top level directory where your Terraform code is located:
+Run the following command in the top level directory where your Terraform code is located:
 
- ```shell
- terraform fmt
- ```
+```shell
+terraform fmt
+```
 
-You can also check for other types of issues with your Terraform code by using the 
+You can also check for other types of issues with your Terraform code by using the
 `terraform validate` command (but bear in mind you need to run `terraform init` command first).
 
 ## Code Reviews
@@ -85,7 +96,7 @@ information on using pull requests.
 ## Community Guidelines
 
 This project follows [Google's Open Source Community
-Guidelines](https:git//opensource.google/conduct/).
+Guidelines](https://opensource.google/conduct/).
 
 ## Contributor Guide
 
