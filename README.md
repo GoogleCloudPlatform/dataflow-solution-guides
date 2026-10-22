@@ -2,8 +2,6 @@
 
 [![Build and validation](https://github.com/GoogleCloudPlatform/dataflow-solution-guides/actions/workflows/pull_request.yml/badge.svg)](https://github.com/GoogleCloudPlatform/dataflow-solution-guides/actions/workflows/pull_request.yml) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Welcome to the **Dataflow Solution Guides**!
-
 The Dataflow Solution Guides provide production-grade **Cloud + Code reference architectures** and full end-to-end deployments for the most common real-time streaming and batch AI workloads on [Google Cloud Dataflow](https://cloud.google.com/dataflow/).
 
 Each guide in this repository includes:
