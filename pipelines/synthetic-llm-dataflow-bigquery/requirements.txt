@@ -23,7 +23,7 @@ docstring-parser==0.18.0
 fastavro==1.13.1
 fasteners==0.20
 frozenlist==1.8.0
-google-api-core==2.40.0
+google-api-core==2.42.0
 google-apitools==0.5.35
 google-auth==2.62.0
 google-auth-httplib2==0.2.1
