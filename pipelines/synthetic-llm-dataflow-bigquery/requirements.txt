@@ -18,9 +18,9 @@ charset-normalizer==3.5.2
 cloud-sql-python-connector==1.23.0
 cryptography==48.0.1
 distro==1.9.0
-dnspython==2.8.0
+dnspython==2.9.0
 docstring-parser==0.18.0
-fastavro==1.12.2
+fastavro==1.13.1
 fasteners==0.20
 frozenlist==1.8.0
 google-api-core==2.40.0
