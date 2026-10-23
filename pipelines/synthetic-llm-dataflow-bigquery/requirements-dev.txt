@@ -21,7 +21,7 @@ charset-normalizer==3.5.2
 cloud-sql-python-connector==1.23.0
 colorama==0.4.6 ; sys_platform == 'win32'
 contourpy==1.4.0
-coverage==7.16.2
+coverage==7.17.0
 cryptography==48.0.1
 cycler==0.12.1
 dill==0.4.1
