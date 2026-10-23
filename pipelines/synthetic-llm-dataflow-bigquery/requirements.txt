@@ -51,7 +51,7 @@ google-crc32c==1.9.0
 google-genai==1.75.0
 google-resumable-media==2.11.0
 googleapis-common-protos==1.75.5
-grpc-google-iam-v1==0.14.5
+grpc-google-iam-v1==0.14.6
 grpc-interceptor==0.15.4
 grpcio==1.84.1
 grpcio-status==1.84.0
