@@ -39,7 +39,7 @@ google-cloud-dlp==3.40.0
 google-cloud-kms==3.17.0
 google-cloud-language==2.21.0
 google-cloud-monitoring==2.31.0
-google-cloud-pubsub==2.41.0
+google-cloud-pubsub==2.43.0
 google-cloud-recommendations-ai==0.10.18
 google-cloud-resource-manager==1.18.0
 google-cloud-secret-manager==2.30.0
