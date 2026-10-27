@@ -30,7 +30,7 @@ dnspython==2.9.0
 docstring-parser==0.18.0
 fastavro==1.13.1
 fasteners==0.20
-fonttools==4.67.0
+fonttools==4.68.0
 frozenlist==1.8.0
 google-api-core==2.43.0
 google-apitools==0.5.35
