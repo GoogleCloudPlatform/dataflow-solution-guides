@@ -27,7 +27,7 @@ ext {
   junitVersion = "4.13.2"
   hamcrestVersion = "3.0"
   googleJavaFormat = '1.36.1'
-  errorProneCoreVersion = '2.50.0'
+  errorProneCoreVersion = '2.51.0'
   autoValueVersion = '1.11.1'
 }
 repositories {
